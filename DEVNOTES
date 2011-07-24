@@ -1,3 +1,4 @@
+Note from TieDyeSheep:
 
 Q:Why are you using a scheduler instead of coloring the sheep in the OnCreatureSpawn event?
 
