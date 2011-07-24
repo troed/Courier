@@ -2,6 +2,9 @@ package se.troed.plugin.LoveSheep;
 
 //import org.bukkit.Server;
 
+import org.bukkit.DyeColor;
+import org.bukkit.entity.Player;
+import org.bukkit.entity.Sheep;
 import org.bukkit.event.Event;
 import org.bukkit.event.Event.Priority;
 import org.bukkit.plugin.PluginDescriptionFile;
@@ -10,33 +13,14 @@ import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.util.config.Configuration;
 
+import java.util.Iterator;
+import java.util.concurrent.LinkedBlockingQueue;
+
 public class LoveSheep extends JavaPlugin {
 
     private final LoveSheep_EntityListener entityListener = new LoveSheep_EntityListener(this);
-
-
-    public void onDisable() {
-        // TODO: Place any custom disable code here
-
-        // NOTE: All registered events are automatically unregistered when a plugin is disabled
-
-        // EXAMPLE: Custom code, here we just output some info so we can check all is well
-        System.out.println(this.getDescription().getName() + " is now disabled.");
-    }
-
-    public void onEnable() {
-        // TODO: Place any custom enable code here including the registration of any events
-
-        // Register our events
-        PluginManager pm = getServer().getPluginManager();
-        pm.registerEvent(Event.Type.CREATURE_SPAWN, entityListener, Priority.Normal, this);
-
-        // EXAMPLE: Custom code, here we just output some info so we can check all is well
-        PluginDescriptionFile pdfFile = this.getDescription();
-        System.out.println(pdfFile.getName() + " version " + pdfFile.getVersion() + " is enabled!");
-
-        readConfig();
-    }
+    private LoveSheepConfig config = null;
+    private LinkedBlockingQueue<InfatuatedSheep> flock = new LinkedBlockingQueue<InfatuatedSheep>();
 
     private void generateDefaultConfig() {
         System.out.println(this.getDescription().getName() + " is generating a default config file.");
@@ -44,24 +28,12 @@ public class LoveSheep extends JavaPlugin {
         PluginDescriptionFile pdfFile = this.getDescription();
         Configuration config = this.getConfiguration();
 
-        Integer i = 1;
-        config.setProperty("se.troed.plugin.LoveSheep;", pdfFile.getVersion());
-        config.setProperty("color.WHITE", i);
-        config.setProperty("color.ORANGE", i);
-        config.setProperty("color.MAGENTA", i);
-        config.setProperty("color.LIGHT_BLUE", i);
-        config.setProperty("color.YELLOW", i);
-        config.setProperty("color.LIME", i);
-        config.setProperty("color.PINK", i);
-        config.setProperty("color.GRAY", i);
-        config.setProperty("color.SILVER", i);
-        config.setProperty("color.CYAN", i);
-        config.setProperty("color.PURPLE", i);
-        config.setProperty("color.BLUE", i);
-        config.setProperty("color.BROWN", i);
-        config.setProperty("color.GREEN", i);
-        config.setProperty("color.RED", i);
-        config.setProperty("color.BLACK", i);
+        // move to LoveSheepConfig
+        config.setProperty("LoveSheep;", pdfFile.getVersion());
+        config.setProperty("distance", 60);
+        config.setProperty("maxLove", 4);
+        config.setProperty("bigamyChance", 0.5);
+        config.setProperty("sheepColor", DyeColor.PINK.getData()); // see http://www.minecraftwiki.net/wiki/Wool for color ids
 
         config.save();
     }
@@ -69,10 +41,83 @@ public class LoveSheep extends JavaPlugin {
     private void readConfig() {
         Configuration config = this.getConfiguration();
         config.load();
-        if (config.getString("se.troed.plugin.LoveSheep;") == null) {
+        if (config.getString("LoveSheep;") == null) {
             generateDefaultConfig();
         }
-        entityListener.updatedConfig();
+        updatedConfig();
 
     }
+    // runs through the list, keeping only sheep still in love
+    private void fallInLoveRunner() {
+        InfatuatedSheep s = null;
+        Iterator iter = flock.iterator();
+        while(iter.hasNext()) {
+            s = (InfatuatedSheep)iter.next();
+            if (!s.loverStatus()) {
+                iter.remove(); // sheep fell out of love
+                System.out.println("Sheep not in love");
+            }
+        }
+    }
+
+    public void onDisable() {
+        // NOTE: All registered events are automatically unregistered when a plugin is disabled
+
+        // EXAMPLE: Custom code, here we just output some info so we can check all is well
+//        System.out.println(this.getDescription().getName() + " is now disabled.");
+    }
+
+    public void onEnable() {
+        // Register our events
+        PluginManager pm = getServer().getPluginManager();
+        pm.registerEvent(Event.Type.CREATURE_SPAWN, entityListener, Priority.Normal, this);
+
+        // EXAMPLE: Custom code, here we just output some info so we can check all is well
+        PluginDescriptionFile pdfFile = this.getDescription();
+        System.out.println(pdfFile.getName() + " version " + pdfFile.getVersion() + " enabled!");
+
+        readConfig();
+    }
+
+    public void updatedConfig() {
+        config = new LoveSheepConfig(getConfiguration());
+    }
+
+    public LoveSheepConfig getConfig() {
+        return config;
+    }
+
+    // linear search through our flock ..
+    public Integer ownership(Player p) {
+        Integer noSheep = 0;
+        Iterator iter = flock.iterator();
+        while(iter.hasNext()) {
+            // can you really compare players like this?
+            if( ((InfatuatedSheep)iter.next()).owner() == p) {
+                noSheep++;
+            }
+        }
+        return noSheep;
+    }
+
+    public void fallInLove(Sheep s, Player p) {
+        InfatuatedSheep sheep = new InfatuatedSheep(s, p, this);
+        try {
+            flock.add(sheep);
+        } catch (IllegalStateException ex) {
+            // don't really care.
+            return;
+        }
+
+        // this whole runnable/delay stuff is to be able to set the sheep color
+        // (thanks to TieDyeSheep)
+        // start the clock     20 = a second
+        getServer().getScheduler().scheduleSyncDelayedTask(this,
+                new Runnable() {
+                    public void run() {
+                        fallInLoveRunner();
+                    }
+                }, 5);
+    }
+
 }

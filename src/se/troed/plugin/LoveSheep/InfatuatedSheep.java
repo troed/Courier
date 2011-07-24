@@ -15,49 +15,25 @@ import org.bukkit.World;
 public class InfatuatedSheep {
 
     private Sheep sheep;
-//    private long myStartTime;
     private World world;
+    private LoveSheep plugin;
+    private Player player;
 
-/*    public static final DyeColor dyeColors[] = {
-            DyeColor.WHITE,
-            DyeColor.ORANGE,
-            DyeColor.MAGENTA,
-            DyeColor.LIGHT_BLUE,
-            DyeColor.YELLOW,
-            DyeColor.LIME,
-            DyeColor.PINK,
-            DyeColor.GRAY,
-            DyeColor.SILVER,
-            DyeColor.CYAN,
-            DyeColor.PURPLE,
-            DyeColor.BLUE,
-            DyeColor.BROWN,
-            DyeColor.GREEN,
-            DyeColor.RED,
-            DyeColor.BLACK
-    };*/
-
-    public InfatuatedSheep(Sheep s, World w) {
+    public InfatuatedSheep(Sheep s, Player p, LoveSheep plug) {
         sheep = s;
-//        myStartTime = w.getTime();
-        world = w;
+        world = s.getWorld();
+        player = p;
+        plugin = plug;
     }
 
-/*    public void Dye(SheepColorPercentages p) {
-        Random r = new Random();
-        //iSheep.setColor(dyeColors[r.nextInt(dyeColors.length)]);
-        //System.out.println("found the sheep");
+    public Player owner() {
+        return player;
+    }
 
-        iSheep.setColor(p.PickColor(r.nextFloat()));
-    }*/
-
-
-    public boolean fellInLove() {
+    public boolean loverStatus() {
         boolean ret = false;
-// want to do something with this. need our own list of LovePlayers? Max nr of sheep per player?
-//        Player o = (Player)sheep.getTarget();
         if (!world.getLivingEntities().contains(sheep)) {
-            // sheep not found in this world anymore
+            // sheep not found in this world anymore, disregard
 //            System.out.println("Sheep gone from this world");
         } else {
             LivingEntity e = sheep.getTarget();
@@ -66,37 +42,15 @@ public class InfatuatedSheep {
                 o = (Player)e;
             }
             if(o != null) {
-                // this sheep is already in love
+                // this sheep is already in love with someone
                 // is it successful? time to drop it? do something here
                 // caveat: we only get here on sheep.spawn - that is, seldom
                 // should maybe move stuff from here to EntityMove or PlayerMove
+                ret = true; // keep it up
             } else {
-                // see if there's an online player nearby in the same world as this sheep
-                List<Player> playerList = world.getPlayers();
-                if(playerList != null) {
-                    try {
-                        Iterator<Player> iterator = playerList.iterator();
-                        while (iterator.hasNext()) {
-                            Player p = iterator.next();
-                            if (p.isOnline()) {
-                                Location ploc = p.getLocation();
-                                Location sloc = sheep.getLocation();
-                                //                            Double dist = ploc.distance(sloc);
-                                //                            System.out.println("Dist: " + dist.toString());
-                                if (ploc.distance(sloc) < 60) { // ? what's a good value
-                                    System.out.println("Sheep in love with " + p.getDisplayName() + "!");
-                                    sheep.setTarget(p);
-                                    sheep.setColor(DyeColor.PINK);
-                                    ret = true;
-                                }
-                            }
-                        }
-                    } catch (Exception ex) {
-    //                    System.out.println("Exception caught");
-                    }
-                } else {
-    //                System.out.println("PlayerList null");
-                }
+                sheep.setTarget(player);
+                sheep.setColor(plugin.getConfig().getSheepColor());
+                ret = true;
             }
         }
 
