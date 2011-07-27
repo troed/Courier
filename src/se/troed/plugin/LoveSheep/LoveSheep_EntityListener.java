@@ -4,6 +4,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.logging.Level;
 
 import com.sun.javaws.jnl.LaunchSelection;
 import org.bukkit.DyeColor;
@@ -29,40 +30,42 @@ public class LoveSheep_EntityListener extends EntityListener {
         if (e.getCreatureType() == CreatureType.SHEEP) {
 
             Sheep sheep = (Sheep) e.getEntity();
-            World world = sheep.getWorld();
+
+// see     public List<org.bukkit.entity.Entity> getNearbyEntities(double x, double y, double z);
+
+// see     plugin.getServer().getOnlinePlayers();
 
             // see if there's an online player nearby in the same world as this sheep
-            List<Player> playerList = world.getPlayers();
+            List<Player> playerList = sheep.getWorld().getPlayers();
             if(playerList != null) {
-                Iterator<Player> iterator = playerList.iterator();
-                while (iterator.hasNext()) {
-                    Player p = iterator.next();
-                    if (p.isOnline()) {
-                        // close enough?
+                for(Player p : playerList) {
+//                Iterator<Player> iterator = playerList.iterator();
+//                while ((iterator != null) && iterator.hasNext()) {
+//                    Player p = iterator.next();
+                    if (p.isOnline()) { // is this needed?
                         Location ploc = p.getLocation();
                         Location sloc = sheep.getLocation();
-                        // Double dist = ploc.distance(sloc);
-                        // System.out.println("Dist: " + dist.toString());
                         if (ploc.distance(sloc) < plugin.getConfig().getDistance()) {
                             boolean sheepUp = true;
-                            Integer owned = plugin.ownership(p);
-                            // check if we have loads of sheep already
-                            if(owned < plugin.getConfig().getMaxLove()) {
-                                if(owned > 0) {
+                            Integer love = plugin.loverCount(p);
+                            // check if we have enough sheep already
+                            if(love < plugin.getConfig().getMaxLove()) {
+                                if(love > 0) {
                                     // roll the bigamy dice
                                     // 0.5^1 = 0.5, 0.5^2 = 0.25 etc
-                                    Double bigamy = Math.pow(plugin.getConfig().getBigamyChance(), owned);
+                                    Double bigamy = Math.pow(plugin.getConfig().getBigamyChance(), love);
                                     if(Math.random() > bigamy) {
                                         sheepUp = false;
-                                        System.out.println(p.getDisplayName() + " is not in Utah");
+                                    } else {
+                                        plugin.getConfig().lslog(Level.FINE, p.getDisplayName() + " lives in Utah!");
                                     }
                                 }
                                 if(sheepUp) {
-                                    System.out.println("Sheep in love with " + p.getDisplayName() + "!");
+                                    plugin.getConfig().lslog(Level.FINE, "Sheep in love with " + p.getDisplayName() + "!");
                                     plugin.fallInLove(sheep, p);
                                 }
                             } else {
-                                System.out.println(p.getDisplayName() + " has enough sheep");
+                                plugin.getConfig().lslog(Level.FINE, p.getDisplayName() + " has enough sheep");
                             }
                         }
                     }

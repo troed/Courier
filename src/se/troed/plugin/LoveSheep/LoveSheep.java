@@ -15,72 +15,84 @@ import org.bukkit.util.config.Configuration;
 
 import java.util.Iterator;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.logging.Level;
 
 public class LoveSheep extends JavaPlugin {
 
     private final LoveSheep_EntityListener entityListener = new LoveSheep_EntityListener(this);
+    private final LoveSheep_PlayerListener playerListener = new LoveSheep_PlayerListener(this);
     private LoveSheepConfig config = null;
     private LinkedBlockingQueue<InfatuatedSheep> flock = new LinkedBlockingQueue<InfatuatedSheep>();
+    private Runnable runnable = null;
+    private int taskId = -1;
 
-    private void generateDefaultConfig() {
-        System.out.println(this.getDescription().getName() + " is generating a default config file.");
-
-        PluginDescriptionFile pdfFile = this.getDescription();
-        Configuration config = this.getConfiguration();
-
-        // move to LoveSheepConfig
-        config.setProperty("LoveSheep;", pdfFile.getVersion());
-        config.setProperty("distance", 60);
-        config.setProperty("maxLove", 4);
-        config.setProperty("bigamyChance", 0.5);
-        config.setProperty("sheepColor", DyeColor.PINK.getData()); // see http://www.minecraftwiki.net/wiki/Wool for color ids
-
-        config.save();
-    }
-
-    private void readConfig() {
-        Configuration config = this.getConfiguration();
-        config.load();
-        if (config.getString("LoveSheep;") == null) {
-            generateDefaultConfig();
-        }
-        updatedConfig();
-
-    }
     // runs through the list, keeping only sheep still in love
     private void fallInLoveRunner() {
         InfatuatedSheep s = null;
         Iterator iter = flock.iterator();
         while(iter.hasNext()) {
             s = (InfatuatedSheep)iter.next();
-            if (!s.loverStatus()) {
+            if (!s.updateLoverStatus()) {
                 iter.remove(); // sheep fell out of love
-                System.out.println("Sheep not in love");
+                config.lslog(Level.FINE, "Sheep no longer in love");
             }
+        }
+        if(flock.isEmpty()) {
+            stopTask();
         }
     }
 
-    public void onDisable() {
-        // NOTE: All registered events are automatically unregistered when a plugin is disabled
+    // ok to be called multiple times
+    private void startTask() {
+        if(taskId >= 0) {
+            return;
+        }
+        if(runnable == null) {
+            runnable = new Runnable() {
+                    public void run() {
+                        fallInLoveRunner();
+                    }
+                };
+        }
+        config.lslog(Level.FINE, "Task start");
+        // first time after 250ms, then every 1s
+        taskId = getServer().getScheduler().scheduleSyncRepeatingTask(this, runnable, 5, 20);
+        if(taskId < 0) {
+            config.lslog(Level.WARNING, "Task scheduling failed");
+        }
+    }
 
-        // EXAMPLE: Custom code, here we just output some info so we can check all is well
-//        System.out.println(this.getDescription().getName() + " is now disabled.");
+    private void stopTask() {
+        if(taskId < 0) {
+            return;
+        }
+        config.lslog(Level.FINE, "Task stop");
+        getServer().getScheduler().cancelTask(taskId);
+        taskId = -1;
+    //        runnable = null;
+    }
+
+    public void onDisable() {
+
+        config.lslog(Level.FINE, this.getDescription().getName() + " is now disabled.");
+        stopTask();
     }
 
     public void onEnable() {
+        loadConfig();
+
         // Register our events
         PluginManager pm = getServer().getPluginManager();
         pm.registerEvent(Event.Type.CREATURE_SPAWN, entityListener, Priority.Normal, this);
+        pm.registerEvent(Event.Type.PLAYER_QUIT, playerListener, Priority.Normal, this);
 
-        // EXAMPLE: Custom code, here we just output some info so we can check all is well
         PluginDescriptionFile pdfFile = this.getDescription();
-        System.out.println(pdfFile.getName() + " version " + pdfFile.getVersion() + " enabled!");
+        config.lslog(Level.INFO, pdfFile.getName() + " version v" + pdfFile.getVersion() + " is enabled!");
+      }
 
-        readConfig();
-    }
-
-    public void updatedConfig() {
-        config = new LoveSheepConfig(getConfiguration());
+    // in preparation for plugin config dynamic reloading
+    public void loadConfig() {
+        config = new LoveSheepConfig(this);
     }
 
     public LoveSheepConfig getConfig() {
@@ -88,36 +100,38 @@ public class LoveSheep extends JavaPlugin {
     }
 
     // linear search through our flock ..
-    public Integer ownership(Player p) {
+    public Integer loverCount(Player p) {
         Integer noSheep = 0;
         Iterator iter = flock.iterator();
         while(iter.hasNext()) {
-            // can you really compare players like this?
-            if( ((InfatuatedSheep)iter.next()).owner() == p) {
+            if( ((InfatuatedSheep)iter.next()).lover() == p) {
                 noSheep++;
             }
         }
+        if(noSheep > 0) {
+            config.lslog(Level.FINE, p.getDisplayName() + " owns " + noSheep + " sheep");
+        }
         return noSheep;
+    }
+
+    // linear search through our flock ..
+    public void loverGone(Player p) {
+        Iterator iter = flock.iterator();
+        while(iter.hasNext()) {
+            InfatuatedSheep s = (InfatuatedSheep)iter.next();
+            if( s.lover() == p) {
+                s.oldColor();
+            }
+        }
     }
 
     public void fallInLove(Sheep s, Player p) {
         InfatuatedSheep sheep = new InfatuatedSheep(s, p, this);
         try {
-            flock.add(sheep);
+            flock.add(sheep); // our scheduled task will take care of the rest
+            startTask();
         } catch (IllegalStateException ex) {
-            // don't really care.
             return;
         }
-
-        // this whole runnable/delay stuff is to be able to set the sheep color
-        // (thanks to TieDyeSheep)
-        // start the clock     20 = a second
-        getServer().getScheduler().scheduleSyncDelayedTask(this,
-                new Runnable() {
-                    public void run() {
-                        fallInLoveRunner();
-                    }
-                }, 5);
     }
-
 }
