@@ -41,9 +41,7 @@ public class InfatuatedSheep {
             // sheep not found in this world anymore, disregard
             plugin.getConfig().lslog(Level.FINE, "Sheep gone from this world");
             // we seem to end up here when players quit (or maybe when there's only one player online that quits?)
-            // dirty fix - doesn't work
-            // try catching player quit event and reset color from that
-//            sheep.setColor(oldColor);
+            // fix by catching Player.QUIT and resetting the color there
         } else {
             // really, this should ALWAYS return the player we were initialized with, or null
             LivingEntity e = sheep.getTarget();
@@ -73,6 +71,7 @@ public class InfatuatedSheep {
                       // would be cool to do fancy pathfinding instead
                       newLoc.add(0,1,0);
                     }
+                    // seems in some cases sheep get hurt by teleporting into (?) eachother/the player
                     sheep.teleport(newLoc);
 
                     ret = true; // keep it up
@@ -88,7 +87,6 @@ public class InfatuatedSheep {
         return ret;
     }
 
-    // ugly fix this
     public void oldColor() {
         plugin.getConfig().lslog(Level.FINE, "Lover no longer online - return to old color");
         sheep.setColor(oldColor);

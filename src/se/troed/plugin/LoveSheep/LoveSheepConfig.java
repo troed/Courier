@@ -18,23 +18,25 @@ public class LoveSheepConfig {
     private Integer distance;
     private Integer maxLove;
     private Double bigamyChance;
+    private Double loveChance;
     private DyeColor sheepColor;
     private Configuration config;
     private PluginDescriptionFile pdfFile;
     private Logger log;
-    private boolean debug = false;
+    private static final boolean debug = false;
 
     private static final String logPrefix = "[LoveSheep] ";
     // any config file _older_ than this is invalid - compatibility break
-    private static final String versionBreak = "0.0.3";
+    private static final String versionBreak = "0.0.5";
 
     private void generateDefaultConfig() {
         lslog(Level.INFO, pdfFile.getName() + " is generating a default config file.");
 
         config.setProperty(pdfFile.getName(), pdfFile.getVersion());
-        config.setProperty("distance", 60);
+        config.setProperty("distance", 100);
         config.setProperty("maxLove", 4);
         config.setProperty("bigamyChance", 0.5);
+        config.setProperty("loveChance", 0.1);
         Byte temp = DyeColor.PINK.getData();
         // see http://www.minecraftwiki.net/wiki/Wool for color ids
         config.setProperty("sheepColor", temp.intValue());
@@ -98,9 +100,12 @@ public class LoveSheepConfig {
         distance = (Integer)config.getProperty("distance");
         maxLove = (Integer)config.getProperty("maxLove");
         bigamyChance = (Double)config.getProperty("bigamyChance");
+        loveChance = (Double)config.getProperty("loveChance");
         Integer temp = (Integer)config.getProperty("sheepColor");
         sheepColor = DyeColor.getByData(temp.byteValue());
  //      sheepColor = DyeColor.getByData((Byte)config.getProperty("sheepColor"));
+
+        // add code to set properties to default values if they weren't in the config
      }
 
     public Integer getDistance() {
@@ -113,6 +118,10 @@ public class LoveSheepConfig {
 
     public Double getBigamyChance() {
         return bigamyChance;
+    }
+
+    public Double getLoveChance() {
+        return loveChance;
     }
 
     public DyeColor getSheepColor() {

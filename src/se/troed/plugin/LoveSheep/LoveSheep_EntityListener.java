@@ -29,43 +29,45 @@ public class LoveSheep_EntityListener extends EntityListener {
     public void onCreatureSpawn(CreatureSpawnEvent e) {
         if (e.getCreatureType() == CreatureType.SHEEP) {
 
-            Sheep sheep = (Sheep) e.getEntity();
+            // random() check vs loveChance whether we should even bother
+            if(Math.random() < plugin.getConfig().getLoveChance()) {
 
-// see     public List<org.bukkit.entity.Entity> getNearbyEntities(double x, double y, double z);
+                Sheep sheep = (Sheep) e.getEntity();
 
-// see     plugin.getServer().getOnlinePlayers();
 
-            // see if there's an online player nearby in the same world as this sheep
-            List<Player> playerList = sheep.getWorld().getPlayers();
-            if(playerList != null) {
-                for(Player p : playerList) {
-//                Iterator<Player> iterator = playerList.iterator();
-//                while ((iterator != null) && iterator.hasNext()) {
-//                    Player p = iterator.next();
-                    if (p.isOnline()) { // is this needed?
-                        Location ploc = p.getLocation();
-                        Location sloc = sheep.getLocation();
-                        if (ploc.distance(sloc) < plugin.getConfig().getDistance()) {
-                            boolean sheepUp = true;
-                            Integer love = plugin.loverCount(p);
-                            // check if we have enough sheep already
-                            if(love < plugin.getConfig().getMaxLove()) {
-                                if(love > 0) {
-                                    // roll the bigamy dice
-                                    // 0.5^1 = 0.5, 0.5^2 = 0.25 etc
-                                    Double bigamy = Math.pow(plugin.getConfig().getBigamyChance(), love);
-                                    if(Math.random() > bigamy) {
-                                        sheepUp = false;
-                                    } else {
-                                        plugin.getConfig().lslog(Level.FINE, p.getDisplayName() + " lives in Utah!");
+    // see     public List<org.bukkit.entity.Entity> getNearbyEntities(double x, double y, double z);
+    // see     plugin.getServer().getOnlinePlayers();
+
+                // see if there's an online player nearby in the same world as this sheep
+                List<Player> playerList = sheep.getWorld().getPlayers();
+                if(playerList != null) {
+                    for(Player p : playerList) {
+                        if (p.isOnline()) { // is this needed?
+                            Location ploc = p.getLocation();
+                            Location sloc = sheep.getLocation();
+                            if (ploc.distance(sloc) < plugin.getConfig().getDistance()) {
+                                boolean sheepUp = true;
+                                Integer love = plugin.loverCount(p);
+                                // check if we have enough sheep already
+                                if(love < plugin.getConfig().getMaxLove()) {
+                                    if(love > 0) {
+                                        // roll the bigamy dice
+                                        // 0.5^1 = 0.5, 0.5^2 = 0.25 etc
+                                        Double bigamy = Math.pow(plugin.getConfig().getBigamyChance(), love);
+                                        if(Math.random() > bigamy) {
+                                            sheepUp = false;
+                                        } else {
+                                            plugin.getConfig().lslog(Level.FINE, p.getDisplayName() + " lives in Utah!");
+                                        }
                                     }
+                                    if(sheepUp) {
+                                        plugin.getConfig().lslog(Level.FINE, "Sheep in love with " + p.getDisplayName() + "!");
+                                        plugin.fallInLove(sheep, p);
+                                        return; // ugly, break or boolean for-each test instead
+                                    }
+                                } else {
+                                    plugin.getConfig().lslog(Level.FINE, p.getDisplayName() + " has enough sheep");
                                 }
-                                if(sheepUp) {
-                                    plugin.getConfig().lslog(Level.FINE, "Sheep in love with " + p.getDisplayName() + "!");
-                                    plugin.fallInLove(sheep, p);
-                                }
-                            } else {
-                                plugin.getConfig().lslog(Level.FINE, p.getDisplayName() + " has enough sheep");
                             }
                         }
                     }
