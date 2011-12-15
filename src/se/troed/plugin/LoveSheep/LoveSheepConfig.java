@@ -2,8 +2,9 @@ package se.troed.plugin.LoveSheep;
 
 import org.bukkit.DyeColor;
 import org.bukkit.Server;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.PluginDescriptionFile;
-import org.bukkit.util.config.Configuration;
+import org.bukkit.configuration.file.FileConfiguration;
 import sun.plugin2.main.server.Plugin;
 import sun.security.util.Debug;
 
@@ -20,16 +21,16 @@ public class LoveSheepConfig {
     private Double bigamyChance;
     private Double loveChance;
     private DyeColor sheepColor;
-    private Configuration config;
+    private FileConfiguration config;
     private PluginDescriptionFile pdfFile;
     private Logger log;
-    private static final boolean debug = false;
+    private static final boolean debug = true;
 
     private static final String logPrefix = "[LoveSheep] ";
     // any config file _older_ than this is invalid - compatibility break
     private static final String versionBreak = "0.0.5";
 
-    private void generateDefaultConfig() {
+/*    private void generateDefaultConfig() {
         lslog(Level.INFO, pdfFile.getName() + " is generating a default config file.");
 
         config.setProperty(pdfFile.getName(), pdfFile.getVersion());
@@ -43,20 +44,20 @@ public class LoveSheepConfig {
 
         config.save();
     }
-
+*/
     public LoveSheepConfig(LoveSheep plug) {
 
         log = plug.getServer().getLogger();
 
-        config = plug.getConfiguration();
+        config = plug.getConfig();
         pdfFile = plug.getDescription();
-        config.load();
-        if (config.getString(pdfFile.getName()) == null) {
-            generateDefaultConfig();
-        }
+//        config.load();
+//        if (config.getString(pdfFile.getName()) == null) {
+//            generateDefaultConfig();
+//        }
 
         // verify config compatibility
-        String version = (String)config.getProperty(pdfFile.getName());
+        String version = config.getString(pdfFile.getName());
         if(version!=null) {
             int major = 0;
             int minor = 0;
@@ -93,19 +94,15 @@ public class LoveSheepConfig {
             if(existingVersion < breakVersion) {
                 // config file not valid - abort plugin load
                 lslog(Level.SEVERE, "Config file version too old - unexpected behaviour might occur!");
-
-
             }
         }
-        distance = (Integer)config.getProperty("distance");
-        maxLove = (Integer)config.getProperty("maxLove");
-        bigamyChance = (Double)config.getProperty("bigamyChance");
-        loveChance = (Double)config.getProperty("loveChance");
-        Integer temp = (Integer)config.getProperty("sheepColor");
+        distance = config.getInt("distance");
+        maxLove = config.getInt("maxLove");
+        bigamyChance = config.getDouble("bigamyChance");
+        loveChance = config.getDouble("loveChance");
+        Integer temp = config.getInt("sheepColor");
         sheepColor = DyeColor.getByData(temp.byteValue());
  //      sheepColor = DyeColor.getByData((Byte)config.getProperty("sheepColor"));
-
-        // add code to set properties to default values if they weren't in the config
      }
 
     public Integer getDistance() {

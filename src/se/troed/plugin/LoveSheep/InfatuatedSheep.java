@@ -39,7 +39,7 @@ public class InfatuatedSheep {
         boolean ret = false;
         if (!world.getLivingEntities().contains(sheep)) {
             // sheep not found in this world anymore, disregard
-            plugin.getConfig().lslog(Level.FINE, "Sheep gone from this world");
+            plugin.getLSConfig().lslog(Level.FINE, "Sheep gone from this world");
             // we seem to end up here when players quit (or maybe when there's only one player online that quits?)
             // fix by catching Player.QUIT and resetting the color there
         } else {
@@ -52,12 +52,12 @@ public class InfatuatedSheep {
             if(p != null) {
                 if(!p.isOnline()) {
                     // lover no longer online
-                    plugin.getConfig().lslog(Level.FINE, "Lover no longer online - return to old color");
+                    plugin.getLSConfig().lslog(Level.FINE, "Lover no longer online - return to old color");
                     sheep.setColor(oldColor);
                 } else {
                     // this sheep is already in love with someone
                     // is it successful? time to drop it? do something here
-                    plugin.getConfig().lslog(Level.FINE, "Loved sheep looking for action");
+                    plugin.getLSConfig().lslog(Level.FINE, "Loved sheep looking for action");
 
                     // only need to do this if we're outside of normal target-affected distance
                     // whatever that is
@@ -79,7 +79,7 @@ public class InfatuatedSheep {
             } else {
                 sheep.setTarget(player);
                 oldColor = sheep.getColor();
-                sheep.setColor(plugin.getConfig().getSheepColor());
+                sheep.setColor(plugin.getLSConfig().getSheepColor());
                 ret = true;
             }
         }
@@ -88,7 +88,7 @@ public class InfatuatedSheep {
     }
 
     public void oldColor() {
-        plugin.getConfig().lslog(Level.FINE, "Lover no longer online - return to old color");
+        plugin.getLSConfig().lslog(Level.FINE, "Lover no longer online - return to old color");
         sheep.setColor(oldColor);
     }
 

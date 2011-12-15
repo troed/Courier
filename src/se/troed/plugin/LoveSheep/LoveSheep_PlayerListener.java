@@ -13,7 +13,7 @@ public class LoveSheep_PlayerListener extends PlayerListener {
     }
 
     public void onPlayerQuit(PlayerQuitEvent event) {
-        plugin.getConfig().lslog(Level.FINE, event.getPlayer().getDisplayName() + " has left the building");
+        plugin.getLSConfig().lslog(Level.FINE, event.getPlayer().getDisplayName() + " has left the building");
         plugin.loverGone(event.getPlayer());
     }
 }

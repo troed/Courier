@@ -11,7 +11,7 @@ import org.bukkit.plugin.PluginDescriptionFile;
 //import org.bukkit.plugin.PluginLoader;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.util.config.Configuration;
+import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.util.Iterator;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -92,10 +92,12 @@ public class LoveSheep extends JavaPlugin {
 
     // in preparation for plugin config dynamic reloading
     public void loadConfig() {
+        getConfig().options().copyDefaults(true);
+
         config = new LoveSheepConfig(this);
     }
 
-    public LoveSheepConfig getConfig() {
+    public LoveSheepConfig getLSConfig() {
         return config;
     }
 

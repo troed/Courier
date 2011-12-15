@@ -30,7 +30,7 @@ public class LoveSheep_EntityListener extends EntityListener {
         if (e.getCreatureType() == CreatureType.SHEEP) {
 
             // random() check vs loveChance whether we should even bother
-            if(Math.random() < plugin.getConfig().getLoveChance()) {
+            if(Math.random() < plugin.getLSConfig().getLoveChance()) {
 
                 Sheep sheep = (Sheep) e.getEntity();
 
@@ -45,28 +45,28 @@ public class LoveSheep_EntityListener extends EntityListener {
                         if (p.isOnline()) { // is this needed?
                             Location ploc = p.getLocation();
                             Location sloc = sheep.getLocation();
-                            if (ploc.distance(sloc) < plugin.getConfig().getDistance()) {
+                            if (ploc.distance(sloc) < plugin.getLSConfig().getDistance()) {
                                 boolean sheepUp = true;
                                 Integer love = plugin.loverCount(p);
                                 // check if we have enough sheep already
-                                if(love < plugin.getConfig().getMaxLove()) {
+                                if(love < plugin.getLSConfig().getMaxLove()) {
                                     if(love > 0) {
                                         // roll the bigamy dice
                                         // 0.5^1 = 0.5, 0.5^2 = 0.25 etc
-                                        Double bigamy = Math.pow(plugin.getConfig().getBigamyChance(), love);
+                                        Double bigamy = Math.pow(plugin.getLSConfig().getBigamyChance(), love);
                                         if(Math.random() > bigamy) {
                                             sheepUp = false;
                                         } else {
-                                            plugin.getConfig().lslog(Level.FINE, p.getDisplayName() + " lives in Utah!");
+                                            plugin.getLSConfig().lslog(Level.FINE, p.getDisplayName() + " lives in Utah!");
                                         }
                                     }
                                     if(sheepUp) {
-                                        plugin.getConfig().lslog(Level.FINE, "Sheep in love with " + p.getDisplayName() + "!");
+                                        plugin.getLSConfig().lslog(Level.FINE, "Sheep in love with " + p.getDisplayName() + "!");
                                         plugin.fallInLove(sheep, p);
                                         return; // ugly, break or boolean for-each test instead
                                     }
                                 } else {
-                                    plugin.getConfig().lslog(Level.FINE, p.getDisplayName() + " has enough sheep");
+                                    plugin.getLSConfig().lslog(Level.FINE, p.getDisplayName() + " has enough sheep");
                                 }
                             }
                         }
