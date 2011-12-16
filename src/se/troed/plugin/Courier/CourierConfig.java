@@ -1,20 +1,14 @@
-package se.troed.plugin.LoveSheep;
+package se.troed.plugin.Courier;
 
 import org.bukkit.DyeColor;
-import org.bukkit.Server;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.configuration.file.FileConfiguration;
-import sun.plugin2.main.server.Plugin;
-import sun.security.util.Debug;
 
-import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.logging.LoggingMXBean;
 
 
-public class LoveSheepConfig {
+public class CourierConfig {
 
     private Integer distance;
     private Integer maxLove;
@@ -26,35 +20,16 @@ public class LoveSheepConfig {
     private Logger log;
     private static final boolean debug = true;
 
-    private static final String logPrefix = "[LoveSheep] ";
+    private static final String logPrefix = "[Courier] ";
     // any config file _older_ than this is invalid - compatibility break
-    private static final String versionBreak = "0.0.5";
+    private static final String versionBreak = "0.0.1";
 
-/*    private void generateDefaultConfig() {
-        lslog(Level.INFO, pdfFile.getName() + " is generating a default config file.");
-
-        config.setProperty(pdfFile.getName(), pdfFile.getVersion());
-        config.setProperty("distance", 100);
-        config.setProperty("maxLove", 4);
-        config.setProperty("bigamyChance", 0.5);
-        config.setProperty("loveChance", 0.1);
-        Byte temp = DyeColor.PINK.getData();
-        // see http://www.minecraftwiki.net/wiki/Wool for color ids
-        config.setProperty("sheepColor", temp.intValue());
-
-        config.save();
-    }
-*/
-    public LoveSheepConfig(LoveSheep plug) {
+    public CourierConfig(Courier plug) {
 
         log = plug.getServer().getLogger();
 
         config = plug.getConfig();
         pdfFile = plug.getDescription();
-//        config.load();
-//        if (config.getString(pdfFile.getName()) == null) {
-//            generateDefaultConfig();
-//        }
 
         // verify config compatibility
         String version = config.getString(pdfFile.getName());
@@ -73,7 +48,7 @@ public class LoveSheepConfig {
             if(parts.length > 2 && parts[2] != null) {
                 revision = Integer.decode(parts[2]);
             }
-            lslog(Level.FINE, "Decoded version: Major: " + major + " Minor: " + minor + " Revision: " + revision);
+            clog(Level.FINE, "Decoded version: Major: " + major + " Minor: " + minor + " Revision: " + revision);
 
             int existingVersion = major*1000000+minor*1000+revision;
 
@@ -87,13 +62,13 @@ public class LoveSheepConfig {
             if(parts.length > 2 && parts[2] != null) {
                 revision = Integer.decode(parts[2]);
             }
-            lslog(Level.FINE, "Comp break: Major: " + major + " Minor: " + minor + " Revision: " + revision);
+            clog(Level.FINE, "Comp break: Major: " + major + " Minor: " + minor + " Revision: " + revision);
 
             int breakVersion = major*1000000+minor*1000+revision;
 
             if(existingVersion < breakVersion) {
                 // config file not valid - abort plugin load
-                lslog(Level.SEVERE, "Config file version too old - unexpected behaviour might occur!");
+                clog(Level.SEVERE, "Config file version too old - unexpected behaviour might occur!");
             }
         }
         distance = config.getInt("distance");
@@ -125,7 +100,7 @@ public class LoveSheepConfig {
         return sheepColor;
     }
 
-    void lslog(Level level, String message) {
+    void clog(Level level, String message) {
         if(!debug && (level != Level.SEVERE && level != Level.WARNING && level != Level.INFO)) {
             return;
         }

@@ -1,50 +1,83 @@
-package se.troed.plugin.LoveSheep;
+package se.troed.plugin.Courier;
 
-import java.util.Iterator;
-import java.util.List;
-import java.util.ListIterator;
+import java.util.UUID;
 import java.util.logging.Level;
 
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
-import org.bukkit.entity.Sheep;
-import org.bukkit.DyeColor;
+import org.bukkit.entity.Enderman;
 import org.bukkit.World;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
-import sun.security.krb5.Config;
 
-public class InfatuatedSheep {
+/**
+ * A Postman is a friendly Enderman, tirelessly carrying around our mail
+ *
+ * One will be spawned for each Player that will receive mail
+ */
+public class Postman {
 
-    private Sheep sheep;
+    private Enderman enderman;
     private World world;
-    private LoveSheep plugin;
+    private Courier plugin;
     private Player player;
-    private DyeColor oldColor;
+    private ItemStack letter;
+    private UUID uuid;
+    boolean scheduledForRemoval;
 
-    public InfatuatedSheep(Sheep s, Player p, LoveSheep plug) {
-        sheep = s;
-        world = s.getWorld();
+    public Postman(Enderman e, Player p, Courier plug) {
+        enderman = e;
+        world = e.getWorld();
         player = p;
         plugin = plug;
+        uuid = e.getUniqueId();
+        // possible to create postmen without letters, why?
     }
 
-    public Player lover() {
+    public void addLetter(ItemStack l) {
+        letter = l;
+    }
+
+    public ItemStack getLetter() {
+        return letter;
+    }
+
+    public Player getPlayer() {
         return player;
+    }
+
+    public UUID getUUID() {
+        return uuid;
+    }
+
+    public void remove() {
+        enderman.remove();
+    }
+
+    public boolean scheduledForRemoval() {
+        return scheduledForRemoval;
+    }
+
+    /**
+     * Called when either mail has been delivered or someone is attacking the postman
+     */
+    public void quickDespawn() {
+        plugin.scheduleDespawnPostman();
+        scheduledForRemoval = true;
     }
 
     public boolean updateLoverStatus() {
         boolean ret = false;
-        if (!world.getLivingEntities().contains(sheep)) {
+        if (!world.getLivingEntities().contains(enderman)) {
             // sheep not found in this world anymore, disregard
-            plugin.getLSConfig().lslog(Level.FINE, "Sheep gone from this world");
+            plugin.getCConfig().clog(Level.FINE, "Sheep gone from this world");
             // we seem to end up here when players quit (or maybe when there's only one player online that quits?)
             // fix by catching Player.QUIT and resetting the color there
         } else {
             // really, this should ALWAYS return the player we were initialized with, or null
-            LivingEntity e = sheep.getTarget();
+            LivingEntity e = enderman.getTarget();
             Player p = null;
             if(e instanceof Player) { // maybe sheep can have other targets (other plugins etc)
                 p = (Player)e;
@@ -52,17 +85,16 @@ public class InfatuatedSheep {
             if(p != null) {
                 if(!p.isOnline()) {
                     // lover no longer online
-                    plugin.getLSConfig().lslog(Level.FINE, "Lover no longer online - return to old color");
-                    sheep.setColor(oldColor);
+                    plugin.getCConfig().clog(Level.FINE, "Lover no longer online - return to old color");
                 } else {
                     // this sheep is already in love with someone
                     // is it successful? time to drop it? do something here
-                    plugin.getLSConfig().lslog(Level.FINE, "Loved sheep looking for action");
+                    plugin.getCConfig().clog(Level.FINE, "Loved sheep looking for action");
 
                     // only need to do this if we're outside of normal target-affected distance
                     // whatever that is
 
-                    Location tloc = lookAt(sheep.getLocation(), p.getLocation());
+                    Location tloc = lookAt(enderman.getLocation(), p.getLocation());
                     // todo: check to see we're not teleporting into a non-air block
                     Location newLoc = move(tloc, new Vector(0,0,1));
                     if(newLoc.getBlock().getType() != Material.AIR) {
@@ -72,24 +104,17 @@ public class InfatuatedSheep {
                       newLoc.add(0,1,0);
                     }
                     // seems in some cases sheep get hurt by teleporting into (?) eachother/the player
-                    sheep.teleport(newLoc);
+                    enderman.teleport(newLoc);
 
                     ret = true; // keep it up
                 }
             } else {
-                sheep.setTarget(player);
-                oldColor = sheep.getColor();
-                sheep.setColor(plugin.getLSConfig().getSheepColor());
+                enderman.setTarget(player);
                 ret = true;
             }
         }
 
         return ret;
-    }
-
-    public void oldColor() {
-        plugin.getLSConfig().lslog(Level.FINE, "Lover no longer online - return to old color");
-        sheep.setColor(oldColor);
     }
 
     // http://forums.bukkit.org/threads/lookat-and-move-functions.26768/#post-505801
