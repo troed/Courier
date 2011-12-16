@@ -1,0 +1,13 @@
+name: Courier
+main: se.troed.plugin.Courier.Courier
+version: 0.0.1
+author: defxor
+commands:
+  postman:
+    description: Spawns a postman
+    permission: courier.postman
+    usage: /postman
+permissions:
+  postman:
+    description: Spawns a postman
+    default: op
