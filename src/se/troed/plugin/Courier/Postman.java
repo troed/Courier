@@ -22,30 +22,24 @@ public class Postman {
     private Enderman enderman;
     private World world;
     private Courier plugin;
-    private Player player;
     private ItemStack letter;
     private UUID uuid;
     boolean scheduledForRemoval;
 
-    public Postman(Enderman e, Player p, Courier plug) {
+    public Postman(Enderman e, Courier plug) {
         enderman = e;
         world = e.getWorld();
-        player = p;
         plugin = plug;
         uuid = e.getUniqueId();
         // possible to create postmen without letters, why?
     }
 
-    public void addLetter(ItemStack l) {
+    public void setLetter(ItemStack l) {
         letter = l;
     }
 
     public ItemStack getLetter() {
         return letter;
-    }
-
-    public Player getPlayer() {
-        return player;
     }
 
     public UUID getUUID() {
@@ -68,7 +62,7 @@ public class Postman {
         scheduledForRemoval = true;
     }
 
-    public boolean updateLoverStatus() {
+/*    public boolean updateLoverStatus() {
         boolean ret = false;
         if (!world.getLivingEntities().contains(enderman)) {
             // sheep not found in this world anymore, disregard
@@ -95,7 +89,6 @@ public class Postman {
                     // whatever that is
 
                     Location tloc = lookAt(enderman.getLocation(), p.getLocation());
-                    // todo: check to see we're not teleporting into a non-air block
                     Location newLoc = move(tloc, new Vector(0,0,1));
                     if(newLoc.getBlock().getType() != Material.AIR) {
                       // VERY naive approach for testing
@@ -109,7 +102,7 @@ public class Postman {
                     ret = true; // keep it up
                 }
             } else {
-                enderman.setTarget(player);
+ //               enderman.setTarget(player);
                 ret = true;
             }
         }
@@ -174,5 +167,5 @@ public class Postman {
         y -= offset.getZ() * Math.sin(rpitch);
 
         return new Location(loc.getWorld(), x, y, z, loc.getYaw(), loc.getPitch());
-    }
+    }*/
 }

@@ -3,16 +3,17 @@ package se.troed.plugin.Courier;
 import org.bukkit.Material;
 import org.bukkit.entity.Enderman;
 import org.bukkit.entity.Item;
-import org.bukkit.event.player.PlayerInteractEntityEvent;
-import org.bukkit.event.player.PlayerListener;
-import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.*;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.map.MapRenderer;
 import org.bukkit.map.MapView;
 import org.bukkit.entity.Entity;
 import org.bukkit.material.MaterialData;
 import sun.text.normalizer.Replaceable;
 
+import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.logging.Level;
 
 public class CourierPlayerListener extends PlayerListener {
@@ -27,7 +28,6 @@ public class CourierPlayerListener extends PlayerListener {
             Entity ent = (Entity) e.getRightClicked();
             if(ent.getUniqueId() == plugin.getPostman().getUUID()) {
                 plugin.getCConfig().clog(Level.FINE, e.getPlayer().getDisplayName() + " receiving mail");
-                // todo: is it _ours_ ?
                 ItemStack letter = plugin.getPostman().getLetter();
 
                 boolean replace = false;
@@ -35,6 +35,7 @@ public class CourierPlayerListener extends PlayerListener {
                 if(item != null) {
                     plugin.getCConfig().clog(Level.FINE, "Item not null");
                     int slot = e.getPlayer().getInventory().getHeldItemSlot();
+                    // todo: fix whatever went wrong here, or disallow right-clicking altogether
 //                    HashMap<Integer, ItemStack> items = e.getPlayer().getInventory().addItem(item.clone());
 //                    if(items.isEmpty()) {
                         plugin.getCConfig().clog(Level.FINE, "Held item added to inventory");
@@ -53,21 +54,55 @@ public class CourierPlayerListener extends PlayerListener {
 
                 ((Enderman)ent).setCarriedMaterial(new MaterialData(Material.AIR)); // null is not valid
                 plugin.getPostman().quickDespawn();
-
-    //   Player  public void sendMap(MapView map);
             }
         }
     }
+    
+    public void onItemHeldChange(PlayerItemHeldEvent e) {
+        if(e.getPlayer().getInventory().getItem(e.getNewSlot()).getType() == Material.MAP) {
+            // durability = the map id
+            MapView map = plugin.getServer().getMap(e.getPlayer().getInventory().getItem(e.getNewSlot()).getDurability());
+            if(map != null) {
+                plugin.getCConfig().clog(Level.FINE, "Map " + map.getId() + " held. X=" + map.getCenterX() + " Z=" + map.getCenterZ());
+                if(map.getCenterX() == Courier.MAGIC_NUMBER) {
+                    Date date = new Date((long)(map.getCenterZ()) * 1000); // convert back to milliseconds
+                    plugin.getCConfig().clog(Level.FINE, "Map + " + map.getId() + " is a Courier letter!");
+                    plugin.getCConfig().clog(Level.FINE, "Created: " + date.toString());
+
+                    // really checks if we still have an attached renderer and fixes it if not
+                    plugin.getLetter(map);
+
+                    // fixing stuffs and immediate rendering?
+                    e.getPlayer().sendMap(map);
+                }
+            } else { // not needed?
+                plugin.getCConfig().clog(Level.FINE, "Id " + e.getPlayer().getItemInHand().getDurability() + " is not a map");
+            }
+        }
+    }
+    
+    public void onPlayerPickupItem(PlayerPickupItemEvent e) {
+        if(e.getItem().getItemStack().getType() == Material.MAP) {
+            MapView map = plugin.getServer().getMap(e.getItem().getItemStack().getDurability());
+            if(map != null) {
+                plugin.getCConfig().clog(Level.FINE, "Map " + map.getId() + " picked up. X=" + map.getCenterX() + " Z=" + map.getCenterZ());
+                if(map.getCenterX() == Courier.MAGIC_NUMBER) {
+                    Date date = new Date((long)(map.getCenterZ()) * 1000); // convert back to milliseconds
+                    plugin.getCConfig().clog(Level.FINE, "Map + " + map.getId() + " is a Courier letter!");
+                    plugin.getCConfig().clog(Level.FINE, "Created: " + date.toString());
+
+                    // really checks if we still have an attached renderer and fixes it if not
+                    plugin.getLetter(map);
+
+                    // if also in active hand then render immediately
+               }
+            }
+        }        
+    }
+
+    // onPlayerDropItem for recycling? or something more active? (furnace? :D)
 
     public void onPlayerQuit(PlayerQuitEvent event) {
         plugin.getCConfig().clog(Level.FINE, event.getPlayer().getDisplayName() + " has left the building");
     }
 }
-
-// need this to make sure only the right reciepient can read their letters?
-  /**
- * Called when a player picks an item up off the ground
- *
- * @see org.bukkit.event.player.PlayerPickupItemEvent
- */
-  //      PLAYER_PICKUP_ITEM (Category.PLAYER),

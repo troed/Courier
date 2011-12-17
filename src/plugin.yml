@@ -7,7 +7,14 @@ commands:
     description: Spawns a postman
     permission: courier.postman
     usage: /postman
+  courier:
+    description: Sends a message
+    permission: courier.send
+    usage: /courier playername message
 permissions:
-  postman:
+  courier.send:
+    description: Sends a message
+    default: false
+  courier.postman:
     description: Spawns a postman
     default: op
