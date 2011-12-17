@@ -4,11 +4,12 @@ import java.util.List;
 import java.util.logging.Level;
 
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.entity.CreatureType;
 import org.bukkit.entity.Enderman;
 import org.bukkit.entity.Player;
-import org.bukkit.entity.Sheep;
 import org.bukkit.event.entity.*;
+import org.bukkit.material.MaterialData;
 
 
 public class CourierEntityListener extends EntityListener {
@@ -36,7 +37,9 @@ public class CourierEntityListener extends EntityListener {
                 plugin.getCConfig().clog(Level.FINE, "Postman taking damage");
                 if(!e.getEntity().isDead() && !plugin.getPostman().scheduledForRemoval()) {
                     e.getEntity().getWorld().dropItemNaturally(e.getEntity().getLocation(), plugin.getPostman().getLetter());
+                    ((Enderman)e.getEntity()).setCarriedMaterial(new MaterialData(Material.AIR)); // null is not valid
                     plugin.getPostman().quickDespawn();
+                    plugin.getCConfig().clog(Level.FINE, "Drop and despawn");
                 } // else already removed
                 e.setCancelled(true);
             }
@@ -52,15 +55,25 @@ public class CourierEntityListener extends EntityListener {
             }
         }
     }
+    
+    public void onEndermanPlace(EndermanPlaceEvent e) {
+        if(plugin.getPostman() != null) {
+            if(e.getEntity().getUniqueId() == plugin.getPostman().getUUID()) {
+                plugin.getCConfig().clog(Level.FINE, "Prevented postman maildrop");
+                e.setCancelled(true);
+            }
+        }
+    }
 
+    // currently not used - doesn't detect their teleports
     public void onCreatureSpawn(CreatureSpawnEvent e) {
         if (e.getCreatureType() == CreatureType.ENDERMAN) {
 
-            plugin.getCConfig().clog(Level.FINE, "Enderman spawn");
-            Enderman ender = (Enderman) e.getEntity();
+//            plugin.getCConfig().clog(Level.FINE, "Enderman spawn");
+//            Enderman ender = (Enderman) e.getEntity();
 
             // was this our spawned enderman near our player?
-            List<Player> playerList = ender.getWorld().getPlayers();
+/*            List<Player> playerList = ender.getWorld().getPlayers();
             if(playerList != null) {
                 for(Player p : playerList) {
                     if (p.isOnline()) { // is this needed?
@@ -71,17 +84,11 @@ public class CourierEntityListener extends EntityListener {
                         }
                     }
                 }
-            }
+            }*/
         }
     }
 }
 
-    /**
-     * Called when an Enderman picks a block up
-     *
-     * @see org.bukkit.event.entity.EndermanPickupEvent
-     */
-//    ENDERMAN_PICKUP (Category.LIVING_ENTITY),
     /**
      * Called when an Enderman places a block
      *

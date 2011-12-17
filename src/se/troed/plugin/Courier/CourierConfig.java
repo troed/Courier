@@ -10,11 +10,6 @@ import java.util.logging.Logger;
 
 public class CourierConfig {
 
-    private Integer distance;
-    private Integer maxLove;
-    private Double bigamyChance;
-    private Double loveChance;
-    private DyeColor sheepColor;
     private FileConfiguration config;
     private PluginDescriptionFile pdfFile;
     private Logger log;
@@ -71,33 +66,7 @@ public class CourierConfig {
                 clog(Level.SEVERE, "Config file version too old - unexpected behaviour might occur!");
             }
         }
-        distance = config.getInt("distance");
-        maxLove = config.getInt("maxLove");
-        bigamyChance = config.getDouble("bigamyChance");
-        loveChance = config.getDouble("loveChance");
-        Integer temp = config.getInt("sheepColor");
-        sheepColor = DyeColor.getByData(temp.byteValue());
- //      sheepColor = DyeColor.getByData((Byte)config.getProperty("sheepColor"));
-     }
 
-    public Integer getDistance() {
-        return distance;
-    }
-
-    public Integer getMaxLove() {
-        return maxLove;
-    }
-
-    public Double getBigamyChance() {
-        return bigamyChance;
-    }
-
-    public Double getLoveChance() {
-        return loveChance;
-    }
-
-    public DyeColor getSheepColor() {
-        return sheepColor;
     }
 
     void clog(Level level, String message) {
