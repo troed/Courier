@@ -102,6 +102,7 @@ public class CourierPlayerListener extends PlayerListener {
 
                     // if also in active hand then render immediately
                     // assuming this event fires too early to know though?
+                    // if so we can check if itemheldhand was empty, "knowing" it will appear there
                }
             }
         }        

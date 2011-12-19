@@ -1,9 +1,0 @@
-Note from TieDyeSheep:
-
-Q:Why are you using a scheduler instead of coloring the sheep in the OnCreatureSpawn event?
-
-A:The sheep color is apparently being overwritten between the event and when they appear in the world. See the following links for details.
-
-http://leaky.bukkit.org/issues/606
-
-http://forums.bukkit.org/threads/solved-oncreaturespawn-and-making-colored-sheep.10280/
