@@ -1,8 +1,6 @@
 package se.troed.plugin.Courier;
 
-import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.entity.Player;
 
 import java.io.File;
 import java.io.IOException;
@@ -10,6 +8,9 @@ import java.util.*;
 
 /**
  * Flatfile now, database and/or map storage later
+ * I'm quite sure I could get rid of messageids by using other primitives 
+ * "delivered" and "read" are slightly tricky. Delivered mail sets newmail to false, even when not read!
+ * (and of course delivered=false and read=true is an invalid combination should it arise)
  *
  * receiver1:
  *   newmail: true/false          <-- makes some things faster but others slow
@@ -18,14 +19,17 @@ import java.util.*;
  *     sender:
  *     message:
  *     delivered:
+ *     read:
  *   mapid73:
  *     sender:
  *     message:
  *     delivered:
+ *     read:
  *   mapid65:
  *     sender:
  *     message:
  *     delivered:
+ *     read:
  * receiver2:
  *   ...
  */
@@ -65,13 +69,9 @@ public class CourierDB {
             return false;
         }
 
-        mdb.set(r + "." + String.valueOf(id) + ".sender", s);
-        mdb.set(r + "." + String.valueOf(id) + ".message", m);
-        // new messages can't have been delivered
-        mdb.set(r + "." + String.valueOf(id) + ".delivered", false);
         // since there's at least one new message, set newmail to true
         mdb.set(r + ".newmail", true);
-        
+
         // update messageids
         List<Integer> messageids = mdb.getIntegerList(r + ".messageids");
         if(messageids == null) {
@@ -80,26 +80,52 @@ public class CourierDB {
         }
         messageids.add((int)id); // safe cast
         mdb.set(r + ".messageids", messageids);
-        
+
+        mdb.set(r + "." + String.valueOf(id) + ".sender", s);
+        mdb.set(r + "." + String.valueOf(id) + ".message", m);
+        // new messages can't have been delivered
+        mdb.set(r + "." + String.valueOf(id) + ".delivered", false);
+        // new messages can't have been read
+        mdb.set(r + "." + String.valueOf(id) + ".read", false);
+
         this.save(); // save after each sent message currently
 
         return true;
     }
-    
-    public boolean gotMessage(String r) {
+
+    // figure out letter decay, re-use of mapids etc
+//    public boolean removeMessage(short id, String r) {
+//    }
+
+    public boolean undeliveredMail(String r) {
         if(mdb == null || r == null) {
             return false;
         }
-        if(mdb.contains(r + ".newmail") == false) {
-            return false;
-        }
-        
         return mdb.getBoolean(r + ".newmail");
     }
     
-    // runs through messageids, finds a message not delivered and returns the corresponding id
+    // runs through messageids, finds a message not read and returns the corresponding id
     // returns -1 on failure
     public short unreadMessageId(String r) {
+        if(mdb == null || r == null) {
+            return -1;
+        }
+
+        List<Integer> messageids = mdb.getIntegerList(r + ".messageids");
+        if(messageids != null) {
+            for(Integer id: messageids) {
+                boolean read = mdb.getBoolean(r + "." + String.valueOf(id) + ".read");
+                if(!read) {
+                    return id.shortValue();
+                }
+            }
+        }
+        return -1;
+    }
+
+    // runs through messageids, finds a message not delivered and returns the corresponding id
+    // returns -1 on failure
+    public short undeliveredMessageId(String r) {
         if(mdb == null || r == null) {
             return -1;
         }
@@ -158,15 +184,36 @@ public class CourierDB {
         return mdb.getString(r + "." + String.valueOf(id) + ".message");
     }
 
-    public boolean delivered(String r, short id) {
+    public boolean getDelivered(String r, short id) {
+        if(mdb == null || r == null || id==-1) {
+            return false;
+        }
+        return mdb.getBoolean(r + "." + String.valueOf(id) + ".delivered");
+    }
+    
+    public boolean setDelivered(String r, short id) {
         if(mdb == null || r == null || id==-1) {
             return false;
         }
         mdb.set(r + "." + String.valueOf(id) + ".delivered", true);
-        unreadMessageId(r); // DIRTY way of making sure "newmail" is cleared
+        undeliveredMessageId(r); // DIRTY way of making sure "newmail" is cleared
         return true;
     }
 
+    public boolean getRead(String r, short id) {
+        if(mdb == null || r == null || id==-1) {
+            return false;
+        }
+        return mdb.getBoolean(r + "." + String.valueOf(id) + ".read");
+    }
+
+    public boolean setRead(String r, short id) {
+        if(mdb == null || r == null || id==-1) {
+            return false;
+        }
+        mdb.set(r + "." + String.valueOf(id) + ".read", true);
+        return true;
+    }
     // remove delivered - that means just deleting the entry and removing the messageid from the list?
     // still no list of all mapids ever used atm
 }

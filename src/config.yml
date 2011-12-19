@@ -1,3 +1,11 @@
-# Config file version
-# Used internally to detect non backward compatible breaks
-Courier: 0.0.1
+# Config file version is used internally to detect non backward compatible breaks
+# All times are in seconds, distances in blocks
+Courier:
+  Version: 0.0.1
+  Route:
+    InitialWait: 10
+    NextRoute: 60
+  Postman:
+    QuickDespawn: 3
+    Despawn: 20
+    SpawnDistance: 10

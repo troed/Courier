@@ -5,12 +5,9 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.*;
-import org.bukkit.inventory.ItemStack;
 import org.bukkit.map.MapRenderer;
 import org.bukkit.map.MapView;
-import org.bukkit.material.MaterialData;
 
-import java.util.Date;
 import java.util.List;
 import java.util.logging.Level;
 
@@ -94,6 +91,7 @@ public class CourierCommands /*extends ServerListener*/ implements CommandExecut
 
                     // offPlayer.getPlayer() returns Player or null depending on onlinestatus
                     sender.sendMessage("Courier: Message to " + p.getName() + " sent!");
+                    // todo: figure out max length and show if a cutoff was made
                     StringBuffer message = new StringBuffer();
                     for(int i=1; i<args.length; i++) {
                         message.append(args[i]);
@@ -105,45 +103,33 @@ public class CourierCommands /*extends ServerListener*/ implements CommandExecut
                 ret = true;
             }
         } else if(cmd.equals(Courier.CMD_POSTMAN) && allowed(player, cmd)){
-            if(plugin.getCourierdb().gotMessage(player.getName())) {
-                short unreadMessageId = plugin.getCourierdb().unreadMessageId(player.getName());
-                if(unreadMessageId != -1) {
+            if(plugin.getCourierdb().undeliveredMail(player.getName())) {
+                short undeliveredMessageId = plugin.getCourierdb().undeliveredMessageId(player.getName());
+                if(undeliveredMessageId != -1) {
                     sender.sendMessage("You've got mail!");
 
                     // Is it the FIRST map viewed on server start that gets the wrong id when rendering?
                     // how can that be?
 
-                    plugin.getCConfig().clog(Level.FINE, "MessageId: " + unreadMessageId);
-                    String from = plugin.getCourierdb().getSender(player.getName(), unreadMessageId);
-                    String message = plugin.getCourierdb().getMessage(player.getName(), unreadMessageId);
+                    plugin.getCConfig().clog(Level.FINE, "MessageId: " + undeliveredMessageId);
+                    String from = plugin.getCourierdb().getSender(player.getName(), undeliveredMessageId);
+                    String message = plugin.getCourierdb().getMessage(player.getName(), undeliveredMessageId);
                     plugin.getCConfig().clog(Level.FINE, "Sender: " + from + " Message: " + message);
-                    if(from != null && message != null) {
-                        Letter letter = new Letter(from, player.getName(), message);
-                        MapView map = plugin.getServer().getMap(unreadMessageId);
-                        letter.initialize(map); // does this make a difference at all?
-                        List<MapRenderer> renderers = map.getRenderers();
-                        for(MapRenderer r : renderers) { // remove existing renderers
-                            map.removeRenderer(r);
-                        }
-                        map.addRenderer(letter);
-                        plugin.addLetter(unreadMessageId, letter); // keeps track of which maps has active renderers
-                        ItemStack letterItem = new ItemStack(Material.MAP,1,map.getId());
+//                    MapView map = plugin.getServer().getMap(unreadMessageId);
+                    if(from != null && message != null/* && map != null*/) {
+//                        plugin.getLetter(map);
+//                        ItemStack letterItem = new ItemStack(Material.MAP,1,map.getId());
                         /**
                          * Instantiate Enderman
                          */
-                        Location loc = player.getLocation();
-                        loc.add(1,0,1);
-                        Enderman ender = (Enderman) player.getWorld().spawnCreature(loc, CreatureType.ENDERMAN);
+                        Location spawnLoc = plugin.findSpawnLocation(player);
+                        if(spawnLoc != null) {
+                            Postman postman = new Postman(plugin, player, spawnLoc, undeliveredMessageId);
+                            plugin.addPostman(postman);
+                        }
 
-                        // wtf this became sugarcane - R2 vs R1 issue?
-                        MaterialData material = new MaterialData(Material.PAPER);
-                        ender.setCarriedMaterial(material);
-
-                        Postman postman = new Postman(ender, plugin);
-                        postman.setLetter(letterItem);
-                        plugin.addPostman(postman);
                     } else {
-                        plugin.getCConfig().clog(Level.FINE, "Gotmail but no sender or message found!");
+                        plugin.getCConfig().clog(Level.SEVERE, "Gotmail but no sender or message found! mapId=" + undeliveredMessageId);
                     }
                 } else {
                     plugin.getCConfig().clog(Level.FINE, "Gotmail but no mailid!");

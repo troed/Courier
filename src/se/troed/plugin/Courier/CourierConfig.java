@@ -1,6 +1,5 @@
 package se.troed.plugin.Courier;
 
-import org.bukkit.DyeColor;
 import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.configuration.file.FileConfiguration;
 
@@ -9,15 +8,26 @@ import java.util.logging.Logger;
 
 
 public class CourierConfig {
+    private static final boolean debug = true;
 
     private FileConfiguration config;
     private PluginDescriptionFile pdfFile;
     private Logger log;
-    private static final boolean debug = true;
-
-    private static final String logPrefix = "[Courier] ";
+    
+    private static final String LOGPREFIX = "[Courier] ";
     // any config file _older_ than this is invalid - compatibility break
-    private static final String versionBreak = "0.0.1";
+    private static final String VERSIONBREAK = "0.0.1";
+    private static final String POSTMAN_QUICK_DESPAWN = "Courier.Postman.QuickDespawn";
+    private static final String POSTMAN_DESPAWN = "Courier.Postman.Despawn";
+    private static final String ROUTE_INITIALWAIT = "Courier.Route.InitialWait";
+    private static final String ROUTE_NEXTROUTE = "Courier.Route.NextRoute";
+    private static final String POSTMAN_SPAWNDISTANCE = "Courier.Postman.SpawnDistance";
+
+    private int quickDespawnTime;
+    private int despawnTime;
+    private int initialWait;
+    private int nextRoute;
+    private int spawnDistance;
 
     public CourierConfig(Courier plug) {
 
@@ -27,7 +37,7 @@ public class CourierConfig {
         pdfFile = plug.getDescription();
 
         // verify config compatibility
-        String version = config.getString(pdfFile.getName());
+        String version = config.getString(".Version" + pdfFile.getName());
         if(version!=null) {
             int major = 0;
             int minor = 0;
@@ -47,7 +57,7 @@ public class CourierConfig {
 
             int existingVersion = major*1000000+minor*1000+revision;
 
-            parts = versionBreak.split("\\.");
+            parts = VERSIONBREAK.split("\\.");
             if(parts.length > 0 && parts[0] != null) {
                 major = Integer.decode(parts[0]);
             }
@@ -66,7 +76,36 @@ public class CourierConfig {
                 clog(Level.SEVERE, "Config file version too old - unexpected behaviour might occur!");
             }
         }
+        quickDespawnTime = config.getInt(POSTMAN_QUICK_DESPAWN);
+        clog(Level.FINE, POSTMAN_QUICK_DESPAWN + ": " + quickDespawnTime);
+        despawnTime = config.getInt(POSTMAN_DESPAWN);
+        clog(Level.FINE, POSTMAN_DESPAWN + ": " + despawnTime);
+        initialWait = config.getInt(ROUTE_INITIALWAIT);
+        clog(Level.FINE, ROUTE_INITIALWAIT + ": " + initialWait);
+        nextRoute = config.getInt(ROUTE_NEXTROUTE);
+        clog(Level.FINE, ROUTE_NEXTROUTE + ": " + nextRoute);
+        spawnDistance = config.getInt(POSTMAN_SPAWNDISTANCE);
+        clog(Level.FINE, POSTMAN_SPAWNDISTANCE + ": " + spawnDistance);
+    }
+    
+    public int getQuickDespawnTime() {
+        return quickDespawnTime;
+    }
 
+    public int getDespawnTime() {
+        return despawnTime;
+    }
+
+    public int getInitialWait() {
+        return initialWait;
+    }
+
+    public int getNextRoute() {
+        return nextRoute;
+    }
+
+    public int getSpawnDistance() {
+        return spawnDistance;
     }
 
     void clog(Level level, String message) {
@@ -77,6 +116,6 @@ public class CourierConfig {
         if(level == Level.FINE) {
             level = Level.INFO;
         }
-        log.log(level, logPrefix + message);
+        log.log(level, LOGPREFIX + message);
     }
 }

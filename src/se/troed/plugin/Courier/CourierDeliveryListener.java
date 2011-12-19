@@ -14,8 +14,17 @@ public class CourierDeliveryListener extends CustomEventListener{
 
     public void onCourierDeliveryEvent(CourierDeliveryEvent e) {
         if(e.getPlayer()!=null && e.getMapId()!=-1) {
-            plugin.getCConfig().clog(Level.FINE, "Delivered letter to " + e.getPlayer().getName() + " with id " + e.getMapId());
-            plugin.getCourierdb().delivered(e.getPlayer().getName(), e.getMapId());
+            if(e.getEventName().equals(CourierDeliveryEvent.COURIER_DELIVERED)) {
+                plugin.getCConfig().clog(Level.FINE, "Delivered letter to " + e.getPlayer().getName() + " with id " + e.getMapId());
+                plugin.getCourierdb().setDelivered(e.getPlayer().getName(), e.getMapId());
+            } else if(e.getEventName().equals(CourierDeliveryEvent.COURIER_READ)) {
+                plugin.getCConfig().clog(Level.FINE, e.getPlayer().getName() + " has read the letter with id " + e.getMapId());
+                plugin.getCourierdb().setRead(e.getPlayer().getName(), e.getMapId());
+            } else {
+                // dude, what?
+                plugin.getCConfig().clog(Level.WARNING, "Unknown Courier event " + e.getEventName() + " received!");
+            }
+                
         }
     }
 
