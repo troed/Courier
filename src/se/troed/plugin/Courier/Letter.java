@@ -5,8 +5,6 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.map.*;
 
-import java.util.logging.Level;
-
 /**
  */
 public class Letter extends MapRenderer {
@@ -20,7 +18,8 @@ public class Letter extends MapRenderer {
     private String receiver;
     private String sender;
     private String message;
-    
+    // note, this is JUST to avoid event spamming. Actual read status is saved in CourierDB
+    private boolean read;
     private Letter() {}
     
     public Letter(String s, String r, String m) {
@@ -29,7 +28,12 @@ public class Letter extends MapRenderer {
         receiver = r;
         message = m;
     }
-    
+
+    public Letter(String s, String r, String m, boolean rd) {
+        this(s, r, m);
+        read = rd;
+    }
+
     @Override
     public void render(MapView map, MapCanvas canvas, Player player) {
         if(player.getName().equals(receiver)) {
@@ -37,16 +41,20 @@ public class Letter extends MapRenderer {
             canvas.drawText(0, MinecraftFont.Font.getHeight()*HEADER_POS, MinecraftFont.Font, temp);
             canvas.drawText(0, MinecraftFont.Font.getHeight()*BODY_POS, MinecraftFont.Font, "§"+MapPalette.DARK_GRAY+";"+ format(message));
 
-            // this is the actual time we can be sure a letter has been delivered
+            // todo: add date
+
+            // this is the actual time we can be sure a letter has been read
             // post an event to make sure we don't block the rendering pipeline
-            CourierDeliveryEvent event = new CourierDeliveryEvent("COURIER_DELIVERY", player, map.getId());
-            Bukkit.getServer().getPluginManager().callEvent(event);
+            if(!read) {
+                CourierDeliveryEvent event = new CourierDeliveryEvent(CourierDeliveryEvent.COURIER_READ, player, map.getId());
+                Bukkit.getServer().getPluginManager().callEvent(event);
+                read = true;
+            }
         } else {
-            String temp = "§"+MapPalette.DARK_GRAY+";Sorry, only §"+MapPalette.DARK_GREEN+";" + receiver + "§"+MapPalette.DARK_GRAY+";can read this letter";
+            String temp = "§"+MapPalette.DARK_GRAY+";Sorry, only §"+MapPalette.DARK_GREEN+";" + receiver + "\n§"+MapPalette.DARK_GRAY+";can read this letter";
             canvas.drawText(0, MinecraftFont.Font.getHeight()*HEADER_POS, MinecraftFont.Font, temp);
         }
-//        canvas.drawText(0, MinecraftFont.Font.getHeight()*5, MinecraftFont.Font, String.valueOf(map.getId()));
-        
+
         if(player.getItemInHand().getType() == Material.MAP) {
 //            System.out.println("Courier: User is holding a map");
         }
@@ -54,31 +62,30 @@ public class Letter extends MapRenderer {
 
     // splits and newlines a String to fit MapCanvas width
     // todo: what to do about height? I could scroll the text ... :)
+
     private String format(String s) {
         String[] words = s.split("\\s+");
         StringBuffer buffer = new StringBuffer();
-        int i=0;
-        while(i<words.length) {
+        int i = 0;
+        while(i < words.length) {
             int width = 0;
-            for(int x=0; i<words.length && (x+width) < CANVAS_WIDTH; i++) {
+            int x = 0;
+            while(i < words.length && (x+width) < CANVAS_WIDTH) {
                 // seems to NPE in MapFont.java:52 if we include the color codes ("§12;" etc) - most likely a bug
                 width = MinecraftFont.Font.getWidth(words[i]); // NPE warning!
+                if(width >= CANVAS_WIDTH) {
+// split
+                    i++; // just skip long words for now
+                }
                 if((x+width) < CANVAS_WIDTH) {
                     buffer.append(words[i]);
                     buffer.append(" ");
                     x+=width;
+                    i++;
                 }
             }
             buffer.append("\n");
         }
         return buffer.toString();
-    }
-    
-    public void setReceiver(String r) {
-        receiver = r;
-    }
-    
-    public void setMessage(String m) {
-        message = m;
     }
 }

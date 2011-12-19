@@ -2,6 +2,9 @@ package se.troed.plugin.Courier;
 
 //import org.bukkit.Server;
 
+import org.bukkit.Location;
+import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.Event.Priority;
@@ -12,9 +15,7 @@ import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.logging.Level;
 
 /**
@@ -65,6 +66,14 @@ import java.util.logging.Level;
 
  // if date == "too old", burn the map and remove the item (is it even possible - do we ever get the item?)
  // - maybe in render, we "know" the user is then actively holding the map in her hands
+
+ // todo: 	for (Entity e : location.getWorld().getEntities())
+ // https://vserver.miykeal.com/~svn/ShowCaseStandalone/src/com/miykeal/showCaseStandalone/Shop.java
+ //
+ 
+    How to deal with players who NEVER read their mail. We'll spawn an immense number of postmen
+    and Items over time! Currently we actually do not track delivered, maybe I need both delivered 
+    as well as read?
  */
 public class Courier extends JavaPlugin {
     // these must match plugin.yml
@@ -82,28 +91,35 @@ public class Courier extends JavaPlugin {
     private final CourierDB courierdb = new CourierDB(this);
     private CourierConfig config;
 
-    private Runnable runnable = null;
-    private int taskId = -1;
-    private Postman postman; // temp, to be hashmap
+    private Runnable deliveryThread;
+    private int deliveryId = -1;
+//    private final Map<UUID, Runnable> despawners = new HashMap<UUID, Runnable>();
+//    private int taskId = -1;
+    private final Map<UUID, Postman> postmen = new HashMap<UUID, Postman>();
     private final Map<Integer, Letter> letters = new HashMap<Integer, Letter>();
 
-    // postmen needs to become a hashmap and to have proper appearance and despawning
+    // postmen should never live long, will always despawn
     public void addPostman(Postman p) {
-        // currently setPostman ..
-        postman = p;
+        postmen.put(p.getUUID(), p);
+        schedulePostmanDespawn(p.getUUID(), getCConfig().getDespawnTime());
     }
 
-    public Postman getPostman() {
-        return postman;
+    // returns null if it's not one of ours
+    public Postman getPostman(UUID uuid) {
+        return postmen.get(uuid);
     }
     
     public void addLetter(short id, Letter l) {
         letters.put(new Integer(id),l);
     }
 
+    // finds the Letter associated with a specific Map
     // making this hashmap persistent might save us a lot of list-searching, then only using this
     // as fallback
     public Letter getLetter(MapView map) {
+        if(map == null) { // safety first
+            return null;
+        }
         Letter letter = null;
         if(!letters.containsKey(new Integer(map.getId()))) {
             // server has lost the MapView<->Letter associations, re-populate
@@ -112,13 +128,14 @@ public class Courier extends JavaPlugin {
             if(to != null) {
                 String from = getCourierdb().getSender(to, id);
                 String message = getCourierdb().getMessage(to, id);
-                letter = new Letter(from, to, message);
+                letter = new Letter(from, to, message, getCourierdb().getRead(to, id));
                 letter.initialize(map); // does this make a difference at all?
                 List<MapRenderer> renderers = map.getRenderers();
                 for(MapRenderer r : renderers) { // remove existing renderers
                     map.removeRenderer(r);
                 }
                 map.addRenderer(letter);
+                addLetter(id, letter);
             } else {
                 // we've found an item pointing to a Courier letter that does not exist anylonger
                 // ripe for re-use!
@@ -130,45 +147,143 @@ public class Courier extends JavaPlugin {
         return letter;
     }
 
-    public void scheduleDespawnPostman() {
-        startTask();
-    }
+    /**
+     * Picks a spot suitably in front of the player's eyes and checks to see if there's room 
+     * for a postman (Enderman) to spawn in line-of-sight
+     * 
+     * Currently this can fail badly not checking whether we're on the same Y ..
+     *
+     * Also: Should be extended to check at least a few blocks to the sides and not JUST direct line of sight
+     * seems this can fail and spawn an enderman "half" into the block to the side, thus taking damage
+     * seems to always happen? need to check a 3x3x3 area instead of 1x1x3?
+     *
+     * todo: don't spawn postmen outdoors when it's raining!
+     */
+    Location findSpawnLocation(Player p) {
+        Location sLoc = null;
 
-    private void despawnPostman() {
-        config.clog(Level.FINE, "Removing postman");
-        if(postman != null) {
-            postman.remove();
+        // o,o,o,o,o,o,x 
+        List<Block> blocks = p.getLineOfSight(null, getCConfig().getSpawnDistance());
+        if(blocks != null && !blocks.isEmpty()) {
+            Block block = blocks.get(blocks.size()-1); // get last block
+            getCConfig().clog(Level.FINE, "findSpawnLocation got lineOfSight");
+            if(!block.isEmpty() && blocks.size()>1) {
+                getCConfig().clog(Level.FINE, "findSpawnLocation got non-air last block");
+                block = blocks.get(blocks.size()-2); // this SHOULD be an air block, then
+            }
+            if(block.isEmpty()) {
+                // find bottom
+                getCConfig().clog(Level.FINE, "findSpawnLocation air block");
+                while(block.getRelative(BlockFace.DOWN, 1).isEmpty()) {
+                    getCConfig().clog(Level.FINE, "findSpawnLocation going down ...");
+                    block = block.getRelative(BlockFace.DOWN, 1);
+                }
+                // verify this is something we can stand on and that we fit
+                if(!block.getRelative(BlockFace.DOWN, 1).isLiquid() && block.getRelative(BlockFace.UP, 1).isEmpty() && block.getRelative(BlockFace.UP, 2).isEmpty()) {
+                    getCConfig().clog(Level.FINE, "findSpawnLocation got location!");
+                    sLoc = block.getLocation();
+                }
+            }
         }
-        postman = null;
-        taskId = -1;
+            
+        if(sLoc == null) {
+            getCConfig().clog(Level.FINE, "Didn't find room to spawn Postman");
+            // fail
+        }
+
+        return sLoc;
     }
 
     public CourierDB getCourierdb() {
         return courierdb;
     }
 
-    // ok to be called multiple times
-    private void startTask() {
-        if(taskId >= 0) {
-            config.clog(Level.WARNING, "Task existed");
-            return;
-        }
-        if(runnable == null) {
-            runnable = new Runnable() {
-                    public void run() {
-                        despawnPostman();
-                    }
-                };
-        }
-        config.clog(Level.FINE, "Task start");
-        // in ticks. one tick = 50ms
-        taskId = getServer().getScheduler().scheduleSyncDelayedTask(this, runnable, 60);
-        if(taskId < 0) {
-            config.clog(Level.WARNING, "Task scheduling failed");
-        }
+    private void despawnPostman(UUID uuid) {
+        config.clog(Level.FINE, "Despawning postman " + uuid);
+        Postman postman = postmen.get(uuid);
+        if(postman != null) {
+            postman.remove();
+            postmen.remove(uuid);
+        } // else, shouldn't happen
     }
 
-    private void stopTask() {
+    public void schedulePostmanDespawn(final UUID uuid, int time) {
+        // if there's an existing (long) timeout on a postman and a quick comes in, cancel the first and start the new
+        // I don't know if it's long ... but I could add that info to Postman
+        Runnable runnable = postmen.get(uuid).getRunnable();
+        if(runnable != null) {
+            config.clog(Level.FINE, "Cancel existing despawn on Postman " + uuid);
+            getServer().getScheduler().cancelTask(postmen.get(uuid).getTaskId());    
+        }
+        runnable = new Runnable() {
+            public void run() {
+                despawnPostman(uuid);
+            }
+        };
+        postmen.get(uuid).setRunnable(runnable);
+        // in ticks. one tick = 50ms
+        config.clog(Level.FINE, "Scheduled " + time + " second despawn for Postman " + uuid);
+        int taskId = getServer().getScheduler().scheduleSyncDelayedTask(this, runnable, time*20);
+        if(taskId >= 0) {
+            postmen.get(uuid).setTaskId(taskId);
+        } else {
+            config.clog(Level.WARNING, "Despawning task scheduling failed");
+        }
+    }
+    
+    private void startDeliveryThread() {
+        if(deliveryId >= 0) {
+            config.clog(Level.WARNING, "Multiple calls to startDelivery()!");
+        }
+        if(deliveryThread == null) {
+            deliveryThread = new Runnable() {
+                public void run() {
+                    deliverMail(); 
+                }
+            };
+        }
+        deliveryId = getServer().getScheduler().scheduleSyncRepeatingTask(this, deliveryThread, getCConfig().getInitialWait()*20, getCConfig().getNextRoute()*20);
+        if(deliveryId < 0) {
+            config.clog(Level.WARNING, "Delivery task scheduling failed");
+        }
+    }
+    
+    private void stopDeliveryThread() {
+        if(deliveryId != -1) {
+            getServer().getScheduler().cancelTask(deliveryId);
+            deliveryId = -1;
+        }
+    }
+    
+    private void deliverMail() {
+        // find first online player with undelivered mail
+        // spawn new thread to deliver the mail
+        Player[] players = getServer().getOnlinePlayers();
+        for(int i=0; i<players.length; i++) {
+            // I really need to remember which players have had a postman sent out even if they
+            // haven't read their mail. Time to separate delivered and read ... maybe even picked up as well?
+            // currently picked up count as delivered, maybe that's what it should as well :)
+
+            // hmm I made all these changes and nothing uses read atm. Weird.
+            if(courierdb.undeliveredMail(players[i].getName())) {
+                // is this lookup slow? it saves us in the extreme case new deliveries are scheduled faster than despawns
+                if(!postmen.containsValue(players[i])) {
+                    short undeliveredMessageId = getCourierdb().undeliveredMessageId(players[i].getName());
+                    if(undeliveredMessageId != -1) {
+                        Location spawnLoc = findSpawnLocation(players[i]);
+                        if(spawnLoc != null) {
+                            Postman postman = new Postman(this, players[i], spawnLoc, undeliveredMessageId);
+                            this.addPostman(postman);
+                        }
+                    } else {
+                        config.clog(Level.SEVERE, "undeliveredMail and undeliveredMessageId not in sync: " + undeliveredMessageId);
+                    }
+                }
+            }
+        }
+    }
+           
+/*    private void stopTask() {
         if(taskId < 0) {
             return;
         }
@@ -176,11 +291,19 @@ public class Courier extends JavaPlugin {
         getServer().getScheduler().cancelTask(taskId);
         taskId = -1;
     //        runnable = null;
-    }
+    }*/
 
     public void onDisable() {
-        stopTask();
-        despawnPostman();
+//        stopTask();
+        // stopDeliveryThread();
+        getServer().getScheduler().cancelTasks(this);
+        Iterator iter = postmen.entrySet().iterator();
+        while(iter.hasNext()) {
+            Postman postman = (Postman)((Map.Entry)iter.next()).getValue();
+            if(postman != null) {
+                postman.remove();
+            }
+        }
         courierdb.save();
         config.clog(Level.FINE, this.getDescription().getName() + " is now disabled.");
     }
@@ -208,6 +331,18 @@ public class Courier extends JavaPlugin {
         getCommand(CMD_POSTMAN).setExecutor(courierCommands);
         getCommand(CMD_COURIER).setExecutor(courierCommands);
 
+        // I kind of think I need a few task here
+        // 1: Every now and then, go through online players and check if there's a letter waiting
+        //    for anyone of them. Or: 
+        // 1: OnPlayerJoin, OnPlayerLeavingBed, start task with random(5) waiting time before checking
+        //    their mail. What's the best user experience?
+        //
+        // 2: For each instantiated postman, start a despawn task to fire after a config amount of 
+        //    seconds. 10 as default?
+        // 3: QuickDespawn cancels the task above and adds a new one for config (3) instead.
+
+        startDeliveryThread();
+        
         PluginDescriptionFile pdfFile = this.getDescription();
         config.clog(Level.INFO, pdfFile.getName() + " version v" + pdfFile.getVersion() + " is enabled!");
       }

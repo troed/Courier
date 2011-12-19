@@ -5,6 +5,8 @@ import org.bukkit.event.Cancellable;
 import org.bukkit.event.Event;
 
 public class CourierDeliveryEvent extends Event implements Cancellable {
+    public static final String COURIER_DELIVERED = "COURIER_DELIVERED";
+    public static final String COURIER_READ = "COURIER_READ";
     private boolean cancelled;
     private Player player;
     private short mapId;
