@@ -54,14 +54,10 @@ public class Letter extends MapRenderer {
             String temp = "§"+MapPalette.DARK_GRAY+";Sorry, only §"+MapPalette.DARK_GREEN+";" + receiver + "\n§"+MapPalette.DARK_GRAY+";can read this letter";
             canvas.drawText(0, MinecraftFont.Font.getHeight()*HEADER_POS, MinecraftFont.Font, temp);
         }
-
-        if(player.getItemInHand().getType() == Material.MAP) {
-//            System.out.println("Courier: User is holding a map");
-        }
     }
 
     // splits and newlines a String to fit MapCanvas width
-    // todo: what to do about height? I could scroll the text ... :)
+    // what to do about height? I could scroll the text ... :)
 
     private String format(String s) {
         String[] words = s.split("\\s+");
@@ -74,7 +70,7 @@ public class Letter extends MapRenderer {
                 // seems to NPE in MapFont.java:52 if we include the color codes ("§12;" etc) - most likely a bug
                 width = MinecraftFont.Font.getWidth(words[i]); // NPE warning!
                 if(width >= CANVAS_WIDTH) {
-// split
+// todo: split
                     i++; // just skip long words for now
                 }
                 if((x+width) < CANVAS_WIDTH) {

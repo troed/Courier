@@ -75,7 +75,6 @@ public class CourierDB {
         // update messageids
         List<Integer> messageids = mdb.getIntegerList(r + ".messageids");
         if(messageids == null) {
-            System.out.println("Courier: messageids was null");
             messageids = new ArrayList<Integer>();
         }
         messageids.add((int)id); // safe cast
@@ -157,7 +156,6 @@ public class CourierDB {
         Iterator iter = strings.iterator();
         while(iter.hasNext()) {
             String key = (String)iter.next(); // slightly dangerous cast?
-            System.out.println("Courier getPlayer, key: " + key);
 
             Integer temp = new Integer(id);
             List<Integer> messageids = mdb.getIntegerList(key + ".messageids");

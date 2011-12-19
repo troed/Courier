@@ -73,7 +73,9 @@ import java.util.logging.Level;
  
     How to deal with players who NEVER read their mail. We'll spawn an immense number of postmen
     and Items over time! Currently we actually do not track delivered, maybe I need both delivered 
-    as well as read?
+    as well as read? Done.
+
+ http://www.minecraftwiki.net/wiki/Map_Item_Format
  */
 public class Courier extends JavaPlugin {
     // these must match plugin.yml
@@ -181,7 +183,14 @@ public class Courier extends JavaPlugin {
                 // verify this is something we can stand on and that we fit
                 if(!block.getRelative(BlockFace.DOWN, 1).isLiquid() && block.getRelative(BlockFace.UP, 1).isEmpty() && block.getRelative(BlockFace.UP, 2).isEmpty()) {
                     getCConfig().clog(Level.FINE, "findSpawnLocation got location!");
-                    sLoc = block.getLocation();
+                    Location tLoc = block.getLocation();
+                    // could it be the fractions that gives us a position that looks ok but then spawns the enderman half inside
+                    // a block anyway? Floor it.
+                    // nope, made no difference whatsoever
+
+                    // is there a rule as to the spawn point being "center" and I get "corner"?
+                    // this is a pure guess .. but seems to be correct at least for Z. Check sign for X as well.
+                    sLoc = new Location(tLoc.getWorld(), tLoc.getBlockX()+0.5, tLoc.getBlockY(), tLoc.getBlockZ()+0.5);
                 }
             }
         }

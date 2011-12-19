@@ -29,8 +29,6 @@ public class CourierEntityListener extends EntityListener {
             Postman postman = plugin.getPostman(e.getEntity().getUniqueId());
             if(!e.getEntity().isDead() && !postman.scheduledForQuickRemoval()) {
                 postman.drop();
-//                e.getEntity().getWorld().dropItemNaturally(e.getEntity().getLocation(), postman.getLetter());
-//                ((Enderman)e.getEntity()).setCarriedMaterial(new MaterialData(Material.AIR)); // null is not valid
                 postman.quickDespawn();
                 plugin.getCConfig().clog(Level.FINE, "Drop and despawn");
             } // else already removed
