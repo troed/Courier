@@ -11,6 +11,10 @@ commands:
     description: Sends a message
     permission: courier.send
     usage: /courier playername message
+  post:
+    description: Alias for courier
+    permission: courier.send
+    usage: /post playername message
 permissions:
   courier.send:
     description: Sends a message

@@ -1,13 +1,7 @@
-LoveSheep
+Courier
 
-A trying-to-be-funny plugin by defxor, almost in its entirety based upon TieDyeSheep (see below).
+A player to player messaging system for Bukkit Minecraft servers
 
-***
+Supports online as well as offline players and uses as few commands as possible to achieve an immersive in-game experience
 
-TieDyeSheep
-
-A minecraft plugin using Bukkit. This allows the server administrator to 
-determine the color ratios of sheep when they spawn.
-
-See the following for usage, etc.
-http://forums.bukkit.org/threads/fun-tiedyesheep-determine-what-colors-sheep-are-when-they-spawn-677.12281/
+by defxor

@@ -30,6 +30,8 @@ public class CourierCommands /*extends ServerListener*/ implements CommandExecut
                 a = true;
             } else if(c.equals(Courier.CMD_COURIER) && p.hasPermission(Courier.PM_SEND)) {
                 a = true;
+            } else if(c.equals(Courier.CMD_POST) && p.hasPermission(Courier.PM_SEND)) {
+                a = true;
             }
             plugin.getCConfig().clog(Level.FINE, "Player command event");
         } else {
@@ -42,11 +44,7 @@ public class CourierCommands /*extends ServerListener*/ implements CommandExecut
 
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         boolean ret = false;
-        /**
-         * Minecraftfont isValid(message)
-         * getWidth
-         * or do I need to know max length myself?
-         */
+
         Player player = null;
         if (sender instanceof Player) {
             player = (Player) sender;
@@ -56,7 +54,7 @@ public class CourierCommands /*extends ServerListener*/ implements CommandExecut
         // player can from now on be null!
 
         String cmd = command.getName().toLowerCase();
-        if(cmd.equals(Courier.CMD_COURIER) && allowed(player, cmd)) {
+        if((cmd.equals(Courier.CMD_COURIER) || cmd.equals(Courier.CMD_POST)) && allowed(player, cmd)) {
             // not allowed to be run from the console, uses player
             if(args == null || args.length < 1) {
                 sender.sendMessage("Courier: Error, no recipient for message!");
@@ -92,6 +90,8 @@ public class CourierCommands /*extends ServerListener*/ implements CommandExecut
                     // offPlayer.getPlayer() returns Player or null depending on onlinestatus
                     sender.sendMessage("Courier: Message to " + p.getName() + " sent!");
                     // todo: figure out max length and show if a cutoff was made
+                    // Minecraftfont isValid(message)
+
                     StringBuffer message = new StringBuffer();
                     for(int i=1; i<args.length; i++) {
                         message.append(args[i]);
@@ -109,19 +109,13 @@ public class CourierCommands /*extends ServerListener*/ implements CommandExecut
                     sender.sendMessage("You've got mail!");
 
                     // Is it the FIRST map viewed on server start that gets the wrong id when rendering?
-                    // how can that be?
+                    // how can that be? if it's my code I don't see where ...
 
                     plugin.getCConfig().clog(Level.FINE, "MessageId: " + undeliveredMessageId);
                     String from = plugin.getCourierdb().getSender(player.getName(), undeliveredMessageId);
                     String message = plugin.getCourierdb().getMessage(player.getName(), undeliveredMessageId);
                     plugin.getCConfig().clog(Level.FINE, "Sender: " + from + " Message: " + message);
-//                    MapView map = plugin.getServer().getMap(unreadMessageId);
-                    if(from != null && message != null/* && map != null*/) {
-//                        plugin.getLetter(map);
-//                        ItemStack letterItem = new ItemStack(Material.MAP,1,map.getId());
-                        /**
-                         * Instantiate Enderman
-                         */
+                    if(from != null && message != null) {
                         Location spawnLoc = plugin.findSpawnLocation(player);
                         if(spawnLoc != null) {
                             Postman postman = new Postman(plugin, player, spawnLoc, undeliveredMessageId);
@@ -132,10 +126,8 @@ public class CourierCommands /*extends ServerListener*/ implements CommandExecut
                         plugin.getCConfig().clog(Level.SEVERE, "Gotmail but no sender or message found! mapId=" + undeliveredMessageId);
                     }
                 } else {
-                    plugin.getCConfig().clog(Level.FINE, "Gotmail but no mailid!");
+                    plugin.getCConfig().clog(Level.WARNING, "Gotmail but no mailid!");
                 }
-                // no, but maybe some basic look-at etc?
-                // ender.setTarget(player);
             }
             ret = true;
         }

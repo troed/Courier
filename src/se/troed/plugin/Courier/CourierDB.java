@@ -9,12 +9,12 @@ import java.util.*;
 /**
  * Flatfile now, database and/or map storage later
  * I'm quite sure I could get rid of messageids by using other primitives 
- * "delivered" and "read" are slightly tricky. Delivered mail sets newmail to false, even when not read!
+ * "delivered" and "read" are slightly tricky. Delivered mail sets newmail to false, even when not read.
  * (and of course delivered=false and read=true is an invalid combination should it arise)
  *
  * receiver1:
  *   newmail: true/false          <-- makes some things faster but others slow
- *   messageids: 42,73,65         <-- get/setIntegerList, although it doesn't look this pretty in the yml
+ *   messageids: 42,73,65         <-- get/setIntegerList, although it currently doesn't look this pretty in the yml
  *   mapid42:
  *     sender:
  *     message:
@@ -112,7 +112,7 @@ public class CourierDB {
 
         List<Integer> messageids = mdb.getIntegerList(r + ".messageids");
         if(messageids != null) {
-            for(Integer id: messageids) {
+            for(Integer id : messageids) {
                 boolean read = mdb.getBoolean(r + "." + String.valueOf(id) + ".read");
                 if(!read) {
                     return id.shortValue();
@@ -131,7 +131,7 @@ public class CourierDB {
 
         List<Integer> messageids = mdb.getIntegerList(r + ".messageids");
         if(messageids != null) {
-            for(Integer id: messageids) {
+            for(Integer id : messageids) {
                 boolean delivered = mdb.getBoolean(r + "." + String.valueOf(id) + ".delivered");
                 if(!delivered) {
                     return id.shortValue();
@@ -155,7 +155,7 @@ public class CourierDB {
         Set<String> strings = mdb.getKeys(false);
         Iterator iter = strings.iterator();
         while(iter.hasNext()) {
-            String key = (String)iter.next(); // slightly dangerous cast?
+            String key = (String)iter.next();
 
             Integer temp = new Integer(id);
             List<Integer> messageids = mdb.getIntegerList(key + ".messageids");
@@ -188,7 +188,9 @@ public class CourierDB {
         }
         return mdb.getBoolean(r + "." + String.valueOf(id) + ".delivered");
     }
-    
+
+    // unexpected side effect, we end up here if player1 takes a message intended for player2
+    // exploit or remove logging of it?
     public boolean setDelivered(String r, short id) {
         if(mdb == null || r == null || id==-1) {
             return false;
