@@ -11,7 +11,7 @@ public class Letter extends MapRenderer {
     // while not specified with an API constant it seems map width is hardcoded as 128 pixels
     // "Each map is 128x128 pixels in size" - minecraftwiki
 //    private final int CANVAS_WIDTH = 128; // I don't get the width calc correct .. or is getWidth buggy?
-    private final int CANVAS_WIDTH = 96;
+    private final int CANVAS_WIDTH = 96; // 96 is a temp fix
     private final int CANVAS_HEIGHT = 128;
     private final int HEADER_POS = 2; // 2*getHeight()
     private final int BODY_POS = 4; // 4*getHeight()

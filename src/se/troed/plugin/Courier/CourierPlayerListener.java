@@ -42,12 +42,12 @@ public class CourierPlayerListener extends PlayerListener {
                 plugin.getCConfig().clog(Level.FINE, "Set item in hand");
                 e.getPlayer().setItemInHand(letter); // REALLY replaces what's there
 
-                // really checks if we still have an attached renderer and fixes it if not
+                // checks if we still have an attached renderer and fixes it if not
                 MapView map = plugin.getServer().getMap(letter.getDurability());
                 plugin.getLetter(map);
                 // quick render
                 e.getPlayer().sendMap(map);
-                ((Enderman)ent).setCarriedMaterial(new MaterialData(Material.AIR)); // null is not valid
+                ((Enderman)ent).setCarriedMaterial(new MaterialData(Material.AIR));
 
                 // delivered
                 CourierDeliveryEvent event = new CourierDeliveryEvent(CourierDeliveryEvent.COURIER_DELIVERED, e.getPlayer(), letter.getDurability());
@@ -100,7 +100,7 @@ public class CourierPlayerListener extends PlayerListener {
                     CourierDeliveryEvent event = new CourierDeliveryEvent(CourierDeliveryEvent.COURIER_DELIVERED, e.getPlayer(), map.getId());
                     plugin.getServer().getPluginManager().callEvent(event);
 
-                    // if also in active hand then render immediately
+                    // todo: if also in active hand then render immediately
                     // assuming this event fires too early to know though?
                     // if so we can check if itemheldhand was empty, "knowing" it will appear there
                }

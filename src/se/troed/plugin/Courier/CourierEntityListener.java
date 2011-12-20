@@ -53,7 +53,7 @@ public class CourierEntityListener extends EntityListener {
 
     // currently not used - doesn't detect their teleports
     // todo: will have to fix that with a thread checking distance between enderman and their player and teleport them
-    // back into line-of-sight
+    // back into line-of-sight. or add events to Bukkit.
     public void onCreatureSpawn(CreatureSpawnEvent e) {
         if (e.getCreatureType() == CreatureType.ENDERMAN) {
 
