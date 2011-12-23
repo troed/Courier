@@ -8,7 +8,7 @@ import java.util.logging.Logger;
 
 
 public class CourierConfig {
-    private static final boolean debug = true;
+    private static final boolean debug = false;
 
     private FileConfiguration config;
     private PluginDescriptionFile pdfFile;
