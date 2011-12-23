@@ -58,7 +58,6 @@ import java.util.logging.Level;
  *
  *
  * Known Issues:
- * - Text width fitting can lose words
  * - User does not know how long a message can be
  * -- Additionally console does not accept as long messages as can be viewed with the map item
  * - CRITICAL: Running out of MapIds!
