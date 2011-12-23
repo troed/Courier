@@ -1,7 +1,7 @@
 # Config file version is used internally to detect non backward compatible breaks
 # All times are in seconds, distances in blocks
 Courier:
-  Version: 0.0.1
+  Version: 0.9.0
   Route:
     InitialWait: 10
     NextRoute: 60
