@@ -16,7 +16,7 @@ public class CourierConfig {
     
     private static final String LOGPREFIX = "[Courier] ";
     // any config file _older_ than this is invalid - compatibility break
-    private static final String VERSIONBREAK = "0.0.1";
+    private static final String VERSIONBREAK = "0.9.0";
     private static final String POSTMAN_QUICK_DESPAWN = "Courier.Postman.QuickDespawn";
     private static final String POSTMAN_DESPAWN = "Courier.Postman.Despawn";
     private static final String ROUTE_INITIALWAIT = "Courier.Route.InitialWait";
