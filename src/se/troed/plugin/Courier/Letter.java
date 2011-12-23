@@ -1,15 +1,16 @@
 package se.troed.plugin.Courier;
 
 import org.bukkit.Bukkit;
-import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.map.*;
+
+import java.util.ArrayList;
+import java.util.Collections;
 
 /**
  */
 public class Letter extends MapRenderer {
-    // while not specified with an API constant it seems map width is hardcoded as 128 pixels
-    // "Each map is 128x128 pixels in size" - minecraftwiki
+    // while not specified with an API constant map width is hardcoded as 128 pixels
 //    private final int CANVAS_WIDTH = 128; // I don't get the width calc correct .. or is getWidth buggy?
     private final int CANVAS_WIDTH = 96; // 96 is a temp fix
     private final int CANVAS_HEIGHT = 128;
@@ -26,7 +27,7 @@ public class Letter extends MapRenderer {
         super(true); // all our messages are contextual (i.e different for different players)
         sender = s;
         receiver = r;
-        message = m;
+        message = format(m);
     }
 
     public Letter(String s, String r, String m, boolean rd) {
@@ -39,7 +40,7 @@ public class Letter extends MapRenderer {
         if(player.getName().equals(receiver)) {
             String temp = "§"+MapPalette.DARK_GRAY+";Letter from §"+MapPalette.DARK_GREEN+";" + sender + "§"+MapPalette.DARK_GRAY+";:";
             canvas.drawText(0, MinecraftFont.Font.getHeight()*HEADER_POS, MinecraftFont.Font, temp);
-            canvas.drawText(0, MinecraftFont.Font.getHeight()*BODY_POS, MinecraftFont.Font, "§"+MapPalette.DARK_GRAY+";"+ format(message));
+            canvas.drawText(0, MinecraftFont.Font.getHeight()*BODY_POS, MinecraftFont.Font, "§"+MapPalette.DARK_GRAY+";"+ message);
 
             // todo: add date
 
@@ -60,27 +61,43 @@ public class Letter extends MapRenderer {
     // what to do about height? I could scroll the text ... :)
 
     private String format(String s) {
-        String[] words = s.split("\\s+");
+        String[] splitwords = s.split("\\s+");
+        ArrayList<String> words = new ArrayList<String>();
+        Collections.addAll(words, splitwords);
         StringBuffer buffer = new StringBuffer();
         int i = 0;
-        while(i < words.length) {
+        while(i < words.size()) {
             int width = 0;
             int x = 0;
-            while(i < words.length && (x+width) < CANVAS_WIDTH) {
+            while(i < words.size() && (x+width) <= CANVAS_WIDTH) {
                 // seems to NPE in MapFont.java:52 if we include the color codes ("§12;" etc) - most likely a bug
-                width = MinecraftFont.Font.getWidth(words[i]); // NPE warning!
-                if(width >= CANVAS_WIDTH) {
-// todo: split
-                    i++; // just skip long words for now
+                // doesn't seem to be possible to generate those characters from the in-game console though
+                try {
+                    width = MinecraftFont.Font.getWidth(words.get(i)); // NPE warning!
+                } catch (NullPointerException e) {
+                    i++; // obviously needs skipping
+                    System.out.println("[COURIER]: Severe! Caught NullPointerException in MinecraftFont.Font.getWidth()");
                 }
-                if((x+width) < CANVAS_WIDTH) {
-                    buffer.append(words[i]);
+                if(width > CANVAS_WIDTH) {
+                    // always splits words in half, if they're still too long it wraps around and splits again ..
+                    String orig = words.get(i);
+                    String s1 = orig.substring(0, orig.length() / 2) + "-";
+                    String s2 = orig.substring(s1.length() - 1); // -1 since we added "-" above
+                    words.add(i, s1);
+                    words.set(i+1, s2);
+                    width = MinecraftFont.Font.getWidth(words.get(i)); // NPE warning!
+//                    System.out.println("Split " + orig + " into " + s1 + " and " + s2);
+                }
+                if((x+width) <= CANVAS_WIDTH) {
+                    buffer.append(words.get(i));
                     buffer.append(" ");
                     x+=width;
+//                    System.out.println("Appended " + words.get(i));
                     i++;
                 }
             }
             buffer.append("\n");
+//            System.out.println("newline");
         }
         return buffer.toString();
     }
