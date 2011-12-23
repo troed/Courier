@@ -28,6 +28,14 @@ import java.util.logging.Level;
  * Very online/offline playerlist - else just "player not found" message back
  * - include possibility to list. what to do on servers with a gazillion players?
  *
+ * Currently implemented 1
+ *
+ * 1: Every now and then, go through online players and check if there's a letter waiting
+ *    for anyone of them. And/Or:
+ * 2: OnPlayerJoin, OnPlayerLeavingBed, start task with random(5) waiting time before checking
+ *    their mail. What's the best user experience?
+ *
+ *
  * todo: in open spaces the endermen teleport away INSTANTLY - kind of ruining the whole thing.
  * see: https://bukkit.atlassian.net/browse/BUKKIT-366
  *
@@ -57,10 +65,15 @@ import java.util.logging.Level;
  * - MINOR: Database is only saved when storing new messages. File does not update just because people read mail.
  * - INTERESTING: People who receive (but they still cannot read of course) other's mails are logged as such.
  * -- Remove or do something useful with?
- * - Mail Delivery thread still running with no users logged on. Start at first player join, stop at last player quit.
+ * - Postmen teleport away if out in open areas
+ * -- Please vote for https://bukkit.atlassian.net/browse/BUKKIT-366 :)
+ * - Postmen are spawned outside even if it's raining
  *
  * Suggested future development (not set in stone):
  * - Allow items to be attached to mails
+ * - /courier list [what if someone's named "list"? :) Maybe /post should be the only send-alias
+ * - %loc inside a message will be replaced with [X,Y,Z]
+ * - Take "photos" of what the sender is looking at. (Either just that or as a "background" to a message)
  *
  */
 public class Courier extends JavaPlugin {
@@ -236,12 +249,12 @@ public class Courier extends JavaPlugin {
         }
     }
     
-    private void stopDeliveryThread() {
+/*    private void stopDeliveryThread() {
         if(deliveryId != -1) {
             getServer().getScheduler().cancelTask(deliveryId);
             deliveryId = -1;
         }
-    }
+    }*/
     
     private void deliverMail() {
         // find first online player with undelivered mail
@@ -271,8 +284,12 @@ public class Courier extends JavaPlugin {
         }
     }
 
-    public void onDisable() {
-        // stopDeliveryThread();
+    public void startDeliveries() {
+        startDeliveryThread();
+        config.clog(Level.FINE, "Deliveries have started");
+    }
+    
+    public void pauseDeliveries() {
         getServer().getScheduler().cancelTasks(this);
         Iterator iter = postmen.entrySet().iterator();
         while(iter.hasNext()) {
@@ -282,6 +299,12 @@ public class Courier extends JavaPlugin {
             }
         }
         courierdb.save();
+        deliveryId = -1;
+        config.clog(Level.FINE, "Deliveries are now paused");
+    }
+    
+    public void onDisable() {
+        pauseDeliveries();
         config.clog(Level.FINE, this.getDescription().getName() + " is now disabled.");
     }
 
@@ -298,6 +321,7 @@ public class Courier extends JavaPlugin {
         pm.registerEvent(Event.Type.ENDERMAN_PICKUP, entityListener, Priority.Normal, this);
         pm.registerEvent(Event.Type.ENDERMAN_PLACE, entityListener, Priority.Normal, this);
         pm.registerEvent(Event.Type.PLAYER_QUIT, playerListener, Priority.Normal, this);
+        pm.registerEvent(Event.Type.PLAYER_JOIN, playerListener, Priority.Normal, this);
         pm.registerEvent(Event.Type.PLAYER_INTERACT_ENTITY, playerListener, Priority.Normal, this);
         pm.registerEvent(Event.Type.PLAYER_ITEM_HELD, playerListener, Priority.Normal, this);
         pm.registerEvent(Event.Type.PLAYER_PICKUP_ITEM, playerListener, Priority.Normal, this);
@@ -309,16 +333,6 @@ public class Courier extends JavaPlugin {
         getCommand(CMD_COURIER).setExecutor(courierCommands);
         getCommand(CMD_POST).setExecutor(courierCommands);
 
-        // Currently implemented 1
-        //
-        // 1: Every now and then, go through online players and check if there's a letter waiting
-        //    for anyone of them. And/Or:
-        // 2: OnPlayerJoin, OnPlayerLeavingBed, start task with random(5) waiting time before checking
-        //    their mail. What's the best user experience?
-        //
-
-        startDeliveryThread();
-        
         PluginDescriptionFile pdfFile = this.getDescription();
         config.clog(Level.INFO, pdfFile.getName() + " version v" + pdfFile.getVersion() + " is enabled!");
       }
@@ -326,7 +340,6 @@ public class Courier extends JavaPlugin {
     // in preparation for plugin config dynamic reloading
     public void loadConfig() {
         getConfig().options().copyDefaults(true);
-
         config = new CourierConfig(this);
     }
 
