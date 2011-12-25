@@ -100,9 +100,11 @@ public class CourierPlayerListener extends PlayerListener {
                     CourierDeliveryEvent event = new CourierDeliveryEvent(CourierDeliveryEvent.COURIER_DELIVERED, e.getPlayer(), map.getId());
                     plugin.getServer().getPluginManager().callEvent(event);
 
-                    // todo: if also in active hand then render immediately
-                    // assuming this event fires too early to know though?
-                    // if so we can check if itemheldhand was empty, "knowing" it will appear there
+                    // if itemheldhand was empty, we should render the letter immediately
+                    ItemStack item = e.getPlayer().getItemInHand();
+                    if(item != null && item.getAmount() == 0) {
+                        e.getPlayer().sendMap(map);
+                    }
                }
             }
         }        
