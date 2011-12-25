@@ -6,7 +6,7 @@ import org.bukkit.map.MapView;
 
 import java.util.logging.Level;
 
-public class CourierServerListener extends ServerListener {
+class CourierServerListener extends ServerListener {
     private final Courier plugin;
 
     public CourierServerListener(Courier instance) {

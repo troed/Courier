@@ -11,7 +11,7 @@ import org.bukkit.material.MaterialData;
 import java.util.Date;
 import java.util.logging.Level;
 
-public class CourierPlayerListener extends PlayerListener {
+class CourierPlayerListener extends PlayerListener {
     private final Courier plugin;
 
     public CourierPlayerListener(Courier instance) {

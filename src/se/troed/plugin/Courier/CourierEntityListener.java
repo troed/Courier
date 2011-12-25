@@ -6,7 +6,7 @@ import org.bukkit.entity.CreatureType;
 import org.bukkit.event.entity.*;
 
 
-public class CourierEntityListener extends EntityListener {
+class CourierEntityListener extends EntityListener {
     private final Courier plugin;
 
     public CourierEntityListener(Courier instance) {

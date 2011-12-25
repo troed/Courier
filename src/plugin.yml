@@ -1,6 +1,6 @@
 name: Courier
 main: se.troed.plugin.Courier.Courier
-version: 0.9.0
+version: 0.9.1
 author: defxor
 commands:
   postman:

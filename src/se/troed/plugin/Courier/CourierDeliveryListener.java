@@ -5,14 +5,14 @@ import org.bukkit.event.Event;
 
 import java.util.logging.Level;
 
-public class CourierDeliveryListener extends CustomEventListener{
+class CourierDeliveryListener extends CustomEventListener{
     private final Courier plugin;
 
     public CourierDeliveryListener(Courier instance) {
         plugin = instance;
     }
 
-    public void onCourierDeliveryEvent(CourierDeliveryEvent e) {
+    void onCourierDeliveryEvent(CourierDeliveryEvent e) {
         if(e.getPlayer()!=null && e.getMapId()!=-1) {
             if(e.getEventName().equals(CourierDeliveryEvent.COURIER_DELIVERED)) {
                 plugin.getCConfig().clog(Level.FINE, "Delivered letter to " + e.getPlayer().getName() + " with id " + e.getMapId());

@@ -18,10 +18,10 @@ import org.bukkit.material.MaterialData;
  */
 public class Postman {
 
-    private Enderman enderman;
-    private Courier plugin;
-    private ItemStack letter;
-    private UUID uuid;
+    private final Enderman enderman;
+    private final Courier plugin;
+    private final ItemStack letter;
+    private final UUID uuid;
     private boolean scheduledForQuickRemoval;
     private int taskId;
     private Runnable runnable;
@@ -55,6 +55,7 @@ public class Postman {
         enderman.remove();
     }
 
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     public boolean scheduledForQuickRemoval() {
         return scheduledForQuickRemoval;
     }

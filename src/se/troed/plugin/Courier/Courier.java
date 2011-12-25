@@ -108,8 +108,8 @@ public class Courier extends JavaPlugin {
         return postmen.get(uuid);
     }
     
-    public void addLetter(short id, Letter l) {
-        letters.put(new Integer(id),l);
+    void addLetter(short id, Letter l) {
+        letters.put((int) id,l);
     }
 
     // finds the Letter associated with a specific Map
@@ -120,7 +120,7 @@ public class Courier extends JavaPlugin {
             return null;
         }
         Letter letter = null;
-        if(!letters.containsKey(new Integer(map.getId()))) {
+        if(!letters.containsKey((int) map.getId())) {
             // server has lost the MapView<->Letter associations, re-populate
             short id = map.getId();
             String to = getCourierdb().getPlayer(id);
@@ -141,7 +141,7 @@ public class Courier extends JavaPlugin {
                 getCConfig().clog(Level.FINE, "BAD: " + id + " not found in messages database");
             }
         } else {
-            letter = letters.get(new Integer(map.getId()));
+            letter = letters.get((int) map.getId());
         }
         return letter;
     }
@@ -156,6 +156,7 @@ public class Courier extends JavaPlugin {
      *
      * todo: don't spawn postmen outdoors when it's raining!
      */
+    @SuppressWarnings("JavaDoc")
     Location findSpawnLocation(Player p) {
         Location sLoc = null;
 
@@ -259,26 +260,27 @@ public class Courier extends JavaPlugin {
         // find first online player with undelivered mail
         // spawn new thread to deliver the mail
         Player[] players = getServer().getOnlinePlayers();
-        for(int i=0; i<players.length; i++) {
+        for (Player player : players) {
             // I really need to remember which players have had a postman sent out even if they
             // haven't read their mail. Time to separate delivered and read ... maybe even picked up as well?
             // currently picked up count as delivered, maybe that's what it should as well :)
 
             // hmm I made all these changes and nothing uses read atm. Weird.
-            if(courierdb.undeliveredMail(players[i].getName())) {
-                // is this lookup slow? it saves us in the extreme case new deliveries are scheduled faster than despawns
-                if(!postmen.containsValue(players[i])) {
-                    short undeliveredMessageId = getCourierdb().undeliveredMessageId(players[i].getName());
-                    if(undeliveredMessageId != -1) {
-                        Location spawnLoc = findSpawnLocation(players[i]);
-                        if(spawnLoc != null) {
-                            Postman postman = new Postman(this, players[i], spawnLoc, undeliveredMessageId);
+            if (courierdb.undeliveredMail(player.getName())) {
+// is this lookup slow? it saves us in the extreme case new deliveries are scheduled faster than despawns
+// oh my this was crappy coding. why did I add this, esp. considering it could never have worked?
+//                if (!postmen.containsValue(player)) {
+                    short undeliveredMessageId = getCourierdb().undeliveredMessageId(player.getName());
+                    if (undeliveredMessageId != -1) {
+                        Location spawnLoc = findSpawnLocation(player);
+                        if (spawnLoc != null) {
+                            Postman postman = new Postman(this, player, spawnLoc, undeliveredMessageId);
                             this.addPostman(postman);
                         }
                     } else {
                         config.clog(Level.SEVERE, "undeliveredMail and undeliveredMessageId not in sync: " + undeliveredMessageId);
                     }
-                }
+//                }
             }
         }
     }
@@ -290,10 +292,9 @@ public class Courier extends JavaPlugin {
     
     public void pauseDeliveries() {
         getServer().getScheduler().cancelTasks(this);
-        Iterator iter = postmen.entrySet().iterator();
-        while(iter.hasNext()) {
-            Postman postman = (Postman)((Map.Entry)iter.next()).getValue();
-            if(postman != null) {
+        for (Map.Entry<UUID, Postman> uuidPostmanEntry : postmen.entrySet()) {
+            Postman postman = (Postman) ((Map.Entry) uuidPostmanEntry).getValue();
+            if (postman != null) {
                 postman.remove();
             }
         }
@@ -337,7 +338,7 @@ public class Courier extends JavaPlugin {
       }
 
     // in preparation for plugin config dynamic reloading
-    public void loadConfig() {
+    void loadConfig() {
         getConfig().options().copyDefaults(true);
         config = new CourierConfig(this);
     }

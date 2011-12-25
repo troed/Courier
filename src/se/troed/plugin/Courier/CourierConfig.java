@@ -8,11 +8,9 @@ import java.util.logging.Logger;
 
 
 public class CourierConfig {
-    private static final boolean debug = false;
+    private static final boolean debug = true;
 
-    private FileConfiguration config;
-    private PluginDescriptionFile pdfFile;
-    private Logger log;
+    private final Logger log;
     
     private static final String LOGPREFIX = "[Courier] ";
     // any config file _older_ than this is invalid - compatibility break
@@ -23,18 +21,18 @@ public class CourierConfig {
     private static final String ROUTE_NEXTROUTE = "Courier.Route.NextRoute";
     private static final String POSTMAN_SPAWNDISTANCE = "Courier.Postman.SpawnDistance";
 
-    private int quickDespawnTime;
-    private int despawnTime;
-    private int initialWait;
-    private int nextRoute;
-    private int spawnDistance;
+    private final int quickDespawnTime;
+    private final int despawnTime;
+    private final int initialWait;
+    private final int nextRoute;
+    private final int spawnDistance;
 
     public CourierConfig(Courier plug) {
 
         log = plug.getServer().getLogger();
 
-        config = plug.getConfig();
-        pdfFile = plug.getDescription();
+        FileConfiguration config = plug.getConfig();
+        PluginDescriptionFile pdfFile = plug.getDescription();
 
         // verify config compatibility
         String version = config.getString(".Version" + pdfFile.getName());
@@ -108,6 +106,7 @@ public class CourierConfig {
         return spawnDistance;
     }
 
+    @SuppressWarnings({"PointlessBooleanExpression", "ConstantConditions"})
     void clog(Level level, String message) {
         if(!debug && (level != Level.SEVERE && level != Level.WARNING && level != Level.INFO)) {
             return;

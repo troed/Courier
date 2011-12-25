@@ -15,7 +15,7 @@ import java.util.logging.Level;
  * Naughty: Implementing ServerCommands and onCommand in the same class
  * Nice: Implementing ServerCommands and onCommand in the same class
  */
-public class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
+class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
     private final Courier plugin;
 
     public CourierCommands(Courier instance) {
@@ -92,7 +92,7 @@ public class CourierCommands /*extends ServerListener*/ implements CommandExecut
                     // todo: figure out max length and show if a cutoff was made
                     // Minecraftfont isValid(message)
 
-                    StringBuffer message = new StringBuffer();
+                    StringBuilder message = new StringBuilder();
                     for(int i=1; i<args.length; i++) {
                         message.append(args[i]);
                         message.append(" ");
@@ -103,6 +103,7 @@ public class CourierCommands /*extends ServerListener*/ implements CommandExecut
                 ret = true;
             }
         } else if(cmd.equals(Courier.CMD_POSTMAN) && allowed(player, cmd)){
+            // not allowed to be run from the console, uses player
             if(plugin.getCourierdb().undeliveredMail(player.getName())) {
                 short undeliveredMessageId = plugin.getCourierdb().undeliveredMessageId(player.getName());
                 if(undeliveredMessageId != -1) {

@@ -12,9 +12,13 @@ import java.util.Collections;
 public class Letter extends MapRenderer {
     // while not specified with an API constant map width is hardcoded as 128 pixels
 //    private final int CANVAS_WIDTH = 128; // I don't get the width calc correct .. or is getWidth buggy?
+    @SuppressWarnings("FieldCanBeLocal")
     private final int CANVAS_WIDTH = 96; // 96 is a temp fix
+    @SuppressWarnings("UnusedDeclaration")
     private final int CANVAS_HEIGHT = 128;
+    @SuppressWarnings("FieldCanBeLocal")
     private final int HEADER_POS = 2; // 2*getHeight()
+    @SuppressWarnings("FieldCanBeLocal")
     private final int BODY_POS = 4; // 4*getHeight()
     private String receiver;
     private String sender;
@@ -23,7 +27,7 @@ public class Letter extends MapRenderer {
     private boolean read;
     private Letter() {}
     
-    public Letter(String s, String r, String m) {
+    private Letter(String s, String r, String m) {
         super(true); // all our messages are contextual (i.e different for different players)
         sender = s;
         receiver = r;
@@ -64,7 +68,7 @@ public class Letter extends MapRenderer {
         String[] splitwords = s.split("\\s+");
         ArrayList<String> words = new ArrayList<String>();
         Collections.addAll(words, splitwords);
-        StringBuffer buffer = new StringBuffer();
+        StringBuilder buffer = new StringBuilder();
         int i = 0;
         while(i < words.size()) {
             int width = 0;

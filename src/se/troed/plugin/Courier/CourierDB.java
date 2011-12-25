@@ -35,7 +35,7 @@ import java.util.*;
  */
 public class CourierDB {
     private static final String FILENAME = "messages.yml";
-    private Courier plugin;
+    private final Courier plugin;
     private YamlConfiguration mdb;
     
     public CourierDB(Courier p) {
@@ -97,6 +97,7 @@ public class CourierDB {
 //    }
 
     public boolean undeliveredMail(String r) {
+        //noinspection SimplifiableIfStatement
         if(mdb == null || r == null) {
             return false;
         }
@@ -153,13 +154,9 @@ public class CourierDB {
         }
         
         Set<String> strings = mdb.getKeys(false);
-        Iterator iter = strings.iterator();
-        while(iter.hasNext()) {
-            String key = (String)iter.next();
-
-            Integer temp = new Integer(id);
+        for (String key : strings) {
             List<Integer> messageids = mdb.getIntegerList(key + ".messageids");
-            if(messageids != null && messageids.contains(temp)) {
+            if (messageids != null && messageids.contains((int) id)) {
                 return key;
             }
         }
@@ -183,6 +180,7 @@ public class CourierDB {
     }
 
     public boolean getDelivered(String r, short id) {
+        //noinspection SimplifiableIfStatement
         if(mdb == null || r == null || id==-1) {
             return false;
         }
@@ -201,6 +199,7 @@ public class CourierDB {
     }
 
     public boolean getRead(String r, short id) {
+        //noinspection SimplifiableIfStatement
         if(mdb == null || r == null || id==-1) {
             return false;
         }
