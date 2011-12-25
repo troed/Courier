@@ -35,7 +35,7 @@ public class CourierConfig {
         PluginDescriptionFile pdfFile = plug.getDescription();
 
         // verify config compatibility
-        String version = config.getString(".Version" + pdfFile.getName());
+        String version = config.getString(pdfFile.getName() + ".Version");
         if(version!=null) {
             int major = 0;
             int minor = 0;
@@ -51,7 +51,7 @@ public class CourierConfig {
             if(parts.length > 2 && parts[2] != null) {
                 revision = Integer.decode(parts[2]);
             }
-            clog(Level.FINE, "Decoded version: Major: " + major + " Minor: " + minor + " Revision: " + revision);
+            clog(Level.FINE, "Config version: Major: " + major + " Minor: " + minor + " Revision: " + revision);
 
             int existingVersion = major*1000000+minor*1000+revision;
 
