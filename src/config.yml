@@ -9,3 +9,5 @@ Courier:
     QuickDespawn: 3
     Despawn: 20
     SpawnDistance: 10
+    Greeting: 'Courier: A Postman has arrived with your mail!'
+    MailDrop: 'Courier: Your mail was dropped onto the ground.'

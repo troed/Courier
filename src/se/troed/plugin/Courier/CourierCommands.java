@@ -87,8 +87,8 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                         // we got one exact match
                         // p = players.get(0); // don't, could be embarrassing if wrong
                         sender.sendMessage("Courier: Couldn't find " + args[0] + ". Did you mean " + players.get(0).getName() + "?");
-                    } else if (players != null && players.size() > 1) {
-                        // more than one possible match found
+                    } else if (players != null && players.size() > 1 && player.hasPermission(Courier.PM_LIST)) {
+                      // more than one possible match found
                         StringBuilder suggestList = new StringBuilder();
                         int width = 0;
                         for(Player pl : players) {
@@ -100,6 +100,7 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                                 width = 0;
                             }
                         }
+                        // players listing who's online. If so, that could be a permission also valid for /courier list
                         sender.sendMessage("Courier: Couldn't find " + args[0] + ". Did you mean anyone of these players?");
                         sender.sendMessage("Courier: " + suggestList.toString());
                     } else {
@@ -125,7 +126,14 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
 
                     StringBuilder message = new StringBuilder();
                     for(int i=1; i<args.length; i++) {
-                        message.append(args[i]);
+                        // %loc -> [X,Y,Z] and such
+                        // if this grows, break it out and make it configurable
+                        if(args[i].equalsIgnoreCase("%loc") || args[i].equalsIgnoreCase("%pos")) {
+                            Location loc = player.getLocation();
+                            message.append("[" + loc.getBlockX() + "," + loc.getBlockY() + "," + loc.getBlockZ() + "]");
+                        } else {
+                            message.append(args[i]);
+                        }
                         message.append(" ");
                     }
 
@@ -170,5 +178,3 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
         plugin.getCConfig().clog(Level.FINE, "Server command event");
     }*/
 }
-
-

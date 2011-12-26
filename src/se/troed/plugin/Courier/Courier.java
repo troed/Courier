@@ -82,6 +82,7 @@ public class Courier extends JavaPlugin {
     public static final String CMD_POST = "post";
     public static final String PM_POSTMAN = "courier.postman";
     public static final String PM_SEND = "courier.send";
+    public static final String PM_LIST = "courier.list";
     public static final int MAGIC_NUMBER = Integer.MAX_VALUE - 395743; // used to id our maps
 
     private final CourierEntityListener entityListener = new CourierEntityListener(this);

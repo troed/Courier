@@ -22,3 +22,6 @@ permissions:
   courier.postman:
     description: Spawns a postman
     default: op
+  courier.list:
+    description: Allows players to use lazy name matching (suggestion list if more than one match)
+    default: op

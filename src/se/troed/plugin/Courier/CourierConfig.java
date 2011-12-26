@@ -20,12 +20,16 @@ public class CourierConfig {
     private static final String ROUTE_INITIALWAIT = "Courier.Route.InitialWait";
     private static final String ROUTE_NEXTROUTE = "Courier.Route.NextRoute";
     private static final String POSTMAN_SPAWNDISTANCE = "Courier.Postman.SpawnDistance";
+    private static final String POSTMAN_GREETING = "Courier.Postman.Greeting";
+    private static final String POSTMAN_MAILDROP = "Courier.Postman.MailDrop";
 
     private final int quickDespawnTime;
     private final int despawnTime;
     private final int initialWait;
     private final int nextRoute;
     private final int spawnDistance;
+    private String greeting = null;
+    private String maildrop = null;
 
     public CourierConfig(Courier plug) {
 
@@ -84,6 +88,10 @@ public class CourierConfig {
         clog(Level.FINE, ROUTE_NEXTROUTE + ": " + nextRoute);
         spawnDistance = config.getInt(POSTMAN_SPAWNDISTANCE);
         clog(Level.FINE, POSTMAN_SPAWNDISTANCE + ": " + spawnDistance);
+        greeting = config.getString(POSTMAN_GREETING, ""); // added in 0.9.1
+        clog(Level.FINE, POSTMAN_GREETING + ": " + greeting);
+        maildrop = config.getString(POSTMAN_MAILDROP, ""); // added in 0.9.1
+        clog(Level.FINE, POSTMAN_MAILDROP + ": " + maildrop);
     }
     
     public int getQuickDespawnTime() {
@@ -104,6 +112,14 @@ public class CourierConfig {
 
     public int getSpawnDistance() {
         return spawnDistance;
+    }
+
+    public String getGreeting() {
+        return greeting;
+    }
+
+    public String getMailDrop() {
+        return maildrop;
     }
 
     @SuppressWarnings({"PointlessBooleanExpression", "ConstantConditions"})

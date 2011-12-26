@@ -25,9 +25,11 @@ public class Postman {
     private boolean scheduledForQuickRemoval;
     private int taskId;
     private Runnable runnable;
+    private final Player player;
     
     public Postman(Courier plug, Player p, Location l, short id) {
         plugin = plug;
+        player = p;
         letter = new ItemStack(Material.MAP,1,id);
         enderman = (Enderman) p.getWorld().spawnCreature(l, CreatureType.ENDERMAN);
         // gah, item vs block ...
@@ -36,6 +38,10 @@ public class Postman {
         uuid = enderman.getUniqueId();
         // todo: if in config, play effect
         p.playEffect(l, Effect.BOW_FIRE, 100);
+        String greeting = plug.getCConfig().getGreeting();
+        if(greeting != null && !greeting.isEmpty()) {
+            p.sendMessage(greeting);
+        }
     }
     
     public ItemStack getLetter() {
@@ -45,6 +51,10 @@ public class Postman {
     public void drop() {
         enderman.getWorld().dropItemNaturally(enderman.getLocation(), letter);
         enderman.setCarriedMaterial(new MaterialData(Material.AIR));
+        String maildrop = plugin.getCConfig().getMailDrop();
+        if(maildrop != null && !maildrop.isEmpty()) {
+            player.sendMessage(maildrop);
+        }
     }
 
     public UUID getUUID() {
