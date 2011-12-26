@@ -61,21 +61,53 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
             } else if(args.length < 2) {
                 sender.sendMessage("Courier: Error, message cannot be empty!");
             } else {
-//                todo:     public List<Player> matchPlayer(String name);
-// is this resource heavy by any chance?
                 OfflinePlayer[] offPlayers = plugin.getServer().getOfflinePlayers();
                 OfflinePlayer p = null;
                 for(OfflinePlayer o : offPlayers) {
                     if(o.getName().equalsIgnoreCase(args[0])) {
                        p = o;
+                       plugin.getCConfig().clog(Level.FINE, "Found " + p.getName() + " in OfflinePlayers");
                        break;
                     }
                 }
                 if(p == null) {
-                    // here we could re-run with matchplayer() and ask if anyone of those was the intended
-                    // recipient
-                    sender.sendMessage("Courier: There's no player on this server with the name " + args[0]);
-                } else {
+                    // See https://bukkit.atlassian.net/browse/BUKKIT-404 by GICodeWarrior
+                    // https://github.com/troed/Courier/issues/2
+                    // We could end up here if this is to a player who's on the server for the first time
+                    p = plugin.getServer().getPlayerExact(args[0]);
+                    if(p != null) {
+                        plugin.getCConfig().clog(Level.FINE, "Found " + p.getName() + " in getPlayerExact");
+                    }
+                }
+                if(p == null) {
+                    // still not found, try lazy matching and display suggestions
+                    // (searches online players only)
+                    List<Player> players = plugin.getServer().matchPlayer(args[0]);
+                    if(players != null && players.size() == 1) {
+                        // we got one exact match
+                        // p = players.get(0); // don't, could be embarrassing if wrong
+                        sender.sendMessage("Courier: Couldn't find " + args[0] + ". Did you mean " + players.get(0).getName() + "?");
+                    } else if (players != null && players.size() > 1) {
+                        // more than one possible match found
+                        StringBuilder suggestList = new StringBuilder();
+                        int width = 0;
+                        for(Player pl : players) {
+                            suggestList.append(pl.getName());
+                            suggestList.append(" ");
+                            width += pl.getName().length()+1;
+                            if(width >= 40) { // todo: how many chars can the console show?
+                                suggestList.append("\n");
+                                width = 0;
+                            }
+                        }
+                        sender.sendMessage("Courier: Couldn't find " + args[0] + ". Did you mean anyone of these players?");
+                        sender.sendMessage("Courier: " + suggestList.toString());
+                    } else {
+                        // time to give up
+                        sender.sendMessage("Courier: There's no player on this server with the name " + args[0]);
+                    }
+                }
+                if(p != null) {
                     // Q: Maps are saved in the world-folders, "null" isn't valid as world then?
                     MapView map = plugin.getServer().createMap(player.getWorld());
                     plugin.getCConfig().clog(Level.FINE, "Map ID = " + map.getId());
@@ -87,7 +119,6 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                         map.removeRenderer(r);
                     }
 
-                    // offPlayer.getPlayer() returns Player or null depending on onlinestatus
                     sender.sendMessage("Courier: Message to " + p.getName() + " sent!");
                     // todo: figure out max length and show if a cutoff was made
                     // Minecraftfont isValid(message)
