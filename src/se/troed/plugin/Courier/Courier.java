@@ -71,7 +71,6 @@ import java.util.logging.Level;
  * Suggested future development (not set in stone):
  * - Allow items to be attached to mails
  * - /courier list [what if someone's named "list"? :) Maybe /post should be the only send-alias
- * - %loc inside a message will be replaced with [X,Y,Z]
  * - Take "photos" of what the sender is looking at. (Either just that or as a "background" to a message)
  *
  */
@@ -155,7 +154,6 @@ public class Courier extends JavaPlugin {
      *
      * Also: Should be extended to check at least a few blocks to the sides and not JUST direct line of sight
      *
-     * todo: don't spawn postmen outdoors when it's raining!
      */
     @SuppressWarnings("JavaDoc")
     Location findSpawnLocation(Player p) {
@@ -179,8 +177,8 @@ public class Courier extends JavaPlugin {
                 }
                 // verify this is something we can stand on and that we fit
                 if(!block.getRelative(BlockFace.DOWN, 1).isLiquid() && block.getRelative(BlockFace.UP, 1).isEmpty() && block.getRelative(BlockFace.UP, 2).isEmpty()) {
-                    getCConfig().clog(Level.FINE, "findSpawnLocation got location!");
                     Location tLoc = block.getLocation();
+                    getCConfig().clog(Level.FINE, "findSpawnLocation got location! [" + tLoc.getBlockX() + "," + tLoc.getBlockY() + "," + tLoc.getBlockZ() + "]");
 
                     // make sure we spawn in the middle of the blocks, not at the corner
                     sLoc = new Location(tLoc.getWorld(), tLoc.getBlockX()+0.5, tLoc.getBlockY(), tLoc.getBlockZ()+0.5);
@@ -256,7 +254,12 @@ public class Courier extends JavaPlugin {
             deliveryId = -1;
         }
     }*/
-    
+
+    // todo: don't spawn postmen outdoors when it's raining!
+    // would be cool to still spawn indoors though. how much time should I spend on that
+    // considering the "proper" solution is likely to let them deliver in the rain once I
+    // can stop them from taking damage thus teleport? come to think of it .. why are they taking damage
+    // can't see any event being thrown on "rain hitting enderman", am I missing something here?
     private void deliverMail() {
         // find first online player with undelivered mail
         // spawn new thread to deliver the mail
@@ -274,6 +277,19 @@ public class Courier extends JavaPlugin {
                     short undeliveredMessageId = getCourierdb().undeliveredMessageId(player.getName());
                     if (undeliveredMessageId != -1) {
                         Location spawnLoc = findSpawnLocation(player);
+                        if(spawnLoc != null && player.getWorld().hasStorm()) {
+                            // I think I consider this to be a temporary solution to
+                            // http://dev.bukkit.org/server-mods/courier/tickets/4-postmen-are-spawned-outside-even-if-its-raining/
+                            // Also, do endermen get hurt by snowfall?
+                            //
+                            // hey. so rails on a block cause my findSpawnLocation to choose the block above
+                            // I guess there are additional checks I should add. emptiness?
+                            // and glass blocks _don't_ seem to be included in "getHighest..." which I feel is wrong ("non-air")
+                            config.clog(Level.FINE, "Top sky facing block at Y: " + player.getWorld().getHighestBlockYAt(spawnLoc));
+                            if(player.getWorld().getHighestBlockYAt(spawnLoc) == spawnLoc.getBlockY()) {
+                                spawnLoc = null;
+                            }
+                        }
                         if (spawnLoc != null) {
                             Postman postman = new Postman(this, player, spawnLoc, undeliveredMessageId);
                             this.addPostman(postman);
@@ -311,7 +327,6 @@ public class Courier extends JavaPlugin {
 
     public void onEnable() {
         this.loadConfig();
-        saveConfig();
         courierdb.load();
 
         // Register our events
@@ -336,11 +351,17 @@ public class Courier extends JavaPlugin {
 
         PluginDescriptionFile pdfFile = this.getDescription();
         config.clog(Level.INFO, pdfFile.getName() + " version v" + pdfFile.getVersion() + " is enabled!");
-      }
+
+        if(getServer().getOnlinePlayers().length > 0) {
+            // players already on, we've been reloaded
+            startDeliveries();
+        }
+    }
 
     // in preparation for plugin config dynamic reloading
     void loadConfig() {
         getConfig().options().copyDefaults(true);
+        saveConfig();
         config = new CourierConfig(this);
     }
 
