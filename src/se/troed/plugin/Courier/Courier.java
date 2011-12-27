@@ -284,7 +284,7 @@ public class Courier extends JavaPlugin {
                             //
                             // hey. so rails on a block cause my findSpawnLocation to choose the block above
                             // I guess there are additional checks I should add. emptiness?
-                            // and glass blocks _don't_ seem to be included in "getHighest..." which I feel is wrong ("non-air")
+                            // todo: and glass blocks _don't_ seem to be included in "getHighest..." which I feel is wrong ("non-air")
                             config.clog(Level.FINE, "Top sky facing block at Y: " + player.getWorld().getHighestBlockYAt(spawnLoc));
                             if(player.getWorld().getHighestBlockYAt(spawnLoc) == spawnLoc.getBlockY()) {
                                 spawnLoc = null;

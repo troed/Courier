@@ -1,6 +1,6 @@
 name: Courier
 main: se.troed.plugin.Courier.Courier
-version: 0.9.1
+version: 0.9.2
 author: defxor
 commands:
   postman:
@@ -8,11 +8,11 @@ commands:
     permission: courier.postman
     usage: /postman
   courier:
-    description: Sends a message
+    description: Deprecated
     permission: courier.send
     usage: /courier playername message
   post:
-    description: Alias for courier
+    description: Sends a letter
     permission: courier.send
     usage: /post playername message
 permissions:
