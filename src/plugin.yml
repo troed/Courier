@@ -1,7 +1,8 @@
 name: Courier
 main: se.troed.plugin.Courier.Courier
-version: 0.9.2
+version: 0.9.5
 author: defxor
+softdepend: [Vault]
 commands:
   postman:
     description: Spawns a postman

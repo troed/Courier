@@ -1,7 +1,8 @@
 # Config file version is used internally to detect non backward compatible breaks
 # All times are in seconds, distances in blocks
 Courier:
-  Version: 0.9.1
+  UseFees: true
+  Version: 0.9.5
   Route:
     InitialWait: 10
     NextRoute: 60
@@ -11,3 +12,5 @@ Courier:
     SpawnDistance: 10
     Greeting: 'Courier: A Postman has arrived with your mail!'
     MailDrop: 'Courier: Your mail was dropped onto the ground.'
+  Fee:
+    Send: 10

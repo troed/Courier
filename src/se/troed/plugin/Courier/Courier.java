@@ -1,5 +1,7 @@
 package se.troed.plugin.Courier;
 
+import net.milkbowl.vault.Vault;
+import net.milkbowl.vault.economy.Economy;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
@@ -8,8 +10,10 @@ import org.bukkit.event.Event;
 import org.bukkit.event.Event.Priority;
 import org.bukkit.map.MapRenderer;
 import org.bukkit.map.MapView;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.plugin.PluginManager;
+import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.*;
@@ -84,6 +88,9 @@ public class Courier extends JavaPlugin {
     public static final String PM_LIST = "courier.list";
     public static final int MAGIC_NUMBER = Integer.MAX_VALUE - 395743; // used to id our maps
 
+    private static Vault vault = null;
+    private static Economy economy = null;
+    
     private final CourierEntityListener entityListener = new CourierEntityListener(this);
     private final CourierPlayerListener playerListener = new CourierPlayerListener(this);
     private final CourierServerListener serverListener = new CourierServerListener(this);
@@ -144,6 +151,10 @@ public class Courier extends JavaPlugin {
             letter = letters.get((int) map.getId());
         }
         return letter;
+    }
+    
+    public Economy getEconomy() {
+        return economy;
     }
 
     /**
@@ -255,11 +266,6 @@ public class Courier extends JavaPlugin {
         }
     }*/
 
-    // todo: don't spawn postmen outdoors when it's raining!
-    // would be cool to still spawn indoors though. how much time should I spend on that
-    // considering the "proper" solution is likely to let them deliver in the rain once I
-    // can stop them from taking damage thus teleport? come to think of it .. why are they taking damage
-    // can't see any event being thrown on "rain hitting enderman", am I missing something here?
     private void deliverMail() {
         // find first online player with undelivered mail
         // spawn new thread to deliver the mail
@@ -280,7 +286,7 @@ public class Courier extends JavaPlugin {
                         if(spawnLoc != null && player.getWorld().hasStorm()) {
                             // I think I consider this to be a temporary solution to
                             // http://dev.bukkit.org/server-mods/courier/tickets/4-postmen-are-spawned-outside-even-if-its-raining/
-                            // Also, do endermen get hurt by snowfall?
+                            // Also, do endermen get hurt by snowfall? (and damage events for endermen in rain are lacking in Bukkit, right?)
                             //
                             // hey. so rails on a block cause my findSpawnLocation to choose the block above
                             // I guess there are additional checks I should add. emptiness?
@@ -322,7 +328,7 @@ public class Courier extends JavaPlugin {
     
     public void onDisable() {
         pauseDeliveries();
-        config.clog(Level.FINE, this.getDescription().getName() + " is now disabled.");
+        config.clog(Level.INFO, this.getDescription().getName() + " is now disabled.");
     }
 
     public void onEnable() {
@@ -349,12 +355,34 @@ public class Courier extends JavaPlugin {
         getCommand(CMD_COURIER).setExecutor(courierCommands);
         getCommand(CMD_POST).setExecutor(courierCommands);
 
-        PluginDescriptionFile pdfFile = this.getDescription();
-        config.clog(Level.INFO, pdfFile.getName() + " version v" + pdfFile.getVersion() + " is enabled!");
-
         if(getServer().getOnlinePlayers().length > 0) {
             // players already on, we've been reloaded
             startDeliveries();
+        }
+
+        // if config says we should use economy, require vault + economy support
+        if(config.getUseFees()) {
+            Plugin x = getServer().getPluginManager().getPlugin("Vault");
+            if(x != null && x instanceof Vault) {
+                vault = (Vault) x;
+            }
+        } 
+        if(vault != null) {
+            if(setupEconomy()) {
+                config.clog(Level.INFO, "Courier has linked to " + economy.getName() + " through Vault");
+            } else {
+                config.clog(Level.SEVERE, "Courier could not find an Economy plugin installed!");
+                setEnabled(false); // verify if this is the right way of doing it
+            }
+        } else {
+            config.clog(Level.SEVERE, "Courier relies on Vault for economy support and Vault isn't installed!");
+            config.clog(Level.INFO, "See http://dev.bukkit.org/server-mods/vault/");
+            setEnabled(false); // verify if this is the right way of doing it
+        }
+
+        if(this.isEnabled()) {
+            PluginDescriptionFile pdfFile = this.getDescription();
+            config.clog(Level.INFO, pdfFile.getName() + " version v" + pdfFile.getVersion() + " is enabled!");
         }
     }
 
@@ -369,4 +397,12 @@ public class Courier extends JavaPlugin {
         return config;
     }
 
+    private Boolean setupEconomy() {
+        RegisteredServiceProvider<Economy> economyProvider = getServer().getServicesManager().getRegistration(net.milkbowl.vault.economy.Economy.class);
+        if (economyProvider != null) {
+            economy = economyProvider.getProvider();
+        }
+
+        return (economy != null);
+    }
 }

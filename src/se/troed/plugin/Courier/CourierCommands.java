@@ -1,5 +1,6 @@
 package se.troed.plugin.Courier;
 
+import net.milkbowl.vault.economy.EconomyResponse;
 import org.bukkit.*;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -56,7 +57,10 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
         String cmd = command.getName().toLowerCase();
         if((cmd.equals(Courier.CMD_COURIER) || cmd.equals(Courier.CMD_POST)) && allowed(player, cmd)) {
             // not allowed to be run from the console, uses player
-            if(args == null || args.length < 1) {
+            if(plugin.getEconomy() != null && plugin.getEconomy().getBalance(player.getName()) < plugin.getCConfig().getFeeSend()) {
+                sender.sendMessage("Courier: Sorry, you don't have enough credit to cover postage (" + plugin.getEconomy().format(plugin.getCConfig().getFeeSend())+ ")");
+                ret = true;
+            } else if(args == null || args.length < 1) {
                 sender.sendMessage("Courier: Error, no recipient for message!");
             } else if(args.length < 2) {
                 sender.sendMessage("Courier: Error, message cannot be empty!");
@@ -120,7 +124,19 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                         map.removeRenderer(r);
                     }
 
-                    sender.sendMessage("Courier: Message to " + p.getName() + " sent!");
+                    if(plugin.getEconomy() != null) {
+                        // withdraw postage fee
+                        double fee = plugin.getCConfig().getFeeSend();
+                        EconomyResponse er = plugin.getEconomy().withdrawPlayer(player.getName(), fee);
+                        if(er.transactionSuccess()) {
+                            sender.sendMessage("Courier: Message to " + p.getName() + " sent! Postage fee of " + plugin.getEconomy().format(fee)+ " paid");
+                        } else {
+                            plugin.getCConfig().clog(Level.WARNING, "Could not withdraw postage fee from " + p.getName());
+                        }
+                    } else {
+                        sender.sendMessage("Courier: Message to " + p.getName() + " sent!");
+                    }
+
                     // todo: figure out max length and show if a cutoff was made
                     // Minecraftfont isValid(message)
 
