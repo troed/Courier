@@ -23,6 +23,7 @@ public class CourierConfig {
     private static final String POSTMAN_SPAWNDISTANCE = "Courier.Postman.SpawnDistance";
     private static final String POSTMAN_GREETING = "Courier.Postman.Greeting";
     private static final String POSTMAN_MAILDROP = "Courier.Postman.MailDrop";
+    private static final String POSTMAN_INVENTORY = "Courier.Postman.Inventory";
     private static final String FEE_SEND = "Courier.Fee.Send";
 
     private final boolean useFees;
@@ -33,6 +34,7 @@ public class CourierConfig {
     private final int spawnDistance;
     private String greeting = null;
     private String maildrop = null;
+    private String inventory = null;
     private final double feeSend;
 
     public CourierConfig(Courier plug) {
@@ -99,6 +101,8 @@ public class CourierConfig {
         clog(Level.FINE, POSTMAN_GREETING + ": " + greeting);
         maildrop = config.getString(POSTMAN_MAILDROP, ""); // added in 0.9.1
         clog(Level.FINE, POSTMAN_MAILDROP + ": " + maildrop);
+        inventory = config.getString(POSTMAN_INVENTORY, ""); // added in 0.9.5
+        clog(Level.FINE, POSTMAN_INVENTORY + ": " + inventory);
         feeSend = config.getDouble(FEE_SEND, 0); // added in 0.9.5
         clog(Level.FINE, FEE_SEND + ": " + feeSend);
     }
@@ -133,6 +137,10 @@ public class CourierConfig {
 
     public String getMailDrop() {
         return maildrop;
+    }
+
+    public String getInventory() {
+        return inventory;
     }
 
     public Double getFeeSend() {

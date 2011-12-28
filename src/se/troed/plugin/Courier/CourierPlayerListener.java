@@ -9,6 +9,7 @@ import org.bukkit.entity.Entity;
 import org.bukkit.material.MaterialData;
 
 import java.util.Date;
+import java.util.HashMap;
 import java.util.logging.Level;
 
 class CourierPlayerListener extends PlayerListener {
@@ -24,22 +25,27 @@ class CourierPlayerListener extends PlayerListener {
             plugin.getCConfig().clog(Level.FINE, e.getPlayer().getDisplayName() + " receiving mail");
             ItemStack letter = plugin.getPostman(ent.getUniqueId()).getLetter();
 
-            boolean replace = false;
             ItemStack item = e.getPlayer().getItemInHand();
             if(item != null && item.getAmount() > 0) {
-                plugin.getCConfig().clog(Level.FINE, "Player held item in hand");
-//                int slot = e.getPlayer().getInventory().getHeldItemSlot();
-// todo: fix whatever went wrong here, or disallow right-clicking altogether
-//                    HashMap<Integer, ItemStack> items = e.getPlayer().getInventory().addItem(item.clone());
-//                    if(items.isEmpty()) {
-//                    plugin.getCConfig().clog(Level.FINE, "Held item added to inventory");
-//                    replace = true;
-//                    } // else add didn't work, we'll drop and the clone will disappear again. Right?
+                plugin.getCConfig().clog(Level.FINE, "Player hands not empty");
+                HashMap<Integer, ItemStack> items = e.getPlayer().getInventory().addItem(letter);
+                if(items.isEmpty()) {
+                    plugin.getCConfig().clog(Level.FINE, "Letter added to inventory");
+
+                    String inventory = plugin.getCConfig().getInventory();
+                    if(inventory != null && !inventory.isEmpty()) {
+                        e.getPlayer().sendMessage(inventory);
+                    }
+                    // delivered
+                    CourierDeliveryEvent event = new CourierDeliveryEvent(CourierDeliveryEvent.COURIER_DELIVERED, e.getPlayer(), letter.getDurability());
+                    plugin.getServer().getPluginManager().callEvent(event);
+                } else {
+                    plugin.getCConfig().clog(Level.FINE, "Inventory full, letter dropped");
+                    plugin.getPostman(ent.getUniqueId()).drop();
+                    // delivered on pickup
+                }
             } else {
-                replace = true;
-            }
-            if(replace) {
-                plugin.getCConfig().clog(Level.FINE, "Set item in hand");
+                plugin.getCConfig().clog(Level.FINE, "Letter delivered into player's hands");
                 e.getPlayer().setItemInHand(letter); // REALLY replaces what's there
 
                 // checks if we still have an attached renderer and fixes it if not
@@ -52,8 +58,6 @@ class CourierPlayerListener extends PlayerListener {
                 // delivered
                 CourierDeliveryEvent event = new CourierDeliveryEvent(CourierDeliveryEvent.COURIER_DELIVERED, e.getPlayer(), letter.getDurability());
                 plugin.getServer().getPluginManager().callEvent(event);
-            } else {
-                plugin.getPostman(ent.getUniqueId()).drop();
             }
 
             plugin.getPostman(ent.getUniqueId()).quickDespawn();
@@ -65,7 +69,7 @@ class CourierPlayerListener extends PlayerListener {
             // durability = the map id
             MapView map = plugin.getServer().getMap(e.getPlayer().getInventory().getItem(e.getNewSlot()).getDurability());
             if(map != null) {
-                plugin.getCConfig().clog(Level.FINE, "Map " + map.getId() + " held. X=" + map.getCenterX() + " Z=" + map.getCenterZ());
+//                plugin.getCConfig().clog(Level.FINE, "Map " + map.getId() + " held. X=" + map.getCenterX() + " Z=" + map.getCenterZ());
                 if(map.getCenterX() == Courier.MAGIC_NUMBER) {
                     Date date = new Date((long)(map.getCenterZ()) * 1000); // convert back to milliseconds
                     plugin.getCConfig().clog(Level.FINE, "Map " + map.getId() + " is a Courier letter!");
@@ -73,8 +77,6 @@ class CourierPlayerListener extends PlayerListener {
 
                     // really checks if we still have an attached renderer and fixes it if not
                     plugin.getLetter(map);
-
-                    // fixing stuffs and immediate rendering?
                     e.getPlayer().sendMap(map);
                 }
             } else { // not needed?

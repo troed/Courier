@@ -12,5 +12,6 @@ Courier:
     SpawnDistance: 10
     Greeting: 'Courier: A Postman has arrived with your mail!'
     MailDrop: 'Courier: Your mail was dropped onto the ground.'
+    Inventory: 'Courier: You had your hands full, the Postman put the mail in your inventory for you.'
   Fee:
     Send: 10
