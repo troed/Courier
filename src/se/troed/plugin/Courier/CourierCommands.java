@@ -12,6 +12,8 @@ import org.bukkit.map.MapView;
 import java.util.List;
 import java.util.logging.Level;
 
+import org.bukkit.ChatColor.*;
+
 /**
  * Naughty: Implementing ServerCommands and onCommand in the same class
  * Nice: Implementing ServerCommands and onCommand in the same class
@@ -24,12 +26,14 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
     }
     
     // Player is null for console
+    // This method didn't turn out that well. Should send a message to sender, when console,
+    // about why the command fails when we need a player object
     private boolean allowed(Player p, String c) {
         boolean a = false;
         if (p != null) {
             if(c.equals(Courier.CMD_POSTMAN) && p.hasPermission(Courier.PM_POSTMAN)) {
                 a = true;
-            } else if(c.equals(Courier.CMD_COURIER) && p.hasPermission(Courier.PM_SEND)) {
+            } else if(c.equals(Courier.CMD_COURIER) && p.hasPermission(Courier.PM_INFO)) {
                 a = true;
             } else if(c.equals(Courier.CMD_POST) && p.hasPermission(Courier.PM_SEND)) {
                 a = true;
@@ -37,6 +41,9 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
             plugin.getCConfig().clog(Level.FINE, "Player command event");
         } else {
             // console operator is op, no player and no location
+            if(c.equals(Courier.CMD_COURIER)) {
+                a = true;
+            }
             plugin.getCConfig().clog(Level.FINE, "Server command event");
         }
         plugin.getCConfig().clog(Level.FINE, "Permission: " + a);
@@ -55,7 +62,24 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
         // player can from now on be null!
 
         String cmd = command.getName().toLowerCase();
-        if((cmd.equals(Courier.CMD_COURIER) || cmd.equals(Courier.CMD_POST)) && allowed(player, cmd)) {
+        if(cmd.equals(Courier.CMD_COURIER) && allowed(player, cmd)) {
+            // can be run from console, does not use player
+            // courier fees = fee info
+            // else general help
+            if (args != null && args.length > 0 && args[0].equalsIgnoreCase("fees")) {
+                if(plugin.getEconomy() != null) {
+                    double fee = plugin.getCConfig().getFeeSend();
+                    sender.sendMessage("Courier: The postage is " + plugin.getEconomy().format(fee));
+                } else {
+                    sender.sendMessage("Courier: There's no cost for sending mail on this server");
+                }
+            // todo: implement /courier list
+            } else {
+                sender.sendMessage(ChatColor.WHITE + "/courier fees " + ChatColor.GRAY + ": Lists cost, if any, for sending a mail");
+                sender.sendMessage(ChatColor.WHITE + "/post playername message " + ChatColor.GRAY + ": Posts a mail to playername");
+            }
+            ret = true;
+        } else if((cmd.equals(Courier.CMD_POST)) && allowed(player, cmd)) {
             // not allowed to be run from the console, uses player
             if(plugin.getEconomy() != null && plugin.getEconomy().getBalance(player.getName()) < plugin.getCConfig().getFeeSend()) {
                 sender.sendMessage("Courier: Sorry, you don't have enough credit to cover postage (" + plugin.getEconomy().format(plugin.getCConfig().getFeeSend())+ ")");
@@ -74,7 +98,7 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                        break;
                     }
                 }
-                if(p == null) {
+                if(p == null) { // todo: remove this section for 1.0.1-R2
                     // See https://bukkit.atlassian.net/browse/BUKKIT-404 by GICodeWarrior
                     // https://github.com/troed/Courier/issues/2
                     // We could end up here if this is to a player who's on the server for the first time
@@ -131,6 +155,7 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                         if(er.transactionSuccess()) {
                             sender.sendMessage("Courier: Message to " + p.getName() + " sent! Postage fee of " + plugin.getEconomy().format(fee)+ " paid");
                         } else {
+                            // todo: if this happens we still send the mail, but without visible confirmation.
                             plugin.getCConfig().clog(Level.WARNING, "Could not withdraw postage fee from " + p.getName());
                         }
                     } else {

@@ -33,7 +33,7 @@ public class Letter extends MapRenderer {
         sender = s;
         receiver = r;
         message = format(m);
-        if(s.length() < 13) { // a nice version would do an actual check vs width, but [see issue with width]
+        if(s != null && s.length() < 13) { // a nice version would do an actual check vs width, but [see issue with width]
             header = "§"+MapPalette.DARK_GRAY+";Letter from §"+MapPalette.DARK_GREEN+";" + sender + "§"+MapPalette.DARK_GRAY+";:";
         } else {
             header = "§"+MapPalette.DARK_GRAY+";From §"+MapPalette.DARK_GREEN+";" + sender + "§"+MapPalette.DARK_GRAY+";:";
