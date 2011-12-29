@@ -23,6 +23,7 @@ public class Letter extends MapRenderer {
     private String receiver;
     private String sender;
     private String message;
+    private String header;
     // note, this is JUST to avoid event spamming. Actual read status is saved in CourierDB
     private boolean read;
     private Letter() {}
@@ -32,6 +33,11 @@ public class Letter extends MapRenderer {
         sender = s;
         receiver = r;
         message = format(m);
+        if(s.length() < 13) { // a nice version would do an actual check vs width, but [see issue with width]
+            header = "§"+MapPalette.DARK_GRAY+";Letter from §"+MapPalette.DARK_GREEN+";" + sender + "§"+MapPalette.DARK_GRAY+";:";
+        } else {
+            header = "§"+MapPalette.DARK_GRAY+";From §"+MapPalette.DARK_GREEN+";" + sender + "§"+MapPalette.DARK_GRAY+";:";
+        }
     }
 
     public Letter(String s, String r, String m, boolean rd) {
@@ -42,8 +48,7 @@ public class Letter extends MapRenderer {
     @Override
     public void render(MapView map, MapCanvas canvas, Player player) {
         if(player.getName().equals(receiver)) {
-            String temp = "§"+MapPalette.DARK_GRAY+";Letter from §"+MapPalette.DARK_GREEN+";" + sender + "§"+MapPalette.DARK_GRAY+";:";
-            canvas.drawText(0, MinecraftFont.Font.getHeight()*HEADER_POS, MinecraftFont.Font, temp);
+            canvas.drawText(0, MinecraftFont.Font.getHeight()*HEADER_POS, MinecraftFont.Font, header);
             canvas.drawText(0, MinecraftFont.Font.getHeight()*BODY_POS, MinecraftFont.Font, "§"+MapPalette.DARK_GRAY+";"+ message);
 
             // todo: add date
