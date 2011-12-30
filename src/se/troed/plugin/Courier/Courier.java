@@ -339,17 +339,17 @@ public class Courier extends JavaPlugin {
 
         // Register our events
         PluginManager pm = getServer().getPluginManager();
-        pm.registerEvent(Event.Type.CREATURE_SPAWN, entityListener, Priority.Normal, this);
-        pm.registerEvent(Event.Type.ENTITY_TARGET, entityListener, Priority.Normal, this);
-        pm.registerEvent(Event.Type.ENTITY_DAMAGE, entityListener, Priority.Normal, this);
-        pm.registerEvent(Event.Type.ENDERMAN_PICKUP, entityListener, Priority.Normal, this);
-        pm.registerEvent(Event.Type.ENDERMAN_PLACE, entityListener, Priority.Normal, this);
-        pm.registerEvent(Event.Type.PLAYER_QUIT, playerListener, Priority.Normal, this);
-        pm.registerEvent(Event.Type.PLAYER_JOIN, playerListener, Priority.Normal, this);
-        pm.registerEvent(Event.Type.PLAYER_INTERACT_ENTITY, playerListener, Priority.Normal, this);
-        pm.registerEvent(Event.Type.PLAYER_ITEM_HELD, playerListener, Priority.Normal, this);
-        pm.registerEvent(Event.Type.PLAYER_PICKUP_ITEM, playerListener, Priority.Normal, this);
-        pm.registerEvent(Event.Type.MAP_INITIALIZE, serverListener, Priority.Normal, this);
+        // I register as High on some events since I know I only modify for Endermen I've spawned
+        pm.registerEvent(Event.Type.ENTITY_TARGET, entityListener, Priority.High, this);
+        pm.registerEvent(Event.Type.ENTITY_DAMAGE, entityListener, Priority.High, this);
+        pm.registerEvent(Event.Type.ENDERMAN_PICKUP, entityListener, Priority.High, this);
+        pm.registerEvent(Event.Type.ENDERMAN_PLACE, entityListener, Priority.High, this);
+        pm.registerEvent(Event.Type.PLAYER_QUIT, playerListener, Priority.Monitor, this);
+        pm.registerEvent(Event.Type.PLAYER_JOIN, playerListener, Priority.Monitor, this);
+        pm.registerEvent(Event.Type.PLAYER_INTERACT_ENTITY, playerListener, Priority.Monitor, this);
+        pm.registerEvent(Event.Type.PLAYER_ITEM_HELD, playerListener, Priority.Monitor, this);
+        pm.registerEvent(Event.Type.PLAYER_PICKUP_ITEM, playerListener, Priority.Monitor, this);
+//        pm.registerEvent(Event.Type.MAP_INITIALIZE, serverListener, Priority.Normal, this);
 //        pm.registerEvent(Event.Type.SERVER_COMMAND, courierCommands, Priority.Normal, this);
         pm.registerEvent(Event.Type.CUSTOM_EVENT, deliveryListener, Priority.Normal, this);
 

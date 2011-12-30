@@ -21,7 +21,7 @@ class CourierPlayerListener extends PlayerListener {
 
     public void onPlayerInteractEntity(PlayerInteractEntityEvent e) {
         Entity ent = e.getRightClicked();
-        if(plugin.getPostman(ent.getUniqueId()) != null) {
+        if(!e.isCancelled() && plugin.getPostman(ent.getUniqueId()) != null) {
             plugin.getCConfig().clog(Level.FINE, e.getPlayer().getDisplayName() + " receiving mail");
             ItemStack letter = plugin.getPostman(ent.getUniqueId()).getLetter();
 
@@ -86,7 +86,7 @@ class CourierPlayerListener extends PlayerListener {
     }
     
     public void onPlayerPickupItem(PlayerPickupItemEvent e) {
-        if(e.getItem().getItemStack().getType() == Material.MAP) {
+        if(!e.isCancelled() && e.getItem().getItemStack().getType() == Material.MAP) {
             MapView map = plugin.getServer().getMap(e.getItem().getItemStack().getDurability());
             if(map != null) {
                 plugin.getCConfig().clog(Level.FINE, "Map " + map.getId() + " picked up. X=" + map.getCenterX() + " Z=" + map.getCenterZ());
