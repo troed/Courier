@@ -36,6 +36,7 @@ class CourierPlayerListener extends PlayerListener {
                     if(inventory != null && !inventory.isEmpty()) {
                         e.getPlayer().sendMessage(inventory);
                     }
+                    ((Enderman)ent).setCarriedMaterial(new MaterialData(Material.AIR));
                     // delivered
                     CourierDeliveryEvent event = new CourierDeliveryEvent(CourierDeliveryEvent.COURIER_DELIVERED, e.getPlayer(), letter.getDurability());
                     plugin.getServer().getPluginManager().callEvent(event);
