@@ -81,8 +81,10 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
             ret = true;
         } else if((cmd.equals(Courier.CMD_POST)) && allowed(player, cmd)) {
             // not allowed to be run from the console, uses player
-            if(plugin.getEconomy() != null && plugin.getEconomy().getBalance(player.getName()) < plugin.getCConfig().getFeeSend()) {
-                sender.sendMessage("Courier: Sorry, you don't have enough credit to cover postage (" + plugin.getEconomy().format(plugin.getCConfig().getFeeSend())+ ")");
+            if(plugin.getEconomy() != null &&
+               plugin.getEconomy().getBalance(player.getName()) < plugin.getCConfig().getFeeSend() &&
+               !player.hasPermission(Courier.PM_THEONEPERCENT)) {
+                    sender.sendMessage("Courier: Sorry, you don't have enough credit to cover postage (" + plugin.getEconomy().format(plugin.getCConfig().getFeeSend())+ ")");
                 ret = true;
             } else if(args == null || args.length < 1) {
                 sender.sendMessage("Courier: Error, no recipient for message!");
@@ -148,7 +150,7 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                         map.removeRenderer(r);
                     }
 
-                    if(plugin.getEconomy() != null) {
+                    if(plugin.getEconomy() != null && !player.hasPermission(Courier.PM_THEONEPERCENT)) {
                         // withdraw postage fee
                         double fee = plugin.getCConfig().getFeeSend();
                         EconomyResponse er = plugin.getEconomy().withdrawPlayer(player.getName(), fee);

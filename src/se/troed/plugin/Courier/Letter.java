@@ -21,6 +21,7 @@ public class Letter extends MapRenderer {
     @SuppressWarnings("FieldCanBeLocal")
     private final int BODY_POS = 4; // 4*getHeight()
     private String receiver;
+    @SuppressWarnings("FieldCanBeLocal")
     private String sender;
     private String message;
     private String header;

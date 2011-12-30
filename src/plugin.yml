@@ -29,3 +29,6 @@ permissions:
   courier.info:
     description: Lists Courier information
     default: true
+  courier.theonepercent:
+    description: No postage fees apply even if UseFees is set to true
+    default: false

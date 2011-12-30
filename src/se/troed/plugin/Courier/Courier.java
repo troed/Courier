@@ -87,6 +87,7 @@ public class Courier extends JavaPlugin {
     public static final String PM_SEND = "courier.send";
     public static final String PM_LIST = "courier.list";
     public static final String PM_INFO = "courier.info";
+    public static final String PM_THEONEPERCENT = "courier.theonepercent";
 
     public static final int MAGIC_NUMBER = Integer.MAX_VALUE - 395743; // used to id our maps
 
