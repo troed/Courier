@@ -292,6 +292,7 @@ public class Courier extends JavaPlugin {
                             //
                             // hey. so rails on a block cause my findSpawnLocation to choose the block above
                             // I guess there are additional checks I should add. emptiness?
+                            // todo: that also means we try to spawn a postman on top of rails even in rain
                             // todo: and glass blocks _don't_ seem to be included in "getHighest..." which I feel is wrong ("non-air")
                             config.clog(Level.FINE, "Top sky facing block at Y: " + player.getWorld().getHighestBlockYAt(spawnLoc));
                             if(player.getWorld().getHighestBlockYAt(spawnLoc) == spawnLoc.getBlockY()) {
@@ -367,12 +368,11 @@ public class Courier extends JavaPlugin {
             Plugin x = getServer().getPluginManager().getPlugin("Vault");
             if(x != null && x instanceof Vault) {
                 vault = (Vault) x;
-            }
-            if(vault != null) {
+
                 if(setupEconomy()) {
                     config.clog(Level.INFO, "Courier has linked to " + economy.getName() + " through Vault");
                 } else {
-                    config.clog(Level.SEVERE, "Courier could not find an Economy plugin installed!");
+                    config.clog(Level.SEVERE, "Vault could not find an Economy plugin installed!");
                     setEnabled(false); // verify if this is the right way of doing it
                 }
             } else {
