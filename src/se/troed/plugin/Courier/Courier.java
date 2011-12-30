@@ -368,18 +368,19 @@ public class Courier extends JavaPlugin {
             if(x != null && x instanceof Vault) {
                 vault = (Vault) x;
             }
-        } 
-        if(vault != null) {
-            if(setupEconomy()) {
-                config.clog(Level.INFO, "Courier has linked to " + economy.getName() + " through Vault");
+            if(vault != null) {
+                if(setupEconomy()) {
+                    config.clog(Level.INFO, "Courier has linked to " + economy.getName() + " through Vault");
+                } else {
+                    config.clog(Level.SEVERE, "Courier could not find an Economy plugin installed!");
+                    setEnabled(false); // verify if this is the right way of doing it
+                }
             } else {
-                config.clog(Level.SEVERE, "Courier could not find an Economy plugin installed!");
+                config.clog(Level.SEVERE, "Courier relies on Vault for economy support and Vault isn't installed!");
+                config.clog(Level.INFO, "See http://dev.bukkit.org/server-mods/vault/");
+                config.clog(Level.INFO, "If you don't want economy support, set UseFees to false in Courier config.");
                 setEnabled(false); // verify if this is the right way of doing it
             }
-        } else {
-            config.clog(Level.SEVERE, "Courier relies on Vault for economy support and Vault isn't installed!");
-            config.clog(Level.INFO, "See http://dev.bukkit.org/server-mods/vault/");
-            setEnabled(false); // verify if this is the right way of doing it
         }
 
         if(this.isEnabled()) {
