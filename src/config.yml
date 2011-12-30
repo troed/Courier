@@ -1,7 +1,7 @@
 # Config file version is used internally to detect non backward compatible breaks
 # All times are in seconds, distances in blocks
 Courier:
-  UseFees: true
+  UseFees: false
   Version: 0.9.5
   Route:
     InitialWait: 10
