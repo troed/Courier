@@ -3,6 +3,7 @@ package se.troed.plugin.Courier;
 import java.util.logging.Level;
 
 import org.bukkit.entity.CreatureType;
+import org.bukkit.entity.Entity;
 import org.bukkit.event.entity.*;
 
 
@@ -48,6 +49,30 @@ class CourierEntityListener extends EntityListener {
         if(!e.isCancelled() && plugin.getPostman(e.getEntity().getUniqueId()) != null) {
             plugin.getCConfig().clog(Level.FINE, "Prevented postman maildrop");
             e.setCancelled(true);
+        }
+    }
+    
+    public void onCreatureSpawn(CreatureSpawnEvent e) {
+        if(e.getCreatureType() == CreatureType.ENDERMAN) {
+            plugin.getCConfig().clog(Level.FINE, "onCreatureSpawn Enderman with uuid:" + e.getEntity().getUniqueId());
+            // we end up here before we've had a chance to log and store our Postman uuids!
+            // this means we cannot reliably override spawn deniers?
+            // We match on Location but it's not pretty. Might be the only solution though?
+            Postman postman = plugin.getAndRemoveSpawner(e.getLocation());
+            if(postman != null) {
+                plugin.getCConfig().clog(Level.FINE, "onCreatureSpawn Postman");
+                if(e.isCancelled()) {
+                    if(plugin.getCConfig().getBreakSpawnProtection()) {
+                        plugin.getCConfig().clog(Level.FINE, "onCreatureSpawn Postman override");
+                        e.setCancelled(false);
+                        postman.announce(e.getLocation());
+                    } else {
+                        postman.cannotDeliver();
+                    }
+                } else {
+                    postman.announce(e.getLocation());
+                }
+            }
         }
     }
 }

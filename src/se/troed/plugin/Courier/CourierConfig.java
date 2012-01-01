@@ -8,7 +8,7 @@ import java.util.logging.Logger;
 
 
 public class CourierConfig {
-    private static final boolean debug = false;
+    private static final boolean debug = true;
 
     private final Logger log;
     
@@ -21,9 +21,11 @@ public class CourierConfig {
     private static final String ROUTE_INITIALWAIT = "Courier.Route.InitialWait";
     private static final String ROUTE_NEXTROUTE = "Courier.Route.NextRoute";
     private static final String POSTMAN_SPAWNDISTANCE = "Courier.Postman.SpawnDistance";
+    private static final String POSTMAN_BREAKSPAWNPROTECTION = "Courier.Postman.BreakSpawnProtection";
     private static final String POSTMAN_GREETING = "Courier.Postman.Greeting";
     private static final String POSTMAN_MAILDROP = "Courier.Postman.MailDrop";
     private static final String POSTMAN_INVENTORY = "Courier.Postman.Inventory";
+    private static final String POSTMAN_CANNOTDELIVER = "Courier.Postman.CannotDeliver";
     private static final String FEE_SEND = "Courier.Fee.Send";
 
     private final boolean useFees;
@@ -32,9 +34,11 @@ public class CourierConfig {
     private final int initialWait;
     private final int nextRoute;
     private final int spawnDistance;
+    private final boolean breakSpawnProtection;
     private String greeting = null;
     private String maildrop = null;
     private String inventory = null;
+    private String cannotDeliver = null;
     private final double feeSend;
 
     public CourierConfig(Courier plug) {
@@ -97,12 +101,16 @@ public class CourierConfig {
         clog(Level.FINE, ROUTE_NEXTROUTE + ": " + nextRoute);
         spawnDistance = config.getInt(POSTMAN_SPAWNDISTANCE);
         clog(Level.FINE, POSTMAN_SPAWNDISTANCE + ": " + spawnDistance);
+        breakSpawnProtection = config.getBoolean(POSTMAN_BREAKSPAWNPROTECTION, true); // added in 0.9.6
+        clog(Level.FINE, POSTMAN_BREAKSPAWNPROTECTION + ": " + breakSpawnProtection);
         greeting = config.getString(POSTMAN_GREETING, ""); // added in 0.9.1
         clog(Level.FINE, POSTMAN_GREETING + ": " + greeting);
         maildrop = config.getString(POSTMAN_MAILDROP, ""); // added in 0.9.1
         clog(Level.FINE, POSTMAN_MAILDROP + ": " + maildrop);
         inventory = config.getString(POSTMAN_INVENTORY, ""); // added in 0.9.5
         clog(Level.FINE, POSTMAN_INVENTORY + ": " + inventory);
+        cannotDeliver = config.getString(POSTMAN_CANNOTDELIVER, ""); // added in 0.9.6
+        clog(Level.FINE, POSTMAN_CANNOTDELIVER + ": " + cannotDeliver);
         feeSend = config.getDouble(FEE_SEND, 0); // added in 0.9.5
         clog(Level.FINE, FEE_SEND + ": " + feeSend);
     }
@@ -130,6 +138,10 @@ public class CourierConfig {
     public int getSpawnDistance() {
         return spawnDistance;
     }
+    
+    public boolean getBreakSpawnProtection() {
+        return breakSpawnProtection;
+    }
 
     public String getGreeting() {
         return greeting;
@@ -141,6 +153,10 @@ public class CourierConfig {
 
     public String getInventory() {
         return inventory;
+    }
+    
+    public String getCannotDeliver() {
+        return cannotDeliver;
     }
 
     public Double getFeeSend() {

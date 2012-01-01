@@ -1,6 +1,6 @@
 name: Courier
 main: se.troed.plugin.Courier.Courier
-version: 0.9.5
+version: 0.9.6
 author: defxor
 softdepend: [Vault]
 commands:

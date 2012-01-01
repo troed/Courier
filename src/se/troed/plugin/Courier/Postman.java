@@ -18,36 +18,49 @@ import org.bukkit.material.MaterialData;
  */
 public class Postman {
 
-    private final Enderman enderman;
+    private Enderman enderman;
     private final Courier plugin;
     private final ItemStack letter;
-    private final UUID uuid;
+    private UUID uuid;
     private boolean scheduledForQuickRemoval;
     private int taskId;
     private Runnable runnable;
     private final Player player;
     
-    public Postman(Courier plug, Player p, Location l, short id) {
+    public Postman(Courier plug, Player p, short id) {
         plugin = plug;
         player = p;
         letter = new ItemStack(Material.MAP,1,id);
-        enderman = (Enderman) p.getWorld().spawnCreature(l, CreatureType.ENDERMAN);
-        // gah, item vs block ...
-        // MaterialData material = new MaterialData(Material.PAPER);
-        enderman.setCarriedMaterial(new MaterialData(Material.BOOKSHELF));
-        uuid = enderman.getUniqueId();
-        // todo: if in config, play effect
-        p.playEffect(l, Effect.BOW_FIRE, 100);
-        String greeting = plug.getCConfig().getGreeting();
-        if(greeting != null && !greeting.isEmpty()) {
-            p.sendMessage(greeting);
-        }
     }
     
     public ItemStack getLetter() {
         return letter;
     }
+    
+    public void spawn(Location l) {
+        enderman = (Enderman) player.getWorld().spawnCreature(l, CreatureType.ENDERMAN);
+        // gah, item vs block ...
+        // MaterialData material = new MaterialData(Material.PAPER);
+        enderman.setCarriedMaterial(new MaterialData(Material.BOOKSHELF));
+        uuid = enderman.getUniqueId();
+    }
 
+    public void cannotDeliver() {
+        String cannotDeliver = plugin.getCConfig().getCannotDeliver();
+        if(cannotDeliver != null && !cannotDeliver.isEmpty()) {
+            player.sendMessage(cannotDeliver);
+        }
+    }
+
+    public void announce(Location l) {
+        // todo: if in config, play effect
+        player.playEffect(l, Effect.BOW_FIRE, 100);
+        String greeting = plugin.getCConfig().getGreeting();
+        if(greeting != null && !greeting.isEmpty()) {
+            player.sendMessage(greeting);
+        }
+    }
+    
     public void drop() {
         enderman.getWorld().dropItemNaturally(enderman.getLocation(), letter);
         enderman.setCarriedMaterial(new MaterialData(Material.AIR));

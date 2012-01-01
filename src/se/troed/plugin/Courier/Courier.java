@@ -106,7 +106,9 @@ public class Courier extends JavaPlugin {
     private int deliveryId = -1;
     private final Map<UUID, Postman> postmen = new HashMap<UUID, Postman>();
     private final Map<Integer, Letter> letters = new HashMap<Integer, Letter>();
-
+    // used temporarily in breaking spawn protections as well as making sure we only announce when spawned
+    private final Map<Location, Postman> spawners = new HashMap<Location, Postman>();
+    
     // postmen should never live long, will always despawn
     public void addPostman(Postman p) {
         postmen.put(p.getUUID(), p);
@@ -118,10 +120,25 @@ public class Courier extends JavaPlugin {
         return postmen.get(uuid);
     }
     
+    public void addSpawner(Location l, Postman p) {
+        // if this just keeps on growing we could detect and warn the admin that something is blocking
+        // even our detection of Enderman spawn events. Regular cleanup thread?
+        spawners.put(l, p);
+        getCConfig().clog(Level.FINE, spawners.size() + " spawners in queue");
+    }
+    
+    public Postman getAndRemoveSpawner(Location l) {
+        Postman p = spawners.get(l);
+        if(p != null) {
+            spawners.remove(l);
+        }
+        return p;
+    }
+    
     void addLetter(short id, Letter l) {
         letters.put((int) id,l);
     }
-
+       
     // finds the Letter associated with a specific Map
     // making this hashmap persistent might save us a lot of list-searching, then only using this
     // as fallback
@@ -301,7 +318,15 @@ public class Courier extends JavaPlugin {
                             }
                         }
                         if (spawnLoc != null) {
-                            Postman postman = new Postman(this, player, spawnLoc, undeliveredMessageId);
+                            Postman postman = new Postman(this, player, undeliveredMessageId);
+                            // separate instantiation from spawning, save spawnLoc in instantiation
+                            // and create a new method to lookup unspawned locations. Use loc matching
+                            // in onCreatureSpawn as mob-denier override variable.
+                            this.addSpawner(spawnLoc, postman);
+                            postman.spawn(spawnLoc);
+                            // since we COULD be wrong when using location, re-check later if it indeed
+                            // was a Postman we allowed through and despawn if not? Extra credit surely.
+                            // Let's see if it's ever needed first
                             this.addPostman(postman);
                         }
                     } else {
@@ -332,6 +357,7 @@ public class Courier extends JavaPlugin {
     
     public void onDisable() {
         pauseDeliveries();
+        spawners.clear();
         config.clog(Level.INFO, this.getDescription().getName() + " is now disabled.");
     }
 
@@ -341,6 +367,8 @@ public class Courier extends JavaPlugin {
 
         // Register our events
         PluginManager pm = getServer().getPluginManager();
+        // Highest since we might need to override spawn deniers
+        pm.registerEvent(Event.Type.CREATURE_SPAWN, entityListener, Priority.Highest, this);
         // I register as High on some events since I know I only modify for Endermen I've spawned
         pm.registerEvent(Event.Type.ENTITY_TARGET, entityListener, Priority.High, this);
         pm.registerEvent(Event.Type.ENTITY_DAMAGE, entityListener, Priority.High, this);
