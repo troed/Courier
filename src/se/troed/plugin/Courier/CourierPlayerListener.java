@@ -20,10 +20,10 @@ class CourierPlayerListener extends PlayerListener {
     }
 
     public void onPlayerInteractEntity(PlayerInteractEntityEvent e) {
-        Entity ent = e.getRightClicked();
-        if(!e.isCancelled() && plugin.getPostman(ent.getUniqueId()) != null) {
+        Postman postman = plugin.getPostman(e.getRightClicked().getUniqueId());
+        if(!e.isCancelled() && !e.getRightClicked().isDead() && postman != null && !postman.scheduledForQuickRemoval()) {
             plugin.getCConfig().clog(Level.FINE, e.getPlayer().getDisplayName() + " receiving mail");
-            ItemStack letter = plugin.getPostman(ent.getUniqueId()).getLetter();
+            ItemStack letter = postman.getLetter();
 
             ItemStack item = e.getPlayer().getItemInHand();
             if(item != null && item.getAmount() > 0) {
@@ -36,13 +36,13 @@ class CourierPlayerListener extends PlayerListener {
                     if(inventory != null && !inventory.isEmpty()) {
                         e.getPlayer().sendMessage(inventory);
                     }
-                    ((Enderman)ent).setCarriedMaterial(new MaterialData(Material.AIR));
+                    ((Enderman)e.getRightClicked()).setCarriedMaterial(new MaterialData(Material.AIR));
                     // delivered
                     CourierDeliveryEvent event = new CourierDeliveryEvent(CourierDeliveryEvent.COURIER_DELIVERED, e.getPlayer(), letter.getDurability());
                     plugin.getServer().getPluginManager().callEvent(event);
                 } else {
                     plugin.getCConfig().clog(Level.FINE, "Inventory full, letter dropped");
-                    plugin.getPostman(ent.getUniqueId()).drop();
+                    postman.drop();
                     // delivered on pickup
                 }
             } else {
@@ -54,14 +54,14 @@ class CourierPlayerListener extends PlayerListener {
                 plugin.getLetter(map);
                 // quick render
                 e.getPlayer().sendMap(map);
-                ((Enderman)ent).setCarriedMaterial(new MaterialData(Material.AIR));
+                ((Enderman)e.getRightClicked()).setCarriedMaterial(new MaterialData(Material.AIR));
 
                 // delivered
                 CourierDeliveryEvent event = new CourierDeliveryEvent(CourierDeliveryEvent.COURIER_DELIVERED, e.getPlayer(), letter.getDurability());
                 plugin.getServer().getPluginManager().callEvent(event);
             }
 
-            plugin.getPostman(ent.getUniqueId()).quickDespawn();
+            postman.quickDespawn();
         }
     }
     
