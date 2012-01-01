@@ -51,16 +51,17 @@ class CourierEntityListener extends EntityListener {
             e.setCancelled(true);
         }
     }
-    
+
+    // in theory we could add another listener at Monitor priority for announce() ..
     public void onCreatureSpawn(CreatureSpawnEvent e) {
         if(e.getCreatureType() == CreatureType.ENDERMAN) {
             plugin.getCConfig().clog(Level.FINE, "onCreatureSpawn Enderman with uuid:" + e.getEntity().getUniqueId());
             // we end up here before we've had a chance to log and store our Postman uuids!
-            // this means we cannot reliably override spawn deniers?
-            // We match on Location but it's not pretty. Might be the only solution though?
+            // this means we cannot reliably override spawn deniers with perfect identification.
+            // We match on Location instead but it's not pretty. Might be the only solution though.
             Postman postman = plugin.getAndRemoveSpawner(e.getLocation());
             if(postman != null) {
-                plugin.getCConfig().clog(Level.FINE, "onCreatureSpawn Postman");
+                plugin.getCConfig().clog(Level.FINE, "onCreatureSpawn is a Postman");
                 if(e.isCancelled()) {
                     if(plugin.getCConfig().getBreakSpawnProtection()) {
                         plugin.getCConfig().clog(Level.FINE, "onCreatureSpawn Postman override");

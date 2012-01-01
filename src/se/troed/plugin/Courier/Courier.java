@@ -20,30 +20,8 @@ import java.util.*;
 import java.util.logging.Level;
 
 /**
- * Send mail by typing /courier playername message
  *
- * Spawn postmen delivering maps which render the mails
- * - good way to run into the map limit on a server!! this could very well be an issue
- * - crap. look into map id reusing. Must keep track of all IDs generated as _mail_ and then ...
- *         ... reuse them somehow.
- *
- * Overkill to spawn a postman picking up the rendered mail-to-send as well?
- *
- * Very online/offline playerlist - else just "player not found" message back
- * - include possibility to list. what to do on servers with a gazillion players?
- *
- * Currently implemented 1
- *
- * 1: Every now and then, go through online players and check if there's a letter waiting
- *    for anyone of them. And/Or:
- * 2: OnPlayerJoin, OnPlayerLeavingBed, start task with random(5) waiting time before checking
- *    their mail. What's the best user experience?
- *
- *
- * todo: in open spaces the endermen teleport away INSTANTLY - kind of ruining the whole thing.
- * see: https://bukkit.atlassian.net/browse/BUKKIT-366
- *
- * I'll wait for some responses before deciding whether I'll make a fork for our server.
+ * Courier - a Minecraft player to player realistic mail plugin
  *
  * Courier letter maps are uniquely defined by their x-value being 2147087904 (INT_MAX - 395743)
  * - I find it unlikely anyone will ever seriously craft a map at that location, it will have to do.
@@ -52,30 +30,11 @@ import java.util.logging.Level;
  *
  * Additionally, Courier letter z-value is the unix timestamp when they were created.
  *
- *
- *
  * How to deal with players who NEVER read their mail. We'll spawn an immense number of postmen
  * and Items over time! I do not track how many times a single mail has been delivered, maybe I should?
  *
  * For recycling purposes, good info:
  * - http://www.minecraftwiki.net/wiki/Map_Item_Format
- *
- *
- * Known Issues:
- * - User does not know how long a message can be
- * -- Additionally console does not accept as long messages as can be viewed with the map item
- * - CRITICAL: Running out of MapIds!
- * - MINOR: Database is only saved when storing new messages. File does not update just because people read mail.
- * - INTERESTING: People who receive (but they still cannot read of course) other's mails are logged as such.
- * -- Remove or do something useful with?
- * - Postmen teleport away if out in open areas
- * -- Please vote for https://bukkit.atlassian.net/browse/BUKKIT-366 :)
- * - Postmen are spawned outside even if it's raining
- *
- * Suggested future development (not set in stone):
- * - Allow items to be attached to mails
- * - /courier list [what if someone's named "list"? :) Maybe /post should be the only send-alias
- * - Take "photos" of what the sender is looking at. (Either just that or as a "background" to a message)
  *
  */
 public class Courier extends JavaPlugin {
