@@ -1,5 +1,6 @@
 # Config file version is used internally to detect non backward compatible breaks
 # All times are in seconds, distances in blocks
+# Strings can use &0..&f color coding
 Courier:
   UseFees: false
   Version: 0.9.6
@@ -11,9 +12,9 @@ Courier:
     Despawn: 20
     SpawnDistance: 10
     BreakSpawnProtection: true
-    Greeting: 'Courier: A Postman has arrived with your mail!'
-    MailDrop: 'Courier: Your mail was dropped onto the ground.'
-    Inventory: 'Courier: You had your hands full, the Postman put the mail in your inventory for you.'
-    CannotDeliver: 'Courier: A Postman has mail for you but was not allowed in this place.'
+    Greeting: '&7Courier: &fA Postman has arrived with your mail!'
+    MailDrop: '&7Courier: &fYour mail was dropped onto the ground.'
+    Inventory: '&7Courier: &fYou had your hands full, the Postman put the mail in your inventory for you.'
+    CannotDeliver: '&7Courier: &fA Postman has mail for you but was not allowed in this place.'
   Fee:
     Send: 10

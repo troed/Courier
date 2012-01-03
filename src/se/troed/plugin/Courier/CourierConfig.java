@@ -1,5 +1,6 @@
 package se.troed.plugin.Courier;
 
+import org.bukkit.ChatColor;
 import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.configuration.file.FileConfiguration;
 
@@ -8,7 +9,7 @@ import java.util.logging.Logger;
 
 
 public class CourierConfig {
-    private static final boolean debug = false;
+    private static final boolean debug = true;
 
     private final Logger log;
     
@@ -103,13 +104,13 @@ public class CourierConfig {
         clog(Level.FINE, POSTMAN_SPAWNDISTANCE + ": " + spawnDistance);
         breakSpawnProtection = config.getBoolean(POSTMAN_BREAKSPAWNPROTECTION, true); // added in 0.9.6
         clog(Level.FINE, POSTMAN_BREAKSPAWNPROTECTION + ": " + breakSpawnProtection);
-        greeting = config.getString(POSTMAN_GREETING, ""); // added in 0.9.1
+        greeting = colorize(config.getString(POSTMAN_GREETING, "")); // added in 0.9.1
         clog(Level.FINE, POSTMAN_GREETING + ": " + greeting);
-        maildrop = config.getString(POSTMAN_MAILDROP, ""); // added in 0.9.1
+        maildrop = colorize(config.getString(POSTMAN_MAILDROP, "")); // added in 0.9.1
         clog(Level.FINE, POSTMAN_MAILDROP + ": " + maildrop);
-        inventory = config.getString(POSTMAN_INVENTORY, ""); // added in 0.9.5
+        inventory = colorize(config.getString(POSTMAN_INVENTORY, "")); // added in 0.9.5
         clog(Level.FINE, POSTMAN_INVENTORY + ": " + inventory);
-        cannotDeliver = config.getString(POSTMAN_CANNOTDELIVER, ""); // added in 0.9.6
+        cannotDeliver = colorize(config.getString(POSTMAN_CANNOTDELIVER, "")); // added in 0.9.6
         clog(Level.FINE, POSTMAN_CANNOTDELIVER + ": " + cannotDeliver);
         feeSend = config.getDouble(FEE_SEND, 0); // added in 0.9.5
         clog(Level.FINE, FEE_SEND + ": " + feeSend);
@@ -173,5 +174,11 @@ public class CourierConfig {
             level = Level.INFO;
         }
         log.log(level, LOGPREFIX + message);
+    }
+
+    // credits: theguynextdoor - http://forums.bukkit.org/threads/adding-color-support.52980/#post-890244
+    // see ChatColor.java for value validity
+    String colorize(String s) {
+        return s.replaceAll("(&(\\p{XDigit}))", "\u00A7$2");
     }
 }
