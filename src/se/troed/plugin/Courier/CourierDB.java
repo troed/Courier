@@ -12,6 +12,7 @@ import java.util.*;
  * "delivered" and "read" are slightly tricky. Delivered mail sets newmail to false, even when not read.
  * (and of course delivered=false and read=true is an invalid combination should it arise)
  *
+ * couriermap: mapid
  * receiver1:
  *   newmail: true/false          <-- makes some things faster but others slow
  *   messageids: 42,73,65         <-- get/setIntegerList, although it currently doesn't look this pretty in the yml
@@ -31,6 +32,24 @@ import java.util.*;
  *     delivered:
  *     read:
  * receiver2:
+ *   ...
+ *
+ * New version:
+ *
+ * receiver1:
+ *   newmail: true/false
+ *   letteritemids:
+ *     - 3234894uuid // non-mc uuid
+ *       - fh484hf   // is this even possible
+ *       - fij43f4
+ *       - fjkjf8t
+ *     - 8773498uuid
+ *     - 2373843uuid
+ *   3234894uuid:
+ *     sender:
+ *     message:
+ *     delivered:
+ *     read:
  *   ...
  */
 public class CourierDB {
@@ -64,7 +83,22 @@ public class CourierDB {
         return ret;
     }
 
-    public boolean storeMessage(short id, String r, String s, String m) {
+    // retrieves what we think is our specially allocated Map
+    public short getCourierMapId() {
+        if(mdb == null) {
+            return -1;
+        }
+        return (short)mdb.getInt("couriermap", -1);
+    }
+    
+    public void setCourierMapId(short mapId) {
+        if(mdb == null) {
+            return;
+        }
+        mdb.set("couriermap", (int)mapId);
+    }
+
+    public boolean storeMessage(int id, String r, String s, String m) {
         if(mdb == null || r == null || s == null || m == null) {
             return false;
         }
@@ -77,7 +111,7 @@ public class CourierDB {
         if(messageids == null) {
             messageids = new ArrayList<Integer>();
         }
-        messageids.add((int)id); // safe cast
+        messageids.add(id);
         mdb.set(r + ".messageids", messageids);
 
         mdb.set(r + "." + String.valueOf(id) + ".sender", s);
@@ -106,7 +140,7 @@ public class CourierDB {
     
     // runs through messageids, finds a message not read and returns the corresponding id
     // returns -1 on failure
-    public short unreadMessageId(String r) {
+    public int unreadMessageId(String r) {
         if(mdb == null || r == null) {
             return -1;
         }
@@ -116,7 +150,7 @@ public class CourierDB {
             for(Integer id : messageids) {
                 boolean read = mdb.getBoolean(r + "." + String.valueOf(id) + ".read");
                 if(!read) {
-                    return id.shortValue();
+                    return id;
                 }
             }
         }
@@ -125,7 +159,7 @@ public class CourierDB {
 
     // runs through messageids, finds a message not delivered and returns the corresponding id
     // returns -1 on failure
-    public short undeliveredMessageId(String r) {
+    public int undeliveredMessageId(String r) {
         if(mdb == null || r == null) {
             return -1;
         }
@@ -135,7 +169,7 @@ public class CourierDB {
             for(Integer id : messageids) {
                 boolean delivered = mdb.getBoolean(r + "." + String.valueOf(id) + ".delivered");
                 if(!delivered) {
-                    return id.shortValue();
+                    return id;
                 }
             }
         }
@@ -147,8 +181,7 @@ public class CourierDB {
 
     // finds a specific messageid and returns associated player
     // needed since the server drops our Letter associations with mapId on restart
-    // why don't I just give up and persist such a List? :)
-    public String getPlayer(short id) {
+    public String getPlayer(int id) {
         if(id == -1 || mdb == null) {
             return null;
         }
@@ -156,14 +189,14 @@ public class CourierDB {
         Set<String> strings = mdb.getKeys(false);
         for (String key : strings) {
             List<Integer> messageids = mdb.getIntegerList(key + ".messageids");
-            if (messageids != null && messageids.contains((int) id)) {
+            if (messageids != null && messageids.contains(id)) {
                 return key;
             }
         }
         return null;
     }
     
-    public String getSender(String r, short id) {
+    public String getSender(String r, int id) {
         if(mdb == null || r == null) {
             return null;
         }
@@ -171,7 +204,7 @@ public class CourierDB {
         return mdb.getString(r + "." + String.valueOf(id) + ".sender");
     }
     
-    public String getMessage(String r, short id) {
+    public String getMessage(String r, int id) {
         if(mdb == null || r == null) {
             return null;
         }
@@ -179,7 +212,7 @@ public class CourierDB {
         return mdb.getString(r + "." + String.valueOf(id) + ".message");
     }
 
-    public boolean getDelivered(String r, short id) {
+    public boolean getDelivered(String r, int id) {
         //noinspection SimplifiableIfStatement
         if(mdb == null || r == null || id==-1) {
             return false;
@@ -189,7 +222,7 @@ public class CourierDB {
 
     // unexpected side effect, we end up here if player1 takes a message intended for player2
     // exploit or remove logging of it?
-    public boolean setDelivered(String r, short id) {
+    public boolean setDelivered(String r, int id) {
         if(mdb == null || r == null || id==-1) {
             return false;
         }
@@ -198,7 +231,7 @@ public class CourierDB {
         return true;
     }
 
-    public boolean getRead(String r, short id) {
+    public boolean getRead(String r, int id) {
         //noinspection SimplifiableIfStatement
         if(mdb == null || r == null || id==-1) {
             return false;
@@ -206,12 +239,40 @@ public class CourierDB {
         return mdb.getBoolean(r + "." + String.valueOf(id) + ".read");
     }
 
-    public boolean setRead(String r, short id) {
+    public boolean setRead(String r, int id) {
         if(mdb == null || r == null || id==-1) {
             return false;
         }
         mdb.set(r + "." + String.valueOf(id) + ".read", true);
         return true;
+    }
+
+    // returns the first available id
+    // expected to be called seldom (at letter creation) and is allowed to be slow
+    // obvious caching/persisting of TreeSet possible
+    // todo: I think 0 is invalid here since that's what an unenchanted item returns
+    public int generateUID() {
+        if(mdb == null) {
+            return -1;
+        }
+        TreeSet<Integer> sortedSet = new TreeSet<Integer>();
+        Set<String> players = mdb.getKeys(false);
+        for (String player : players) {
+            List<Integer> messageids = mdb.getIntegerList(player + ".messageids");
+            if (messageids != null) {
+                // add all messageids found for this player to our ordered set
+                sortedSet.addAll(messageids);
+            }
+        }
+        // make sure we don't enter negative number territory
+        for(int i=Courier.MIN_ID; i<Courier.MAX_ID; i++) {
+            if(sortedSet.add(i)) {
+                // i wasn't in the set
+                return i;
+            }
+        }
+        // todo: no more unique ids available - force admin to cleanup I guess
+        return -1;
     }
     // remove delivered - that means just deleting the entry and removing the messageid from the list?
     // still no list of all mapids ever used atm

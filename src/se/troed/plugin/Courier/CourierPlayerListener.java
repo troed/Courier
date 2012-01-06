@@ -1,9 +1,11 @@
 package se.troed.plugin.Courier;
 
 import org.bukkit.Material;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Enderman;
 import org.bukkit.event.player.*;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.map.MapCanvas;
 import org.bukkit.map.MapView;
 import org.bukkit.entity.Entity;
 import org.bukkit.material.MaterialData;
@@ -23,7 +25,7 @@ class CourierPlayerListener extends PlayerListener {
         Postman postman = plugin.getPostman(e.getRightClicked().getUniqueId());
         if(!e.isCancelled() && !e.getRightClicked().isDead() && postman != null && !postman.scheduledForQuickRemoval()) {
             plugin.getCConfig().clog(Level.FINE, e.getPlayer().getDisplayName() + " receiving mail");
-            ItemStack letter = postman.getLetter();
+            ItemStack letter = postman.getLetterItem();
 
             ItemStack item = e.getPlayer().getItemInHand();
             if(item != null && item.getAmount() > 0) {
@@ -38,7 +40,7 @@ class CourierPlayerListener extends PlayerListener {
                     }
                     ((Enderman)e.getRightClicked()).setCarriedMaterial(new MaterialData(Material.AIR));
                     // delivered
-                    CourierDeliveryEvent event = new CourierDeliveryEvent(CourierDeliveryEvent.COURIER_DELIVERED, e.getPlayer(), letter.getDurability());
+                    CourierDeliveryEvent event = new CourierDeliveryEvent(CourierDeliveryEvent.COURIER_DELIVERED, e.getPlayer(), letter.getEnchantmentLevel(Enchantment.DURABILITY));
                     plugin.getServer().getPluginManager().callEvent(event);
                 } else {
                     plugin.getCConfig().clog(Level.FINE, "Inventory full, letter dropped");
@@ -49,15 +51,12 @@ class CourierPlayerListener extends PlayerListener {
                 plugin.getCConfig().clog(Level.FINE, "Letter delivered into player's hands");
                 e.getPlayer().setItemInHand(letter); // REALLY replaces what's there
 
-                // checks if we still have an attached renderer and fixes it if not
-                MapView map = plugin.getServer().getMap(letter.getDurability());
-                plugin.getLetter(map);
                 // quick render
-                e.getPlayer().sendMap(map);
+                e.getPlayer().sendMap(plugin.getServer().getMap(plugin.getCourierdb().getCourierMapId()));
                 ((Enderman)e.getRightClicked()).setCarriedMaterial(new MaterialData(Material.AIR));
 
                 // delivered
-                CourierDeliveryEvent event = new CourierDeliveryEvent(CourierDeliveryEvent.COURIER_DELIVERED, e.getPlayer(), letter.getDurability());
+                CourierDeliveryEvent event = new CourierDeliveryEvent(CourierDeliveryEvent.COURIER_DELIVERED, e.getPlayer(), letter.getEnchantmentLevel(Enchantment.DURABILITY));
                 plugin.getServer().getPluginManager().callEvent(event);
             }
 
@@ -67,48 +66,36 @@ class CourierPlayerListener extends PlayerListener {
     
     public void onItemHeldChange(PlayerItemHeldEvent e) {
         if(e.getPlayer().getInventory().getItem(e.getNewSlot()).getType() == Material.MAP) {
-            // durability = the map id
-            MapView map = plugin.getServer().getMap(e.getPlayer().getInventory().getItem(e.getNewSlot()).getDurability());
-            if(map != null) {
-//                plugin.getCConfig().clog(Level.FINE, "Map " + map.getId() + " held. X=" + map.getCenterX() + " Z=" + map.getCenterZ());
-                if(map.getCenterX() == Courier.MAGIC_NUMBER) {
-                    Date date = new Date((long)(map.getCenterZ()) * 1000); // convert back to milliseconds
-                    plugin.getCConfig().clog(Level.FINE, "Map " + map.getId() + " is a Courier letter!");
-                    plugin.getCConfig().clog(Level.FINE, "Created: " + date.toString());
+//            MapView map = plugin.getServer().getMap(e.getPlayer().getInventory().getItem(e.getNewSlot()).getDurability());
+            Letter letter = plugin.getLetter(e.getPlayer().getInventory().getItem(e.getNewSlot()));
+            if(letter != null) {
+                plugin.getCConfig().clog(Level.FINE, "Switched to Letter id " + letter.getId());
 
-                    // really checks if we still have an attached renderer and fixes it if not
-                    plugin.getLetter(map);
-                    e.getPlayer().sendMap(map);
-                }
+                // quick render
+                e.getPlayer().sendMap(plugin.getServer().getMap(plugin.getCourierdb().getCourierMapId()));
             } else { // not needed?
-                plugin.getCConfig().clog(Level.FINE, "Id " + e.getPlayer().getItemInHand().getDurability() + " is not a map");
+                plugin.getCConfig().clog(Level.FINE, "Id " + e.getPlayer().getItemInHand().getDurability() + " is not a Letter");
             }
         }
     }
     
     public void onPlayerPickupItem(PlayerPickupItemEvent e) {
         if(!e.isCancelled() && e.getItem().getItemStack().getType() == Material.MAP) {
-            MapView map = plugin.getServer().getMap(e.getItem().getItemStack().getDurability());
-            if(map != null) {
-                plugin.getCConfig().clog(Level.FINE, "Map " + map.getId() + " picked up. X=" + map.getCenterX() + " Z=" + map.getCenterZ());
-                if(map.getCenterX() == Courier.MAGIC_NUMBER) {
-                    Date date = new Date((long)(map.getCenterZ()) * 1000); // convert back to milliseconds
-                    plugin.getCConfig().clog(Level.FINE, "Map " + map.getId() + " is a Courier letter!");
-                    plugin.getCConfig().clog(Level.FINE, "Created: " + date.toString());
+            //MapView map = plugin.getServer().getMap(e.getItem().getItemStack().getDurability());
+            plugin.getCConfig().clog(Level.FINE, "Map id " + e.getItem().getItemStack().getEnchantmentLevel(Enchantment.DURABILITY));
+            Letter letter = plugin.getLetter(e.getItem().getItemStack());
+            if(letter != null) {
+                plugin.getCConfig().clog(Level.FINE, "Map " + letter.getId() + " picked up.");
 
-                    // really checks if we still have an attached renderer and fixes it if not
-                    plugin.getLetter(map);
+                // delivered
+                CourierDeliveryEvent event = new CourierDeliveryEvent(CourierDeliveryEvent.COURIER_DELIVERED, e.getPlayer(), letter.getId());
+                plugin.getServer().getPluginManager().callEvent(event);
 
-                    // delivered
-                    CourierDeliveryEvent event = new CourierDeliveryEvent(CourierDeliveryEvent.COURIER_DELIVERED, e.getPlayer(), map.getId());
-                    plugin.getServer().getPluginManager().callEvent(event);
-
-                    // if itemheldhand was empty, we should render the letter immediately
-                    ItemStack item = e.getPlayer().getItemInHand();
-                    if(item != null && item.getAmount() == 0) {
-                        e.getPlayer().sendMap(map);
-                    }
-               }
+                // if itemheldhand was empty, we should render the letter immediately
+                ItemStack item = e.getPlayer().getItemInHand();
+                if(item != null && item.getAmount() == 0) {
+                    e.getPlayer().sendMap(plugin.getServer().getMap(plugin.getCourierdb().getCourierMapId()));
+                }
             }
         }        
     }

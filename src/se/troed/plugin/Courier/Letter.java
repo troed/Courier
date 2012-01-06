@@ -1,7 +1,5 @@
 package se.troed.plugin.Courier;
 
-import org.bukkit.Bukkit;
-import org.bukkit.entity.Player;
 import org.bukkit.map.*;
 
 import java.util.ArrayList;
@@ -9,30 +7,27 @@ import java.util.Collections;
 
 /**
  */
-public class Letter extends MapRenderer {
+public class Letter {
     // while not specified with an API constant map width is hardcoded as 128 pixels
 //    private final int CANVAS_WIDTH = 128; // I don't get the width calc correct .. or is getWidth buggy?
     @SuppressWarnings("FieldCanBeLocal")
     private final int CANVAS_WIDTH = 96; // 96 is a temp fix
     @SuppressWarnings("UnusedDeclaration")
     private final int CANVAS_HEIGHT = 128;
-    @SuppressWarnings("FieldCanBeLocal")
-    private final int HEADER_POS = 2; // 2*getHeight()
-    @SuppressWarnings("FieldCanBeLocal")
-    private final int BODY_POS = 4; // 4*getHeight()
     private String receiver;
     @SuppressWarnings("FieldCanBeLocal")
     private String sender;
     private String message;
     private String header;
+    private int id;
     // note, this is JUST to avoid event spamming. Actual read status is saved in CourierDB
     private boolean read;
     private Letter() {}
     
-    private Letter(String s, String r, String m) {
-        super(true); // all our messages are contextual (i.e different for different players)
+    private Letter(String s, String r, String m, int id) {
         sender = s;
         receiver = r;
+        this.id = id;
         message = format(m);
         if(s != null && s.length() < 13) { // a nice version would do an actual check vs width, but [see issue with width]
             header = "§"+MapPalette.DARK_GRAY+";Letter from §"+MapPalette.DARK_GREEN+";" + sender + "§"+MapPalette.DARK_GRAY+";:";
@@ -41,30 +36,34 @@ public class Letter extends MapRenderer {
         }
     }
 
-    public Letter(String s, String r, String m, boolean rd) {
-        this(s, r, m);
+    public Letter(String s, String r, String m, int id, boolean rd) {
+        this(s, r, m, id);
         read = rd;
     }
-
-    @Override
-    public void render(MapView map, MapCanvas canvas, Player player) {
-        if(player.getName().equals(receiver)) {
-            canvas.drawText(0, MinecraftFont.Font.getHeight()*HEADER_POS, MinecraftFont.Font, header);
-            canvas.drawText(0, MinecraftFont.Font.getHeight()*BODY_POS, MinecraftFont.Font, "§"+MapPalette.DARK_GRAY+";"+ message);
-
-            // todo: add date
-
-            // this is the actual time we can be sure a letter has been read
-            // post an event to make sure we don't block the rendering pipeline
-            if(!read) {
-                CourierDeliveryEvent event = new CourierDeliveryEvent(CourierDeliveryEvent.COURIER_READ, player, map.getId());
-                Bukkit.getServer().getPluginManager().callEvent(event);
-                read = true;
-            }
-        } else {
-            String temp = "§"+MapPalette.DARK_GRAY+";Sorry, only §"+MapPalette.DARK_GREEN+";" + receiver + "\n§"+MapPalette.DARK_GRAY+";can read this letter";
-            canvas.drawText(0, MinecraftFont.Font.getHeight()*HEADER_POS, MinecraftFont.Font, temp);
-        }
+    
+    public int getId() {
+        return id;
+    }
+    
+    public String getReceiver() {
+        return receiver;
+    }
+    
+    public String getHeader() {
+        return header;
+    }
+    
+    public String getMessage() {
+        return message;
+    }
+    
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
+    public boolean getRead() {
+        return read;
+    }
+    
+    public void setRead(boolean r) {
+        read = r;
     }
 
     // splits and newlines a String to fit MapCanvas width

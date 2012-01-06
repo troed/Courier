@@ -5,9 +5,11 @@ import net.milkbowl.vault.economy.Economy;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.Event.Priority;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.map.MapRenderer;
 import org.bukkit.map.MapView;
 import org.bukkit.plugin.Plugin;
@@ -36,6 +38,74 @@ import java.util.logging.Level;
  * For recycling purposes, good info:
  * - http://www.minecraftwiki.net/wiki/Map_Item_Format
  *
+ // switching out maps dyamically for the user will fail a lot of cases where itemheldevent
+ // isn't triggered. that might be fixed though, but isn't currently:
+ // https://bukkit.atlassian.net/browse/BUKKIT-437
+ // if it WAS to be fixed, then maybe I could use one _real_ map and just fake all the others
+ // switching out dynamically based on our magic X-value
+ *
+ * "using the entity unique id to track my Postmen and I should be able to use the same unique id for
+ * (Map) Items. If so, I could use those as keys into the message db instead of actual Map IDs and then
+ * use a single Map for its canvas when rendering."
+ *
+ * = /letter creates an entry in the database, with it's own UUID (unrelated to Minecraft)
+ *   and immediately creates a MapItem according to below for the player
+ *   Problem: MapItem doesn't really exist, we can only get an ItemStack(MAP,1,mapid) - previously
+ *     we relied on mapid as our uuid, now we need a new one that persists. However, that only exists
+ *     in Entity (extended by Item) and we do not have an Item! Thus, there's no way to track a Map Item
+ *     (is it really anything but a lot of ItemStacks ever?) throughout the world. It might be that maps are
+ *     the only uniquely identifiable items in Minecraft, and that my original approach was correct.
+ *
+ *     if so, we should still have our own letteruuid which mapid maps (hah) towards, making it possible to
+ *     re-map mapids to other letteruuids. we could also store a back reference to which mapids reference
+ *     which letteruuids - making it possible to immediately recycle those maps when a letter is deleted or
+ *     recycled.
+ *
+ *     we would need a table which just lists all the mapids we've allocated for Courier of course. need
+ *     to be able to detect that we've run out and trigger some form of deallocation of the oldest ones
+ *     - and that should probably not be one per new message but free up a block of them when done. possibly
+ *     a slow operation.
+ *
+ * + If I go the enchantment route, how to handle already existing ItemStacks with specific MapIds?
+ *  -- detect Courier X value, remake them into the new Map Id and enchant.
+ *
+ * = deliveries create MapItems, and their UUIDs are mapped to the UUID in our database. One new such
+ *   UUID mapping for each new Item we ever create point to a letter (to do - detect if they despawn and remove)
+ *
+ * = picking up item, check X for courier (Z now becomes worthless), lookup in itemuuids database
+ *   and create the Letter object in LetterRenderer structure from letteruuids table.
+ * = update newmail in player table if renderer says read and we loop through all mail to that player (ouch,
+ *   sounds slow, but we could do it async?)
+ *
+ * = deliverythread checks newmail and sends out deliveries. new itemuuid if no itemuuid for that letteruuid
+ *   already exists (sounds like a backwards lookup, hmm)
+ *
+ * ISSUE: Currently no quick rendering (sendMap) works. Is this fixable?
+ *
+ * Oh my it was ages since I last did database design. Bukkit persistence is Ebeans and objects.
+ *
+ * table player
+ * key: player1 | data: newmail, itemuuid1, itemuuid2, itemuuid3
+ * key: player2 | data: newmail, itemuuid2
+ *
+ * table itemuuids
+ * key: itemuuid1 | letteruuid1
+ *      itemuuid2 | letteruuid2
+ *      itemuuid3 | letteruuid1
+ *
+ * table letteruuids
+ * key: letteruuid1 | sender, player1, message, delivered, read, date
+ *
+ * table mapidpool
+ * itemuuid1, itemuuid2, itemuuid3 etc ...
+ *
+ * create a conversion routine from messages.yml to database, run it every time the database disappears for
+ * beta testing
+ *
+ * also initial config and beta testing is done: loop through mapId() from 0 until null, save in array. Find latest non-Courier map,
+ * use the first courier map after that as our magic map. Try to reset the index.
+ * (for betatest, just create a new one)
+ *
  */
 public class Courier extends JavaPlugin {
     // these must match plugin.yml
@@ -48,7 +118,9 @@ public class Courier extends JavaPlugin {
     public static final String PM_INFO = "courier.info";
     public static final String PM_THEONEPERCENT = "courier.theonepercent";
 
-    public static final int MAGIC_NUMBER = Integer.MAX_VALUE - 395743; // used to id our maps
+    private final int MAGIC_NUMBER = Integer.MAX_VALUE - 395743; // used to id our map
+    public static final int MAX_ID = Short.MAX_VALUE; // really, we don't do negative numbers well atm
+    public static final int MIN_ID = 1;
 
     private static Vault vault = null;
     private static Economy economy = null;
@@ -60,6 +132,7 @@ public class Courier extends JavaPlugin {
     private final CourierCommands courierCommands = new CourierCommands(this);
     private final CourierDB courierdb = new CourierDB(this);
     private CourierConfig config;
+    private LetterRenderer letterRenderer = null;
 
     private Runnable deliveryThread;
     private int deliveryId = -1;
@@ -94,40 +167,34 @@ public class Courier extends JavaPlugin {
         return p;
     }
     
-    void addLetter(short id, Letter l) {
-        letters.put((int) id,l);
+    private void addLetter(int id, Letter l) {
+        letters.put(id, l);
     }
-       
+
     // finds the Letter associated with a specific Map
-    // making this hashmap persistent might save us a lot of list-searching, then only using this
-    // as fallback
-    public Letter getLetter(MapView map) {
-        if(map == null) { // safety first
+    // recreates from db after restart
+    public Letter getLetter(ItemStack letterItem) {
+        if(letterItem == null) { // safety first
             return null;
         }
-        Letter letter = null;
-        if(!letters.containsKey((int) map.getId())) {
+        Letter letter = letters.get(letterItem.getEnchantmentLevel(Enchantment.DURABILITY));
+        if(letter == null) {
             // server has lost the MapView<->Letter associations, re-populate
-            short id = map.getId();
+            // todo: what does this return for an unenchanted item?
+            // todo: I think it returns 0 ...
+            int id = letterItem.getEnchantmentLevel(Enchantment.DURABILITY);
             String to = getCourierdb().getPlayer(id);
             if(to != null) {
                 String from = getCourierdb().getSender(to, id);
                 String message = getCourierdb().getMessage(to, id);
-                letter = new Letter(from, to, message, getCourierdb().getRead(to, id));
-                letter.initialize(map); // does this make a difference at all?
-                List<MapRenderer> renderers = map.getRenderers();
-                for(MapRenderer r : renderers) { // remove existing renderers
-                    map.removeRenderer(r);
-                }
-                map.addRenderer(letter);
+                letter = new Letter(from, to, message, id, getCourierdb().getRead(to, id));
                 addLetter(id, letter);
+                getCConfig().clog(Level.FINE, "New Letter " + id + " created for " + to);
             } else {
                 // we've found an item pointing to a Courier letter that does not exist anylonger
                 // ripe for re-use!
                 getCConfig().clog(Level.FINE, "BAD: " + id + " not found in messages database");
             }
-        } else {
-            letter = letters.get((int) map.getId());
         }
         return letter;
     }
@@ -259,7 +326,8 @@ public class Courier extends JavaPlugin {
 // is this lookup slow? it saves us in the extreme case new deliveries are scheduled faster than despawns
 // oh my this was crappy coding. why did I add this, esp. considering it could never have worked?
 //                if (!postmen.containsValue(player)) {
-                    short undeliveredMessageId = getCourierdb().undeliveredMessageId(player.getName());
+                    int undeliveredMessageId = getCourierdb().undeliveredMessageId(player.getName());
+                    config.clog(Level.FINE, "Undelivered messageid: " + undeliveredMessageId);
                     if (undeliveredMessageId != -1) {
                         Location spawnLoc = findSpawnLocation(player);
                         if(spawnLoc != null && player.getWorld().hasStorm()) {
@@ -323,6 +391,7 @@ public class Courier extends JavaPlugin {
     public void onEnable() {
         this.loadConfig();
         courierdb.load();
+        boolean abort = false;
 
         // Register our events
         PluginManager pm = getServer().getPluginManager();
@@ -346,13 +415,57 @@ public class Courier extends JavaPlugin {
         getCommand(CMD_COURIER).setExecutor(courierCommands);
         getCommand(CMD_POST).setExecutor(courierCommands);
 
-        if(getServer().getOnlinePlayers().length > 0) {
+        // Prepare the magic Courier Map we use for all rendering
+        short mapId = courierdb.getCourierMapId();
+        if(mapId == -1) {
+            // we don't have an allocated map stored, see if there is one we've forgotten about
+            for(short i=0; i<Short.MAX_VALUE; i++) {
+                MapView mv = getServer().getMap(i);
+                if(mv != null && mv.getCenterX() == MAGIC_NUMBER) {
+                    // there we go, a nice Courier Letter map
+                    // todo: before release, convert all but one into enchanted maps
+                    // or even, convert them all and allocate a new? safety net
+                    mapId = i;
+                    courierdb.setCourierMapId(mapId);
+                    getCConfig().clog(Level.INFO, "Found existing Courier map with id " + mv.getId());
+                    break;
+                } else if(mv == null) {
+                    // no Courier Maps found, we need to create one for our use
+                    // Maps are saved in the world-folders, use default world
+                    mv = getServer().createMap(getServer().getWorlds().get(0)); // todo: dunno. user configurable?
+                    mv.setCenterX(MAGIC_NUMBER);
+                    mapId = mv.getId();
+                    getCConfig().clog(Level.INFO, "Rendering map claimed with the id " + mv.getId());
+                    courierdb.setCourierMapId(mapId);
+                    break;
+                }
+            }
+        }
+        if(mapId == -1) {
+            getCConfig().clog(Level.SEVERE, "Could not allocate a Map. This is a fatal error.");
+            abort = true;
+        }
+
+        if(!abort) {
+            MapView mv = getServer().getMap(mapId);
+            if(letterRenderer == null) {
+                letterRenderer = new LetterRenderer(this);
+            }
+            letterRenderer.initialize(mv); // does this make a difference at all?
+            List<MapRenderer> renderers = mv.getRenderers();
+            for(MapRenderer r : renderers) { // remove existing renderers
+                mv.removeRenderer(r);
+            }
+            mv.addRenderer(letterRenderer);
+        }
+        
+        if(!abort && getServer().getOnlinePlayers().length > 0) {
             // players already on, we've been reloaded
             startDeliveries();
         }
 
         // if config says we should use economy, require vault + economy support
-        if(config.getUseFees()) {
+        if(!abort && config.getUseFees()) {
             Plugin x = getServer().getPluginManager().getPlugin("Vault");
             if(x != null && x instanceof Vault) {
                 vault = (Vault) x;
@@ -361,19 +474,21 @@ public class Courier extends JavaPlugin {
                     config.clog(Level.INFO, "Courier has linked to " + economy.getName() + " through Vault");
                 } else {
                     config.clog(Level.SEVERE, "Vault could not find an Economy plugin installed!");
-                    setEnabled(false); // verify if this is the right way of doing it
+                    abort = true;
                 }
             } else {
                 config.clog(Level.SEVERE, "Courier relies on Vault for economy support and Vault isn't installed!");
                 config.clog(Level.INFO, "See http://dev.bukkit.org/server-mods/vault/");
                 config.clog(Level.INFO, "If you don't want economy support, set UseFees to false in Courier config.");
-                setEnabled(false); // verify if this is the right way of doing it
+                abort = true;
             }
         }
 
-        if(this.isEnabled()) {
+        if(!abort) {
             PluginDescriptionFile pdfFile = this.getDescription();
             config.clog(Level.INFO, pdfFile.getName() + " version v" + pdfFile.getVersion() + " is enabled!");
+        } else {
+            setEnabled(false);
         }
     }
 
