@@ -66,7 +66,21 @@ class CourierPlayerListener extends PlayerListener {
     
     public void onItemHeldChange(PlayerItemHeldEvent e) {
         if(e.getPlayer().getInventory().getItem(e.getNewSlot()).getType() == Material.MAP) {
-//            MapView map = plugin.getServer().getMap(e.getPlayer().getInventory().getItem(e.getNewSlot()).getDurability());
+            // legacy Courier support
+            MapView map = plugin.getServer().getMap(e.getPlayer().getInventory().getItem(e.getNewSlot()).getDurability());
+            if(map.getCenterX() == Courier.MAGIC_NUMBER && map.getId() != plugin.getCourierdb().getCourierMapId()) {
+                int id = e.getPlayer().getInventory().getItem(e.getNewSlot()).getDurability();
+                plugin.getCConfig().clog(Level.FINE, "Converting legacy Courier Letter id " + id);
+                // convert old Courier Letter into new
+                ItemStack letterItem = new ItemStack(Material.MAP, 1, plugin.getCourierdb().getCourierMapId());
+                // I can trust this id to stay the same thanks to how we handle it in CourierDB
+                letterItem.addUnsafeEnchantment(Enchantment.DURABILITY, id);
+                // store the date in the db
+                plugin.getCourierdb().storeDate(id, map.getCenterZ());
+                // replacing under the hood
+                e.getPlayer().getInventory().setItem(e.getNewSlot(), letterItem);
+            }
+            // legacy end
             Letter letter = plugin.getLetter(e.getPlayer().getInventory().getItem(e.getNewSlot()));
             if(letter != null) {
                 plugin.getCConfig().clog(Level.FINE, "Switched to Letter id " + letter.getId());
@@ -74,14 +88,28 @@ class CourierPlayerListener extends PlayerListener {
                 // quick render
                 e.getPlayer().sendMap(plugin.getServer().getMap(plugin.getCourierdb().getCourierMapId()));
             } else { // not needed?
-                plugin.getCConfig().clog(Level.FINE, "Id " + e.getPlayer().getItemInHand().getDurability() + " is not a Letter");
+                plugin.getCConfig().clog(Level.FINE, "Id " + e.getPlayer().getInventory().getItem(e.getNewSlot()).getDurability() + " is not a Letter");
             }
         }
     }
     
     public void onPlayerPickupItem(PlayerPickupItemEvent e) {
         if(!e.isCancelled() && e.getItem().getItemStack().getType() == Material.MAP) {
-            //MapView map = plugin.getServer().getMap(e.getItem().getItemStack().getDurability());
+            // legacy Courier support
+            MapView map = plugin.getServer().getMap(e.getItem().getItemStack().getDurability());
+            if(map.getCenterX() == Courier.MAGIC_NUMBER && map.getId() != plugin.getCourierdb().getCourierMapId()) {
+                int id = e.getItem().getItemStack().getDurability();
+                plugin.getCConfig().clog(Level.FINE, "Converting legacy Courier Letter id " + id);
+                // convert old Courier Letter into new
+                ItemStack letterItem = new ItemStack(Material.MAP, 1, plugin.getCourierdb().getCourierMapId());
+                // I can trust this id to stay the same thanks to how we handle it in CourierDB
+                letterItem.addUnsafeEnchantment(Enchantment.DURABILITY, id);
+                // store the date in the db
+                plugin.getCourierdb().storeDate(id, map.getCenterZ());
+                // replacing under the hood
+                e.getItem().setItemStack(letterItem);
+            }
+            // legacy end
             plugin.getCConfig().clog(Level.FINE, "Map id " + e.getItem().getItemStack().getEnchantmentLevel(Enchantment.DURABILITY));
             Letter letter = plugin.getLetter(e.getItem().getItemStack());
             if(letter != null) {

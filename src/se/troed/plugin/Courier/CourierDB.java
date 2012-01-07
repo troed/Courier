@@ -98,7 +98,7 @@ public class CourierDB {
         mdb.set("couriermap", (int)mapId);
     }
 
-    public boolean storeMessage(int id, String r, String s, String m) {
+    public boolean storeMessage(int id, String r, String s, String m, int d) {
         if(mdb == null || r == null || s == null || m == null) {
             return false;
         }
@@ -116,6 +116,7 @@ public class CourierDB {
 
         mdb.set(r + "." + String.valueOf(id) + ".sender", s);
         mdb.set(r + "." + String.valueOf(id) + ".message", m);
+        mdb.set(r + "." + String.valueOf(id) + ".date", d);
         // new messages can't have been delivered
         mdb.set(r + "." + String.valueOf(id) + ".delivered", false);
         // new messages can't have been read
@@ -125,8 +126,23 @@ public class CourierDB {
 
         return true;
     }
+    
+    // used for legacy Letter conversion only
+    public boolean storeDate(int id, int d) {
+        if(mdb == null) {
+            return false;
+        }
+        
+        String player = getPlayer(id);
+        if(player == null) {
+            return false; // this would be bad
+        }
+        mdb.set(player + "." + String.valueOf(id) + ".date", d);
 
-    // figure out letter decay, re-use of mapids etc
+        return true;
+    }
+
+// figure out letter decay, re-use of mapids etc
 //    public boolean removeMessage(short id, String r) {
 //    }
 

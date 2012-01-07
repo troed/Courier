@@ -106,6 +106,7 @@ import java.util.logging.Level;
  * use the first courier map after that as our magic map. Try to reset the index.
  * (for betatest, just create a new one)
  *
+ * there IS something fishy about maps being per-world. how is that info put into the ItemStack? the data byte?
  */
 public class Courier extends JavaPlugin {
     // these must match plugin.yml
@@ -118,16 +119,16 @@ public class Courier extends JavaPlugin {
     public static final String PM_INFO = "courier.info";
     public static final String PM_THEONEPERCENT = "courier.theonepercent";
 
-    private final int MAGIC_NUMBER = Integer.MAX_VALUE - 395743; // used to id our map
+    public static final int MAGIC_NUMBER = Integer.MAX_VALUE - 395743; // used to id our map
     public static final int MAX_ID = Short.MAX_VALUE; // really, we don't do negative numbers well atm
-    public static final int MIN_ID = 1;
+    public static final int MIN_ID = 1; // since unenchanted items are level 0
 
     private static Vault vault = null;
     private static Economy economy = null;
     
     private final CourierEntityListener entityListener = new CourierEntityListener(this);
     private final CourierPlayerListener playerListener = new CourierPlayerListener(this);
-    private final CourierServerListener serverListener = new CourierServerListener(this);
+//    private final CourierServerListener serverListener = new CourierServerListener(this);
     private final CourierDeliveryListener deliveryListener = new CourierDeliveryListener(this);
     private final CourierCommands courierCommands = new CourierCommands(this);
     private final CourierDB courierdb = new CourierDB(this);
@@ -180,20 +181,21 @@ public class Courier extends JavaPlugin {
         Letter letter = letters.get(letterItem.getEnchantmentLevel(Enchantment.DURABILITY));
         if(letter == null) {
             // server has lost the MapView<->Letter associations, re-populate
-            // todo: what does this return for an unenchanted item?
-            // todo: I think it returns 0 ...
+            // we end up here for unenchanted items, empty slots etc - with id 0
             int id = letterItem.getEnchantmentLevel(Enchantment.DURABILITY);
-            String to = getCourierdb().getPlayer(id);
-            if(to != null) {
-                String from = getCourierdb().getSender(to, id);
-                String message = getCourierdb().getMessage(to, id);
-                letter = new Letter(from, to, message, id, getCourierdb().getRead(to, id));
-                addLetter(id, letter);
-                getCConfig().clog(Level.FINE, "New Letter " + id + " created for " + to);
-            } else {
-                // we've found an item pointing to a Courier letter that does not exist anylonger
-                // ripe for re-use!
-                getCConfig().clog(Level.FINE, "BAD: " + id + " not found in messages database");
+            if(id != 0) {
+                String to = getCourierdb().getPlayer(id);
+                if(to != null) {
+                    String from = getCourierdb().getSender(to, id);
+                    String message = getCourierdb().getMessage(to, id);
+                    letter = new Letter(from, to, message, id, getCourierdb().getRead(to, id));
+                    addLetter(id, letter);
+                    getCConfig().clog(Level.FINE, "New Letter " + id + " created for " + to);
+                } else {
+                    // we've found an item pointing to a Courier letter that does not exist anylonger
+                    // ripe for re-use!
+                    getCConfig().clog(Level.FINE, "BAD: " + id + " not found in messages database");
+                }
             }
         }
         return letter;
@@ -421,19 +423,20 @@ public class Courier extends JavaPlugin {
             // we don't have an allocated map stored, see if there is one we've forgotten about
             for(short i=0; i<Short.MAX_VALUE; i++) {
                 MapView mv = getServer().getMap(i);
-                if(mv != null && mv.getCenterX() == MAGIC_NUMBER) {
-                    // there we go, a nice Courier Letter map
-                    // todo: before release, convert all but one into enchanted maps
-                    // or even, convert them all and allocate a new? safety net
+                if(mv != null && mv.getCenterX() == Courier.MAGIC_NUMBER && mv.getCenterZ() == 0 ) {
+                    // there we go, a nice Courier Letter map to render with
                     mapId = i;
                     courierdb.setCourierMapId(mapId);
                     getCConfig().clog(Level.INFO, "Found existing Courier map with id " + mv.getId());
                     break;
+                // else if getCenterX == MAGIC_NUMBER it's a legacy Letter and will be handled in PlayerListener
                 } else if(mv == null) {
-                    // no Courier Maps found, we need to create one for our use
-                    // Maps are saved in the world-folders, use default world
-                    mv = getServer().createMap(getServer().getWorlds().get(0)); // todo: dunno. user configurable?
-                    mv.setCenterX(MAGIC_NUMBER);
+                    // no Courier Map found and we've gone through them all, we need to create one for our use
+                    // (in reality this might be triggered if the admin has deleted some maps, nothing I can do)
+                    // Maps are saved in the world-folders, use default world(0) trick
+                    mv = getServer().createMap(getServer().getWorlds().get(0));
+                    mv.setCenterX(Courier.MAGIC_NUMBER);
+                    mv.setCenterZ(0); // legacy Courier Letters have a unix timestamp here instead
                     mapId = mv.getId();
                     getCConfig().clog(Level.INFO, "Rendering map claimed with the id " + mv.getId());
                     courierdb.setCourierMapId(mapId);

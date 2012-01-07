@@ -172,7 +172,11 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                     }
 
                     // this is where we actually generate a uid for this message
-                    plugin.getCourierdb().storeMessage(plugin.getCourierdb().generateUID(), p.getName(), sender.getName(),  message.toString());
+                    plugin.getCourierdb().storeMessage(plugin.getCourierdb().generateUID(),
+                                                       p.getName(),
+                                                       sender.getName(),
+                                                       message.toString(),
+                                                       (int)(System.currentTimeMillis() / 1000L)); // oh noes unix y2k issues!!!11
                 }
                 ret = true;
             }
