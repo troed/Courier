@@ -30,7 +30,7 @@ import java.util.logging.Level;
  * - Other plugin developers can use this fact to skip Courier Letters when they traverse maps
  * - I'll also likely need to use it when I finally solve map recycling.
  *
- * Additionally, Courier letter z-value is the unix timestamp when they were created.
+ * LEGACY: Additionally, Courier letter z-value is the unix timestamp when they were created.
  *
  * How to deal with players who NEVER read their mail. We'll spawn an immense number of postmen
  * and Items over time! I do not track how many times a single mail has been delivered, maybe I should?
@@ -44,9 +44,6 @@ import java.util.logging.Level;
  // if it WAS to be fixed, then maybe I could use one _real_ map and just fake all the others
  // switching out dynamically based on our magic X-value
  *
- * "using the entity unique id to track my Postmen and I should be able to use the same unique id for
- * (Map) Items. If so, I could use those as keys into the message db instead of actual Map IDs and then
- * use a single Map for its canvas when rendering."
  *
  * = /letter creates an entry in the database, with it's own UUID (unrelated to Minecraft)
  *   and immediately creates a MapItem according to below for the player
@@ -69,18 +66,25 @@ import java.util.logging.Level;
  * + If I go the enchantment route, how to handle already existing ItemStacks with specific MapIds?
  *  -- detect Courier X value, remake them into the new Map Id and enchant.
  *
+ * = /post recipient takes the LetterItem held in the player's hands and removes it. Will get recreated
+ *   by the Postman anyway.
+ *
  * = deliveries create MapItems, and their UUIDs are mapped to the UUID in our database. One new such
  *   UUID mapping for each new Item we ever create point to a letter (to do - detect if they despawn and remove)
  *
  * = picking up item, check X for courier (Z now becomes worthless), lookup in itemuuids database
  *   and create the Letter object in LetterRenderer structure from letteruuids table.
- * = update newmail in player table if renderer says read and we loop through all mail to that player (ouch,
+ *   - wait what? when picking up an item all that is already done. I have an Item.
+ *
+ * = update newmail in player table if renderer says delivered and we loop through all mail to that player (ouch,
  *   sounds slow, but we could do it async?)
+ *   - uh, this is how it was always done
  *
  * = deliverythread checks newmail and sends out deliveries. new itemuuid if no itemuuid for that letteruuid
  *   already exists (sounds like a backwards lookup, hmm)
  *
- * ISSUE: Currently no quick rendering (sendMap) works. Is this fixable?
+ * ISSUE: Currently no quick rendering (sendMap) works. Not sure this is fixable - I guess it understands
+ *        we're using the same MapID for everything.
  *
  * Oh my it was ages since I last did database design. Bukkit persistence is Ebeans and objects.
  *
@@ -102,11 +106,7 @@ import java.util.logging.Level;
  * create a conversion routine from messages.yml to database, run it every time the database disappears for
  * beta testing
  *
- * also initial config and beta testing is done: loop through mapId() from 0 until null, save in array. Find latest non-Courier map,
- * use the first courier map after that as our magic map. Try to reset the index.
- * (for betatest, just create a new one)
- *
- * there IS something fishy about maps being per-world. how is that info put into the ItemStack? the data byte?
+ * Q: there IS something fishy about maps being per-world. how is that info put into the ItemStack? the data byte?
  */
 public class Courier extends JavaPlugin {
     // these must match plugin.yml
@@ -172,16 +172,16 @@ public class Courier extends JavaPlugin {
         letters.put(id, l);
     }
 
-    // finds the Letter associated with a specific Map
-    // recreates from db after restart
+    // finds the Letter associated with a specific id
+    // recreates structure from db after each restart as needed
     public Letter getLetter(ItemStack letterItem) {
         if(letterItem == null) { // safety first
             return null;
         }
         Letter letter = letters.get(letterItem.getEnchantmentLevel(Enchantment.DURABILITY));
         if(letter == null) {
-            // server has lost the MapView<->Letter associations, re-populate
-            // we end up here for unenchanted items, empty slots etc - with id 0
+            // server has lost the ItemStack<->Letter associations, re-populate
+            // we also end up here for unenchanted maps - with id 0
             int id = letterItem.getEnchantmentLevel(Enchantment.DURABILITY);
             if(id != 0) {
                 String to = getCourierdb().getPlayer(id);
@@ -325,43 +325,40 @@ public class Courier extends JavaPlugin {
 
             // hmm I made all these changes and nothing uses read atm. Weird.
             if (courierdb.undeliveredMail(player.getName())) {
-// is this lookup slow? it saves us in the extreme case new deliveries are scheduled faster than despawns
-// oh my this was crappy coding. why did I add this, esp. considering it could never have worked?
-//                if (!postmen.containsValue(player)) {
-                    int undeliveredMessageId = getCourierdb().undeliveredMessageId(player.getName());
-                    config.clog(Level.FINE, "Undelivered messageid: " + undeliveredMessageId);
-                    if (undeliveredMessageId != -1) {
-                        Location spawnLoc = findSpawnLocation(player);
-                        if(spawnLoc != null && player.getWorld().hasStorm()) {
-                            // I think I consider this to be a temporary solution to
-                            // http://dev.bukkit.org/server-mods/courier/tickets/4-postmen-are-spawned-outside-even-if-its-raining/
-                            // Also, do endermen get hurt by snowfall? (and damage events for endermen in rain are lacking in Bukkit, right?)
-                            //
-                            // hey. so rails on a block cause my findSpawnLocation to choose the block above
-                            // I guess there are additional checks I should add. emptiness?
-                            // todo: that also means we try to spawn a postman on top of rails even in rain
-                            // todo: and glass blocks _don't_ seem to be included in "getHighest..." which I feel is wrong ("non-air")
-                            config.clog(Level.FINE, "Top sky facing block at Y: " + player.getWorld().getHighestBlockYAt(spawnLoc));
-                            if(player.getWorld().getHighestBlockYAt(spawnLoc) == spawnLoc.getBlockY()) {
-                                spawnLoc = null;
-                            }
+                // if already delivery out for this player do something
+                int undeliveredMessageId = getCourierdb().undeliveredMessageId(player.getName());
+                config.clog(Level.FINE, "Undelivered messageid: " + undeliveredMessageId);
+                if (undeliveredMessageId != -1) {
+                    Location spawnLoc = findSpawnLocation(player);
+                    if(spawnLoc != null && player.getWorld().hasStorm()) {
+                        // I think I consider this to be a temporary solution to
+                        // http://dev.bukkit.org/server-mods/courier/tickets/4-postmen-are-spawned-outside-even-if-its-raining/
+                        // Also, do endermen get hurt by snowfall? (and damage events for endermen in rain are lacking in Bukkit, right?)
+                        //
+                        // hey. so rails on a block cause my findSpawnLocation to choose the block above
+                        // I guess there are additional checks I should add. emptiness?
+                        // todo: that also means we try to spawn a postman on top of rails even in rain
+                        // todo: and glass blocks _don't_ seem to be included in "getHighest..." which I feel is wrong ("non-air")
+                        config.clog(Level.FINE, "Top sky facing block at Y: " + player.getWorld().getHighestBlockYAt(spawnLoc));
+                        if(player.getWorld().getHighestBlockYAt(spawnLoc) == spawnLoc.getBlockY()) {
+                            spawnLoc = null;
                         }
-                        if (spawnLoc != null) {
-                            Postman postman = new Postman(this, player, undeliveredMessageId);
-                            // separate instantiation from spawning, save spawnLoc in instantiation
-                            // and create a new method to lookup unspawned locations. Use loc matching
-                            // in onCreatureSpawn as mob-denier override variable.
-                            this.addSpawner(spawnLoc, postman);
-                            postman.spawn(spawnLoc);
-                            // since we COULD be wrong when using location, re-check later if it indeed
-                            // was a Postman we allowed through and despawn if not? Extra credit surely.
-                            // Let's see if it's ever needed first
-                            this.addPostman(postman);
-                        }
-                    } else {
-                        config.clog(Level.SEVERE, "undeliveredMail and undeliveredMessageId not in sync: " + undeliveredMessageId);
                     }
-//                }
+                    if (spawnLoc != null) {
+                        Postman postman = new Postman(this, player, undeliveredMessageId);
+                        // separate instantiation from spawning, save spawnLoc in instantiation
+                        // and create a new method to lookup unspawned locations. Use loc matching
+                        // in onCreatureSpawn as mob-denier override variable.
+                        this.addSpawner(spawnLoc, postman);
+                        postman.spawn(spawnLoc);
+                        // since we COULD be wrong when using location, re-check later if it indeed
+                        // was a Postman we allowed through and despawn if not? Extra credit surely.
+                        // Let's see if it's ever needed first
+                        this.addPostman(postman);
+                    }
+                } else {
+                    config.clog(Level.SEVERE, "undeliveredMail and undeliveredMessageId not in sync: " + undeliveredMessageId);
+                }
             }
         }
     }
@@ -418,6 +415,7 @@ public class Courier extends JavaPlugin {
         getCommand(CMD_POST).setExecutor(courierCommands);
 
         // Prepare the magic Courier Map we use for all rendering
+        // and more importantly, the one all ItemStacks will point to
         short mapId = courierdb.getCourierMapId();
         if(mapId == -1) {
             // we don't have an allocated map stored, see if there is one we've forgotten about
@@ -429,7 +427,7 @@ public class Courier extends JavaPlugin {
                     courierdb.setCourierMapId(mapId);
                     getCConfig().clog(Level.INFO, "Found existing Courier map with id " + mv.getId());
                     break;
-                // else if getCenterX == MAGIC_NUMBER it's a legacy Letter and will be handled in PlayerListener
+                // else if getCenterX == MAGIC_NUMBER it's a legacy Letter and will be handled by PlayerListener
                 } else if(mv == null) {
                     // no Courier Map found and we've gone through them all, we need to create one for our use
                     // (in reality this might be triggered if the admin has deleted some maps, nothing I can do)
@@ -486,6 +484,10 @@ public class Courier extends JavaPlugin {
                 abort = true;
             }
         }
+// debug
+        int newId = getCourierdb().generateUID();
+        getCConfig().clog(Level.FINE, "Converting legacy Courier Letter 19 to " + newId);
+        getCourierdb().changeId(19, newId);
 
         if(!abort) {
             PluginDescriptionFile pdfFile = this.getDescription();

@@ -141,8 +141,40 @@ public class CourierDB {
 
         return true;
     }
+    
+    // currently used for legacy Letter conversion only, but it is generalized
+    public void changeId(int oldid, int newid) {
+        if(mdb == null) {
+            return;
+        }
+        
+        String r = getPlayer(oldid);
+        String s = getSender(r, oldid);
+        String m = getMessage(r, oldid);
+        int date = getDate(r, oldid);
+        boolean delivered = getDelivered(r, oldid);
+        boolean read = getRead(r, oldid);
+        
+        List<Integer> messageids = mdb.getIntegerList(r + ".messageids");
+        if(messageids == null) { // safety, should not happen in this case
+            messageids = new ArrayList<Integer>();
+        }
+        messageids.add(newid);
+        // "atomic" add
+        mdb.set(r + ".messageids", messageids);
+        mdb.set(r + "." + String.valueOf(newid) + ".sender", s);
+        mdb.set(r + "." + String.valueOf(newid) + ".message", m);
+        mdb.set(r + "." + String.valueOf(newid) + ".date", date);
+        mdb.set(r + "." + String.valueOf(newid) + ".delivered", delivered);
+        mdb.set(r + "." + String.valueOf(newid) + ".read", read);
 
-// figure out letter decay, re-use of mapids etc
+        // "atomic" remove
+        messageids.remove(Integer.valueOf(oldid)); // caught out by ArrayList.remove(Object o) vs remove(int i) ...
+        mdb.set(r + ".messageids", messageids);
+        mdb.set(r + "." + String.valueOf(oldid), null);
+    }
+
+// figure out letter decay, re-use of ids etc
 //    public boolean removeMessage(short id, String r) {
 //    }
 
@@ -247,6 +279,13 @@ public class CourierDB {
         return true;
     }
 
+    public int getDate(String r, int id) {
+        if(mdb == null || r == null) {
+            return -1;
+        }
+        return mdb.getInt(r + "." + String.valueOf(id) + ".date");
+    }
+
     public boolean getRead(String r, int id) {
         //noinspection SimplifiableIfStatement
         if(mdb == null || r == null || id==-1) {
@@ -266,7 +305,6 @@ public class CourierDB {
     // returns the first available id
     // expected to be called seldom (at letter creation) and is allowed to be slow
     // obvious caching/persisting of TreeSet possible
-    // todo: I think 0 is invalid here since that's what an unenchanted item returns
     public int generateUID() {
         if(mdb == null) {
             return -1;
@@ -290,6 +328,4 @@ public class CourierDB {
         // todo: no more unique ids available - force admin to cleanup I guess
         return -1;
     }
-    // remove delivered - that means just deleting the entry and removing the messageid from the list?
-    // still no list of all mapids ever used atm
 }

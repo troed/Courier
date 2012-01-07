@@ -25,7 +25,7 @@ public class LetterRenderer extends MapRenderer {
     // what? I'm getting _constant_ calls to this renderer method, 20tps, no matter if I'm holding a map or not!
     // it starts as soon as I have a map (to check: any map or Courier) in the inventory, but whether it's
     // in my hands or not isn't relevant
-    // (weird theory - has to do with enchantments .. ?) verify against old code
+    // todo: this is also in old code with non-enchanted maps. should report as bug.
     @Override
     public void render(MapView map, MapCanvas canvas, Player player) {
 //        System.out.print("render(); ");
