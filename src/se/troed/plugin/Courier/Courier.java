@@ -484,10 +484,6 @@ public class Courier extends JavaPlugin {
                 abort = true;
             }
         }
-// debug
-        int newId = getCourierdb().generateUID();
-        getCConfig().clog(Level.FINE, "Converting legacy Courier Letter 19 to " + newId);
-        getCourierdb().changeId(19, newId);
 
         if(!abort) {
             PluginDescriptionFile pdfFile = this.getDescription();

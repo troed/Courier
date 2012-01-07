@@ -2,7 +2,7 @@
 # All times are in seconds, distances in blocks
 Courier:
   UseFees: false
-  Version: 0.9.6
+  Version: 0.9.9
   Route:
     InitialWait: 10
     NextRoute: 60
