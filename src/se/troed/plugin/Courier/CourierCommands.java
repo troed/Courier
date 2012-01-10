@@ -8,7 +8,6 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.*;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.material.MaterialData;
 
 import java.util.HashMap;
 import java.util.List;
@@ -204,7 +203,10 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                     if(send) {
                         // sign over this letter to recipient
                         plugin.getCourierdb().sendMessage(letter.getId(), p.getName());
-                        
+                        // existing Letter now has outdated info, will automatically be recreated from db
+                        plugin.removeLetter(letter.getId());
+                        plugin.getLetterRenderer().forceClear();
+
                         // remove item from hands, which kills the ItemStack association. It's now "gone"
                         // from the control of this player. (if I implement additional receivers you could of course
                         //  cc: yourself)
