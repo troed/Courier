@@ -1,5 +1,23 @@
 package se.troed.plugin.Courier;
 
+/*
+ *   Copyright (C) 2011 Troed Sangberg <courier@troed.se>
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation; either version 2 of the License, or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License along
+ *   with this program; if not, write to the Free Software Foundation, Inc.,
+ *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ */
+
 import net.milkbowl.vault.Vault;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.Location;
@@ -21,14 +39,13 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.util.*;
 import java.util.logging.Level;
 
-/**
+/*
  *
  * Courier - a Minecraft player to player realistic mail plugin
  *
  * Courier letter maps are uniquely defined by their x-value being 2147087904 (INT_MAX - 395743)
  * - I find it unlikely anyone will ever seriously craft a map at that location, it will have to do.
  * - Other plugin developers can use this fact to skip Courier Letters when they traverse maps
- * - I'll also likely need to use it when I finally solve map recycling.
  *
  * LEGACY: Additionally, Courier letter z-value is the unix timestamp when they were created.
  *
@@ -47,13 +64,8 @@ import java.util.logging.Level;
  *
  * = /letter creates an entry in the database, with it's own UUID (unrelated to Minecraft)
  *   and immediately creates a MapItem according to below for the player
- *   Problem: MapItem doesn't really exist, we can only get an ItemStack(MAP,1,mapid) - previously
- *     we relied on mapid as our uuid, now we need a new one that persists. However, that only exists
- *     in Entity (extended by Item) and we do not have an Item! Thus, there's no way to track a Map Item
- *     (is it really anything but a lot of ItemStacks ever?) throughout the world. It might be that maps are
- *     the only uniquely identifiable items in Minecraft, and that my original approach was correct.
  *
- *     if so, we should still have our own letteruuid which mapid maps (hah) towards, making it possible to
+ *     we should still have our own letteruuid which mapid maps (hah) towards, making it possible to
  *     re-map mapids to other letteruuids. we could also store a back reference to which mapids reference
  *     which letteruuids - making it possible to immediately recycle those maps when a letter is deleted or
  *     recycled.
@@ -62,9 +74,6 @@ import java.util.logging.Level;
  *     to be able to detect that we've run out and trigger some form of deallocation of the oldest ones
  *     - and that should probably not be one per new message but free up a block of them when done. possibly
  *     a slow operation.
- *
- * + If I go the enchantment route, how to handle already existing ItemStacks with specific MapIds?
- *  -- detect Courier X value, remake them into the new Map Id and enchant.
  *
  * = /post recipient takes the LetterItem held in the player's hands and removes it. Will get recreated
  *   by the Postman anyway.
@@ -75,10 +84,6 @@ import java.util.logging.Level;
  * = picking up item, check X for courier (Z now becomes worthless), lookup in itemuuids database
  *   and create the Letter object in LetterRenderer structure from letteruuids table.
  *   - wait what? when picking up an item all that is already done. I have an Item.
- *
- * = update newmail in player table if renderer says delivered and we loop through all mail to that player (ouch,
- *   sounds slow, but we could do it async?)
- *   - uh, this is how it was always done
  *
  * = deliverythread checks newmail and sends out deliveries. new itemuuid if no itemuuid for that letteruuid
  *   already exists (sounds like a backwards lookup, hmm)
@@ -175,15 +180,15 @@ public class Courier extends JavaPlugin {
     // finds the Letter associated with a specific id
     // recreates structure from db after each restart as needed
     public Letter getLetter(ItemStack letterItem) {
-        if(letterItem == null) { // safety first
+        if(letterItem == null || !letterItem.containsEnchantment(Enchantment.DURABILITY)) {
             return null;
         }
         Letter letter = letters.get(letterItem.getEnchantmentLevel(Enchantment.DURABILITY));
         if(letter == null) {
             // server has lost the ItemStack<->Letter associations, re-populate
-            // we also end up here for unenchanted maps - with id 0
+//            // we also end up here for unenchanted maps - with id 0
             int id = letterItem.getEnchantmentLevel(Enchantment.DURABILITY);
-            if(id != 0) {
+//            if(id != 0) {
                 String to = getCourierdb().getPlayer(id);
                 if(to != null) {
                     String from = getCourierdb().getSender(to, id);
@@ -195,7 +200,7 @@ public class Courier extends JavaPlugin {
                     // we've found an item pointing to a Courier letter that does not exist anylonger
                     // ripe for re-use!
                     getCConfig().clog(Level.FINE, "BAD: " + id + " not found in messages database");
-                }
+//                }
             }
         }
         return letter;
@@ -319,11 +324,6 @@ public class Courier extends JavaPlugin {
         // spawn new thread to deliver the mail
         Player[] players = getServer().getOnlinePlayers();
         for (Player player : players) {
-            // I really need to remember which players have had a postman sent out even if they
-            // haven't read their mail. Time to separate delivered and read ... maybe even picked up as well?
-            // currently picked up count as delivered, maybe that's what it should as well :)
-
-            // hmm I made all these changes and nothing uses read atm. Weird.
             if (courierdb.undeliveredMail(player.getName())) {
                 // if already delivery out for this player do something
                 int undeliveredMessageId = getCourierdb().undeliveredMessageId(player.getName());
@@ -339,6 +339,12 @@ public class Courier extends JavaPlugin {
                         // I guess there are additional checks I should add. emptiness?
                         // todo: that also means we try to spawn a postman on top of rails even in rain
                         // todo: and glass blocks _don't_ seem to be included in "getHighest..." which I feel is wrong ("non-air")
+                        // see https://bukkit.atlassian.net/browse/BUKKIT-445
+                        //
+                        // int getHighestBlockYAt (int x, int z); returns 0 when you call it from the Nether.
+                        // https://bukkit.atlassian.net/browse/BUKKIT-451
+
+
                         config.clog(Level.FINE, "Top sky facing block at Y: " + player.getWorld().getHighestBlockYAt(spawnLoc));
                         if(player.getWorld().getHighestBlockYAt(spawnLoc) == spawnLoc.getBlockY()) {
                             spawnLoc = null;

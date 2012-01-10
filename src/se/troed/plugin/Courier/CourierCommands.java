@@ -5,21 +5,11 @@ import org.bukkit.*;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
-import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.*;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.map.MapRenderer;
-import org.bukkit.map.MapView;
 
 import java.util.List;
 import java.util.logging.Level;
 
-import org.bukkit.ChatColor.*;
-
-/**
- * Naughty: Implementing ServerCommands and onCommand in the same class
- * Nice: Implementing ServerCommands and onCommand in the same class
- */
 class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
     private final Courier plugin;
 
@@ -120,7 +110,7 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                         // p = players.get(0); // don't, could be embarrassing if wrong
                         sender.sendMessage("Courier: Couldn't find " + args[0] + ". Did you mean " + players.get(0).getName() + "?");
                     } else if (players != null && players.size() > 1 && player.hasPermission(Courier.PM_LIST)) {
-                      // more than one possible match found
+                        // more than one possible match found
                         StringBuilder suggestList = new StringBuilder();
                         int width = 0;
                         for(Player pl : players) {
@@ -157,6 +147,7 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
 
                     // todo: figure out max length and show if a cutoff was made
                     // Minecraftfont isValid(message)
+                    // todo: I've seen strange stuff here with regards to 8 bit ascii
 
                     StringBuilder message = new StringBuilder();
                     for(int i=1; i<args.length; i++) {

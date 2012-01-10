@@ -68,6 +68,7 @@ class CourierPlayerListener extends PlayerListener {
     ItemStack legacyConversion(int id, MapView map) {
         if(id == 0) {
             // special case. MapID 0 was a valid Courier Letter, Enchantment Level 0 is not!
+            // (actually I was probably wrong about that, but let's go with it anyway)
             int newId = plugin.getCourierdb().generateUID();
             plugin.getCConfig().clog(Level.FINE, "Converting legacy Courier Letter 0 to " + newId);
             plugin.getCourierdb().changeId(id, newId);
@@ -114,29 +115,14 @@ class CourierPlayerListener extends PlayerListener {
             if(map.getCenterX() == Courier.MAGIC_NUMBER && map.getId() != plugin.getCourierdb().getCourierMapId()) {
                 int id = e.getItem().getItemStack().getDurability();
                 ItemStack letterItem = legacyConversion(id, map);
-/*                if(id == 0) {
-                    // special case. MapID 0 was a valid Courier Letter, Enchantment Level 0 is not!
-                    int newId = plugin.getCourierdb().generateUID();
-                    plugin.getCConfig().clog(Level.FINE, "Converting legacy Courier Letter 0 to " + newId);
-                    plugin.getCourierdb().changeId(id, newId);
-                    id = newId;
-                } else {
-                    plugin.getCConfig().clog(Level.FINE, "Converting legacy Courier Letter id " + id);
-                }
-                // convert old Courier Letter into new
-                ItemStack letterItem = new ItemStack(Material.MAP, 1, plugin.getCourierdb().getCourierMapId());
-                // I can trust this id to stay the same thanks to how we handle it in CourierDB
-                letterItem.addUnsafeEnchantment(Enchantment.DURABILITY, id);
-                // store the date in the db
-                plugin.getCourierdb().storeDate(id, map.getCenterZ());*/
                 // replacing under the hood
                 e.getItem().setItemStack(letterItem);
             }
             // legacy end
-            plugin.getCConfig().clog(Level.FINE, "Map id " + e.getItem().getItemStack().getEnchantmentLevel(Enchantment.DURABILITY));
+            plugin.getCConfig().clog(Level.FINE, "Letter id " + e.getItem().getItemStack().getEnchantmentLevel(Enchantment.DURABILITY));
             Letter letter = plugin.getLetter(e.getItem().getItemStack());
             if(letter != null) {
-                plugin.getCConfig().clog(Level.FINE, "Map " + letter.getId() + " picked up.");
+                plugin.getCConfig().clog(Level.FINE, "Letter " + letter.getId() + " picked up.");
 
                 // delivered
                 CourierDeliveryEvent event = new CourierDeliveryEvent(CourierDeliveryEvent.COURIER_DELIVERED, e.getPlayer(), letter.getId());

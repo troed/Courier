@@ -7,50 +7,36 @@ import java.io.IOException;
 import java.util.*;
 
 /**
- * Flatfile now, database and/or map storage later
+ * Flatfile now, database later
  * I'm quite sure I could get rid of messageids by using other primitives 
  * "delivered" and "read" are slightly tricky. Delivered mail sets newmail to false, even when not read.
  * (and of course delivered=false and read=true is an invalid combination should it arise)
  *
- * couriermap: mapid
+ * courierclaimedmap: mapid       # 17 chars = cannot clash with any playername
  * receiver1:
  *   newmail: true/false          <-- makes some things faster but others slow
  *   messageids: 42,73,65         <-- get/setIntegerList, although it currently doesn't look this pretty in the yml
  *   mapid42:
  *     sender:
  *     message:
+ *     date:
  *     delivered:
  *     read:
  *   mapid73:
  *     sender:
  *     message:
+ *     date:
  *     delivered:
  *     read:
  *   mapid65:
  *     sender:
  *     message:
+ *     date:
  *     delivered:
  *     read:
  * receiver2:
  *   ...
  *
- * New version:
- *
- * receiver1:
- *   newmail: true/false
- *   letteritemids:
- *     - 3234894uuid // non-mc uuid
- *       - fh484hf   // is this even possible
- *       - fij43f4
- *       - fjkjf8t
- *     - 8773498uuid
- *     - 2373843uuid
- *   3234894uuid:
- *     sender:
- *     message:
- *     delivered:
- *     read:
- *   ...
  */
 public class CourierDB {
     private static final String FILENAME = "messages.yml";
@@ -88,14 +74,14 @@ public class CourierDB {
         if(mdb == null) {
             return -1;
         }
-        return (short)mdb.getInt("couriermap", -1);
+        return (short)mdb.getInt("courierclaimedmap", -1);
     }
     
     public void setCourierMapId(short mapId) {
         if(mdb == null) {
             return;
         }
-        mdb.set("couriermap", (int)mapId);
+        mdb.set("courierclaimedmap", (int)mapId);
     }
 
     public boolean storeMessage(int id, String r, String s, String m, int d) {
@@ -228,7 +214,7 @@ public class CourierDB {
     }
 
     // finds a specific messageid and returns associated player
-    // needed since the server drops our Letter associations with mapId on restart
+    // needed since the server drops our Letter associations with uid on restart
     public String getPlayer(int id) {
         if(id == -1 || mdb == null) {
             return null;
