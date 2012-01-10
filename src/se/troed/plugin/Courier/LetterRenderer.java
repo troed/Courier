@@ -18,6 +18,7 @@ public class LetterRenderer extends MapRenderer {
     private final int CANVAS_HEIGHT = 128;
 //    private final byte[] clearImage = new byte[128*128];  // nice letter background image todo
     private int lastId = -1;
+    private boolean clear = false;
 
     public LetterRenderer(Courier p) {
         super(true); // all our messages are contextual (i.e different for different players)
@@ -36,22 +37,26 @@ public class LetterRenderer extends MapRenderer {
         ItemStack item = player.getItemInHand();
         if(item != null && item.getType() == Material.MAP) {
             Letter letter = plugin.getLetter(item);
-            if(letter != null && lastId != letter.getId()) {
+            if(clear || (letter != null && lastId != letter.getId())) {
                 System.out.println("Clear! New id: " + letter.getId());
                 for(int j = 0; j < CANVAS_HEIGHT; j++) {
                     for(int i = 0; i < CANVAS_WIDTH; i++) {
-    //                    canvas.setPixel(i, j, clearImage[j*128+i]);
+                        //                    canvas.setPixel(i, j, clearImage[j*128+i]);
                         canvas.setPixel(i, j, MapPalette.TRANSPARENT);
                     }
                 }
                 lastId = letter.getId();
+                clear = false;
             }
             // todo: config setting whether to do this check or not
             // (heh, interesting for pvp war servers. "your mail has fallen into enemy hands". "they've read it!")
             if(letter != null && player.getName().equals(letter.getReceiver())) {
-
-                canvas.drawText(0, MinecraftFont.Font.getHeight()*HEADER_POS, MinecraftFont.Font, letter.getHeader());
-                canvas.drawText(0, MinecraftFont.Font.getHeight()*BODY_POS, MinecraftFont.Font, "§"+ MapPalette.DARK_GRAY+";"+ letter.getMessage());
+                int drawPos = HEADER_POS;
+                if(!player.getName().equals(letter.getSender())) {
+                    canvas.drawText(0, MinecraftFont.Font.getHeight() * drawPos, MinecraftFont.Font, letter.getHeader());
+                    drawPos = BODY_POS;
+                }
+                canvas.drawText(0, MinecraftFont.Font.getHeight() * drawPos, MinecraftFont.Font, "§"+ MapPalette.DARK_GRAY+";"+ letter.getMessage());
 
                 // todo: add date
 
@@ -67,5 +72,10 @@ public class LetterRenderer extends MapRenderer {
                 canvas.drawText(0, MinecraftFont.Font.getHeight()*HEADER_POS, MinecraftFont.Font, temp);
             }
         }
+    }
+    
+    // called by CourierCommands commandLetter. Not terribly pretty architectured.
+    public void forceClear() {
+        clear = true;
     }
 }

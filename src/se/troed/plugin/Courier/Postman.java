@@ -31,7 +31,7 @@ public class Postman {
     public Postman(Courier plug, Player p, int id) {
         plugin = plug;
         player = p;
-        // the only place where we create an actual letter ItemStack
+        // Postmen, like players doing /letter, can create actual Items
         letterItem = new ItemStack(Material.MAP, 1, plug.getCourierdb().getCourierMapId());
         letterItem.addUnsafeEnchantment(Enchantment.DURABILITY, id);
     }

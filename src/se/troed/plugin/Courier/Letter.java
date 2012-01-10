@@ -11,7 +11,7 @@ public class Letter {
     // while not specified with an API constant map width is hardcoded as 128 pixels
 //    private final int CANVAS_WIDTH = 128; // I don't get the width calc correct .. or is getWidth buggy?
     @SuppressWarnings("FieldCanBeLocal")
-    private final int CANVAS_WIDTH = 96; // 96 is a temp fix
+    private final int CANVAS_WIDTH = 90; // 96 is a temp fix. Changed to 90 in 0.9.10. Need to deal with this properly.
     @SuppressWarnings("UnusedDeclaration")
     private final int CANVAS_HEIGHT = 128;
     private String receiver;
@@ -47,6 +47,10 @@ public class Letter {
     
     public String getReceiver() {
         return receiver;
+    }
+    
+    public String getSender() {
+        return sender;
     }
     
     public String getHeader() {

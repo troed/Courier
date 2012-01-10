@@ -70,6 +70,10 @@ class CourierPlayerListener extends PlayerListener {
             // special case. MapID 0 was a valid Courier Letter, Enchantment Level 0 is not!
             // (actually I was probably wrong about that, but let's go with it anyway)
             int newId = plugin.getCourierdb().generateUID();
+            if(newId == -1) {
+                plugin.getCConfig().clog(Level.SEVERE, "Out of unique message IDs! Notify your admin!");
+                return null;
+            }
             plugin.getCConfig().clog(Level.FINE, "Converting legacy Courier Letter 0 to " + newId);
             plugin.getCourierdb().changeId(id, newId);
             id = newId;
@@ -93,7 +97,9 @@ class CourierPlayerListener extends PlayerListener {
                 int id = e.getPlayer().getInventory().getItem(e.getNewSlot()).getDurability();
                 ItemStack letterItem = legacyConversion(id, map);
                 // replacing under the hood
-                e.getPlayer().getInventory().setItem(e.getNewSlot(), letterItem);
+                if(letterItem != null) {
+                    e.getPlayer().getInventory().setItem(e.getNewSlot(), letterItem);
+                }
             }
             // legacy end
             Letter letter = plugin.getLetter(e.getPlayer().getInventory().getItem(e.getNewSlot()));
@@ -116,7 +122,9 @@ class CourierPlayerListener extends PlayerListener {
                 int id = e.getItem().getItemStack().getDurability();
                 ItemStack letterItem = legacyConversion(id, map);
                 // replacing under the hood
-                e.getItem().setItemStack(letterItem);
+                if(letterItem != null) {
+                    e.getItem().setItemStack(letterItem);
+                }
             }
             // legacy end
             plugin.getCConfig().clog(Level.FINE, "Letter id " + e.getItem().getItemStack().getEnchantmentLevel(Enchantment.DURABILITY));

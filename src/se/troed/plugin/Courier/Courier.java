@@ -49,17 +49,17 @@ import java.util.logging.Level;
  *
  * LEGACY: Additionally, Courier letter z-value is the unix timestamp when they were created.
  *
- * How to deal with players who NEVER read their mail. We'll spawn an immense number of postmen
+ * How to deal with players who NEVER accept delivery? We'll spawn an immense number of postmen
  * and Items over time! I do not track how many times a single mail has been delivered, maybe I should?
  *
- * For recycling purposes, good info:
+ * LEGACY: For recycling purposes, good info:
  * - http://www.minecraftwiki.net/wiki/Map_Item_Format
  *
- // switching out maps dyamically for the user will fail a lot of cases where itemheldevent
- // isn't triggered. that might be fixed though, but isn't currently:
- // https://bukkit.atlassian.net/browse/BUKKIT-437
- // if it WAS to be fixed, then maybe I could use one _real_ map and just fake all the others
- // switching out dynamically based on our magic X-value
+ * LEGACY: switching out maps dyamically for the user will fail a lot of cases where itemheldevent
+ * isn't triggered. that might be fixed though, but isn't currently:
+ * https://bukkit.atlassian.net/browse/BUKKIT-437
+ * if it WAS to be fixed, then maybe I could use one _real_ map and just fake all the others
+ * switching out dynamically based on our magic X-value
  *
  *
  * = /letter creates an entry in the database, with it's own UUID (unrelated to Minecraft)
@@ -118,8 +118,10 @@ public class Courier extends JavaPlugin {
     public static final String CMD_POSTMAN = "postman";
     public static final String CMD_COURIER = "courier";
     public static final String CMD_POST = "post";
+    public static final String CMD_LETTER = "letter";
     public static final String PM_POSTMAN = "courier.postman";
     public static final String PM_SEND = "courier.send";
+    public static final String PM_WRITE = "courier.write";
     public static final String PM_LIST = "courier.list";
     public static final String PM_INFO = "courier.info";
     public static final String PM_THEONEPERCENT = "courier.theonepercent";
@@ -172,6 +174,10 @@ public class Courier extends JavaPlugin {
         }
         return p;
     }
+
+    public void removeLetter(int id) {
+        letters.remove(id);
+    }
     
     private void addLetter(int id, Letter l) {
         letters.put(id, l);
@@ -195,7 +201,7 @@ public class Courier extends JavaPlugin {
                     String message = getCourierdb().getMessage(to, id);
                     letter = new Letter(from, to, message, id, getCourierdb().getRead(to, id));
                     addLetter(id, letter);
-                    getCConfig().clog(Level.FINE, "New Letter " + id + " created for " + to);
+                    getCConfig().clog(Level.FINE, "Letter " + id + " recreated from db for " + to);
                 } else {
                     // we've found an item pointing to a Courier letter that does not exist anylonger
                     // ripe for re-use!
@@ -204,6 +210,10 @@ public class Courier extends JavaPlugin {
             }
         }
         return letter;
+    }
+
+    public LetterRenderer getLetterRenderer() {
+        return letterRenderer;
     }
     
     public Economy getEconomy() {
@@ -419,6 +429,7 @@ public class Courier extends JavaPlugin {
         getCommand(CMD_POSTMAN).setExecutor(courierCommands);
         getCommand(CMD_COURIER).setExecutor(courierCommands);
         getCommand(CMD_POST).setExecutor(courierCommands);
+        getCommand(CMD_LETTER).setExecutor(courierCommands);
 
         // Prepare the magic Courier Map we use for all rendering
         // and more importantly, the one all ItemStacks will point to

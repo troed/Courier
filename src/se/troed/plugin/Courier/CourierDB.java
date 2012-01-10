@@ -84,31 +84,80 @@ public class CourierDB {
         mdb.set("courierclaimedmap", (int)mapId);
     }
 
-    public boolean storeMessage(int id, String r, String s, String m, int d) {
-        if(mdb == null || r == null || s == null || m == null) {
+    public boolean sendMessage(int id, String r) {
+        boolean ret = false;
+        if(mdb == null || r == null) {
             return false;
         }
 
-        // since there's at least one new message, set newmail to true
-        mdb.set(r + ".newmail", true);
+        // nothing to say the player who wants to send a picked up Letter is the one with it in her storage
+        String origin = getPlayer(id);
+
+        if(origin != null) {
+            // alright, sign over to a specific receiver
+            String s = getSender(origin, id);
+            String m = getMessage(origin, id);
+            int date = getDate(origin, id);
+
+            List<Integer> messageids = mdb.getIntegerList(r + ".messageids");
+            if(messageids == null) {
+                messageids = new ArrayList<Integer>();
+            }
+            if(!messageids.contains(id)) { // I should move to a non-duplicate storage type .. 
+                messageids.add(id);
+            }
+            mdb.set(r + ".messageids", messageids);
+            mdb.set(r + "." + String.valueOf(id) + ".sender", s);
+            mdb.set(r + "." + String.valueOf(id) + ".message", m);
+            mdb.set(r + "." + String.valueOf(id) + ".date", date);
+            // new messages can't have been delivered
+            mdb.set(r + "." + String.valueOf(id) + ".delivered", false);
+            // new messages can't have been read
+            mdb.set(r + "." + String.valueOf(id) + ".read", false);
+
+            // since there's at least one new message, set newmail to true
+            mdb.set(r + ".newmail", true);
+
+            // if we send to ourselves, don't delete what we just added
+            if(!r.equalsIgnoreCase(origin)) {
+                // "atomic" remove
+                messageids = mdb.getIntegerList(origin + ".messageids");
+                if(messageids != null) { // safety check
+                    messageids.remove(Integer.valueOf(id));
+                }
+                mdb.set(origin + ".messageids", messageids);
+                mdb.set(origin + "." + String.valueOf(id), null);
+            }
+
+            this.save();
+            ret = true;
+        }
+        return ret;    
+    }
+
+    public boolean storeMessage(int id, String s, String m, int d) {
+        if(mdb == null || s == null || m == null) {
+            return false;
+        }
 
         // update messageids
-        List<Integer> messageids = mdb.getIntegerList(r + ".messageids");
+        List<Integer> messageids = mdb.getIntegerList(s + ".messageids");
         if(messageids == null) {
             messageids = new ArrayList<Integer>();
         }
-        messageids.add(id);
-        mdb.set(r + ".messageids", messageids);
+        if(!messageids.contains(id)) { // I should move to a non-duplicate storage type .. 
+            messageids.add(id);
+        }
+        mdb.set(s + ".messageids", messageids);
 
-        mdb.set(r + "." + String.valueOf(id) + ".sender", s);
-        mdb.set(r + "." + String.valueOf(id) + ".message", m);
-        mdb.set(r + "." + String.valueOf(id) + ".date", d);
-        // new messages can't have been delivered
-        mdb.set(r + "." + String.valueOf(id) + ".delivered", false);
-        // new messages can't have been read
-        mdb.set(r + "." + String.valueOf(id) + ".read", false);
-
-        this.save(); // save after each sent message currently
+        mdb.set(s + "." + String.valueOf(id) + ".sender", s);
+        mdb.set(s + "." + String.valueOf(id) + ".message", m);
+        mdb.set(s + "." + String.valueOf(id) + ".date", d);
+        mdb.set(s + "." + String.valueOf(id) + ".delivered", true);
+        mdb.set(s + "." + String.valueOf(id) + ".read", true);
+        // we do not change .newmail when storing in our own storage, of course
+        
+        this.save(); // save after each stored message currently
 
         return true;
     }
@@ -214,7 +263,6 @@ public class CourierDB {
     }
 
     // finds a specific messageid and returns associated player
-    // needed since the server drops our Letter associations with uid on restart
     public String getPlayer(int id) {
         if(id == -1 || mdb == null) {
             return null;
@@ -288,7 +336,7 @@ public class CourierDB {
         return true;
     }
 
-    // returns the first available id
+    // returns the first available id, or -1 when we're fatally out of them (or db error .. hmm)
     // expected to be called seldom (at letter creation) and is allowed to be slow
     // obvious caching/persisting of TreeSet possible
     public int generateUID() {
@@ -311,7 +359,6 @@ public class CourierDB {
                 return i;
             }
         }
-        // todo: no more unique ids available - force admin to cleanup I guess
         return -1;
     }
 }

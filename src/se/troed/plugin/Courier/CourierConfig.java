@@ -17,6 +17,7 @@ public class CourierConfig {
     private static final String USEFEES = "Courier.UseFees";
     // any config file _older_ than this is invalid - compatibility break
     private static final String VERSIONBREAK = "0.9.0";
+    private static final String FEE_SEND = "Courier.Fee.Send";
     private static final String POSTMAN_QUICK_DESPAWN = "Courier.Postman.QuickDespawn";
     private static final String POSTMAN_DESPAWN = "Courier.Postman.Despawn";
     private static final String ROUTE_INITIALWAIT = "Courier.Route.InitialWait";
@@ -27,9 +28,11 @@ public class CourierConfig {
     private static final String POSTMAN_MAILDROP = "Courier.Postman.MailDrop";
     private static final String POSTMAN_INVENTORY = "Courier.Postman.Inventory";
     private static final String POSTMAN_CANNOTDELIVER = "Courier.Postman.CannotDeliver";
-    private static final String FEE_SEND = "Courier.Fee.Send";
-
+    private static final String LETTER_DROP = "Courier.Letter.Drop";
+    private static final String LETTER_INVENTORY = "Courier.Letter.Inventory";
+    
     private final boolean useFees;
+    private final double feeSend;
     private final int quickDespawnTime;
     private final int despawnTime;
     private final int initialWait;
@@ -40,8 +43,9 @@ public class CourierConfig {
     private String maildrop = null;
     private String inventory = null;
     private String cannotDeliver = null;
-    private final double feeSend;
-
+    private String letterDrop = null;
+    private String letterInventory = null;
+    
     public CourierConfig(Courier plug) {
 
         log = plug.getServer().getLogger();
@@ -92,6 +96,8 @@ public class CourierConfig {
         
         useFees = config.getBoolean(USEFEES, false); // added in 0.9.5
         clog(Level.FINE, USEFEES + ": " + useFees);
+        feeSend = config.getDouble(FEE_SEND, 0); // added in 0.9.5
+        clog(Level.FINE, FEE_SEND + ": " + feeSend);
         quickDespawnTime = config.getInt(POSTMAN_QUICK_DESPAWN);
         clog(Level.FINE, POSTMAN_QUICK_DESPAWN + ": " + quickDespawnTime);
         despawnTime = config.getInt(POSTMAN_DESPAWN);
@@ -112,8 +118,10 @@ public class CourierConfig {
         clog(Level.FINE, POSTMAN_INVENTORY + ": " + inventory);
         cannotDeliver = colorize(config.getString(POSTMAN_CANNOTDELIVER, "")); // added in 0.9.6
         clog(Level.FINE, POSTMAN_CANNOTDELIVER + ": " + cannotDeliver);
-        feeSend = config.getDouble(FEE_SEND, 0); // added in 0.9.5
-        clog(Level.FINE, FEE_SEND + ": " + feeSend);
+        letterDrop = colorize(config.getString(LETTER_DROP, "")); // added in 0.9.10
+        clog(Level.FINE, LETTER_DROP + ": " + letterDrop);
+        letterInventory = colorize(config.getString(LETTER_INVENTORY, "")); // added in 0.9.10
+        clog(Level.FINE, LETTER_INVENTORY + ": " + letterInventory);
     }
 
     public boolean getUseFees() {
@@ -162,6 +170,14 @@ public class CourierConfig {
 
     public Double getFeeSend() {
         return feeSend;
+    }
+
+    public String getLetterDrop() {
+        return letterDrop;
+    }
+    
+    public String getLetterInventory() {
+        return letterInventory;
     }
 
     @SuppressWarnings({"PointlessBooleanExpression", "ConstantConditions"})
