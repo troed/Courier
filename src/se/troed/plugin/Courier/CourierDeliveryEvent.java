@@ -9,12 +9,12 @@ class CourierDeliveryEvent extends Event implements Cancellable {
     public static final String COURIER_READ = "COURIER_READ";
     private boolean cancelled;
     private final Player player;
-    private final short mapId;
+    private final int id;
 
-    public CourierDeliveryEvent(String event, Player p, short id) {
+    public CourierDeliveryEvent(String event, Player p, int id) {
         super(event);
         player = p;
-        mapId = id;
+        this.id = id;
     }
 
     public boolean isCancelled() {
@@ -29,7 +29,7 @@ class CourierDeliveryEvent extends Event implements Cancellable {
         return player;
     }
 
-    public short getMapId() {
-        return mapId;
+    public int getId() {
+        return id;
     }
 }

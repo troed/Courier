@@ -5,6 +5,7 @@ import java.util.UUID;
 import org.bukkit.Effect;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.CreatureType;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Enderman;
@@ -20,21 +21,23 @@ public class Postman {
 
     private Enderman enderman;
     private final Courier plugin;
-    private final ItemStack letter;
+    private final ItemStack letterItem;
     private UUID uuid;
     private boolean scheduledForQuickRemoval;
     private int taskId;
     private Runnable runnable;
     private final Player player;
     
-    public Postman(Courier plug, Player p, short id) {
+    public Postman(Courier plug, Player p, int id) {
         plugin = plug;
         player = p;
-        letter = new ItemStack(Material.MAP,1,id);
+        // the only place where we create an actual letter ItemStack
+        letterItem = new ItemStack(Material.MAP, 1, plug.getCourierdb().getCourierMapId());
+        letterItem.addUnsafeEnchantment(Enchantment.DURABILITY, id);
     }
     
-    public ItemStack getLetter() {
-        return letter;
+    public ItemStack getLetterItem() {
+        return letterItem;
     }
     
     public void spawn(Location l) {
@@ -62,7 +65,7 @@ public class Postman {
     }
     
     public void drop() {
-        enderman.getWorld().dropItemNaturally(enderman.getLocation(), letter);
+        enderman.getWorld().dropItemNaturally(enderman.getLocation(), letterItem);
         enderman.setCarriedMaterial(new MaterialData(Material.AIR));
         String maildrop = plugin.getCConfig().getMailDrop();
         if(maildrop != null && !maildrop.isEmpty()) {

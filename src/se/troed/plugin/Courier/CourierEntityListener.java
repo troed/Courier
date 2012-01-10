@@ -3,7 +3,6 @@ package se.troed.plugin.Courier;
 import java.util.logging.Level;
 
 import org.bukkit.entity.CreatureType;
-import org.bukkit.entity.Entity;
 import org.bukkit.event.entity.*;
 
 
@@ -55,7 +54,6 @@ class CourierEntityListener extends EntityListener {
     // in theory we could add another listener at Monitor priority for announce() ..
     public void onCreatureSpawn(CreatureSpawnEvent e) {
         if(e.getCreatureType() == CreatureType.ENDERMAN) {
-            plugin.getCConfig().clog(Level.FINE, "onCreatureSpawn Enderman with uuid:" + e.getEntity().getUniqueId());
             // we end up here before we've had a chance to log and store our Postman uuids!
             // this means we cannot reliably override spawn deniers with perfect identification.
             // We match on Location instead but it's not pretty. Might be the only solution though.

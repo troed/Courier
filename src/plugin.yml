@@ -1,11 +1,14 @@
 name: Courier
 main: se.troed.plugin.Courier.Courier
-version: 0.9.6
+version: 0.9.9
 author: defxor
+description: Item based Player to Player realistically rendered mail
+website: http://dev.bukkit.org/server-mods/courier/
 softdepend: [Vault]
 commands:
   postman:
     description: Spawns a postman
+    aliases: [mailman, postie]
     permission: courier.postman
     usage: /postman
   courier:
@@ -13,9 +16,15 @@ commands:
     permission: courier.info
     usage: /courier
   post:
-    description: Sends a letter
+    description: Sends the letter currently held in hand to someone
+    aliases: [mail, send]
     permission: courier.send
-    usage: /post playername message
+    usage: /post playername
+  letter:
+    description: Creates a letter
+    aliases: [note, write]
+    permission: courier.send
+    usage: /letter message        # Can be repeated to add additional text to existing handheld letter
 permissions:
   courier.send:
     description: Sends a message

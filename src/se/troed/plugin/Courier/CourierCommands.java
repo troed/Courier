@@ -6,18 +6,10 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.*;
-import org.bukkit.map.MapRenderer;
-import org.bukkit.map.MapView;
 
 import java.util.List;
 import java.util.logging.Level;
 
-import org.bukkit.ChatColor.*;
-
-/**
- * Naughty: Implementing ServerCommands and onCommand in the same class
- * Nice: Implementing ServerCommands and onCommand in the same class
- */
 class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
     private final Courier plugin;
 
@@ -118,7 +110,7 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                         // p = players.get(0); // don't, could be embarrassing if wrong
                         sender.sendMessage("Courier: Couldn't find " + args[0] + ". Did you mean " + players.get(0).getName() + "?");
                     } else if (players != null && players.size() > 1 && player.hasPermission(Courier.PM_LIST)) {
-                      // more than one possible match found
+                        // more than one possible match found
                         StringBuilder suggestList = new StringBuilder();
                         int width = 0;
                         for(Player pl : players) {
@@ -139,17 +131,6 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                     }
                 }
                 if(p != null) {
-                    // Q: Maps are saved in the world-folders, "null" isn't valid as world then?
-                    MapView map = plugin.getServer().createMap(player.getWorld());
-                    plugin.getCConfig().clog(Level.FINE, "Map ID = " + map.getId());
-                    // make it ours
-                    map.setCenterX(Courier.MAGIC_NUMBER);
-                    map.setCenterZ((int)(System.currentTimeMillis() / 1000L)); // oh noes unix y2k issues!!!11
-                    List<MapRenderer> renderers = map.getRenderers();
-                    for(MapRenderer r : renderers) { // remove existing renderers
-                        map.removeRenderer(r);
-                    }
-
                     if(plugin.getEconomy() != null && !player.hasPermission(Courier.PM_THEONEPERCENT)) {
                         // withdraw postage fee
                         double fee = plugin.getCConfig().getFeeSend();
@@ -166,6 +147,7 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
 
                     // todo: figure out max length and show if a cutoff was made
                     // Minecraftfont isValid(message)
+                    // todo: I've seen strange stuff here with regards to 8 bit ascii
 
                     StringBuilder message = new StringBuilder();
                     for(int i=1; i<args.length; i++) {
@@ -180,14 +162,19 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                         message.append(" ");
                     }
 
-                    plugin.getCourierdb().storeMessage(map.getId(), p.getName(), sender.getName(),  message.toString());
+                    // this is where we actually generate a uid for this message
+                    plugin.getCourierdb().storeMessage(plugin.getCourierdb().generateUID(),
+                                                       p.getName(),
+                                                       sender.getName(),
+                                                       message.toString(),
+                                                       (int)(System.currentTimeMillis() / 1000L)); // oh noes unix y2k issues!!!11
                 }
                 ret = true;
             }
         } else if(cmd.equals(Courier.CMD_POSTMAN) && allowed(player, cmd)){
             // not allowed to be run from the console, uses player
             if(plugin.getCourierdb().undeliveredMail(player.getName())) {
-                short undeliveredMessageId = plugin.getCourierdb().undeliveredMessageId(player.getName());
+                int undeliveredMessageId = plugin.getCourierdb().undeliveredMessageId(player.getName());
                 if(undeliveredMessageId != -1) {
                     sender.sendMessage("You've got mail!");
 
