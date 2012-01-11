@@ -158,23 +158,23 @@ public class CourierDB {
             return false;
         }
 
-        s = s.toLowerCase();
+        String skey = s.toLowerCase();
 
         // update messageids
-        List<Integer> messageids = mdb.getIntegerList(s + ".messageids");
+        List<Integer> messageids = mdb.getIntegerList(skey + ".messageids");
         if(messageids == null) {
             messageids = new ArrayList<Integer>();
         }
         if(!messageids.contains(id)) { // I should move to a non-duplicate storage type .. 
             messageids.add(id);
         }
-        mdb.set(s + ".messageids", messageids);
+        mdb.set(skey + ".messageids", messageids);
 
-        mdb.set(s + "." + String.valueOf(id) + ".sender", s);
-        mdb.set(s + "." + String.valueOf(id) + ".message", m);
-        mdb.set(s + "." + String.valueOf(id) + ".date", d);
-        mdb.set(s + "." + String.valueOf(id) + ".delivered", true);
-        mdb.set(s + "." + String.valueOf(id) + ".read", true);
+        mdb.set(skey + "." + String.valueOf(id) + ".sender", s);
+        mdb.set(skey + "." + String.valueOf(id) + ".message", m);
+        mdb.set(skey + "." + String.valueOf(id) + ".date", d);
+        mdb.set(skey + "." + String.valueOf(id) + ".delivered", true);
+        mdb.set(skey + "." + String.valueOf(id) + ".read", true);
         // we do not change .newmail when storing in our own storage, of course
         
         this.save(); // save after each stored message currently
@@ -195,7 +195,7 @@ public class CourierDB {
 
             if(r.equals(rlower)) {
                 // this receiver needs no rewriting, only rewrite message senders when needed
-                List<Integer> messageids = mdb.getIntegerList(r + ".messageids");
+/*                List<Integer> messageids = mdb.getIntegerList(r + ".messageids");
                 if(messageids != null) { // a player who's only read others' mail would be null here I think
                     for(Integer id : messageids) {
                         String s = getSender(r, id);
@@ -203,7 +203,7 @@ public class CourierDB {
                             mdb.set(rlower + "." + String.valueOf(id) + ".sender", s.toLowerCase());
                         }
                     }
-                }
+                }*/
             } else {
                 // this receiver needs full rewriting
                 boolean newmail = mdb.getBoolean(r + ".newmail");
@@ -223,7 +223,8 @@ public class CourierDB {
                     boolean delivered = mdb.getBoolean(r + "." + String.valueOf(id) + ".delivered");
                     boolean read = mdb.getBoolean(r + "." + String.valueOf(id) + ".read");
                     
-                    mdb.set(rlower + "." + String.valueOf(id) + ".sender", s.toLowerCase());
+//                    mdb.set(rlower + "." + String.valueOf(id) + ".sender", s.toLowerCase());
+                    mdb.set(rlower + "." + String.valueOf(id) + ".sender", s);
                     mdb.set(rlower + "." + String.valueOf(id) + ".message", m);
                     mdb.set(rlower + "." + String.valueOf(id) + ".date", date);
                     mdb.set(rlower + "." + String.valueOf(id) + ".delivered", delivered);

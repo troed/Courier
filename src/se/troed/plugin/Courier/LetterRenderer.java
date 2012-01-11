@@ -52,7 +52,7 @@ public class LetterRenderer extends MapRenderer {
             // (heh, interesting for pvp war servers. "your mail has fallen into enemy hands". "they've read it!")
             if(letter != null && player.getName().equals(letter.getReceiver())) {
                 int drawPos = HEADER_POS;
-                if(!player.getName().equals(letter.getSender())) {
+                if(!player.getName().equalsIgnoreCase(letter.getSender())) {
                     canvas.drawText(0, MinecraftFont.Font.getHeight() * drawPos, MinecraftFont.Font, letter.getHeader());
                     drawPos = BODY_POS;
                 }
