@@ -69,6 +69,22 @@ public class CourierDB {
         return ret;
     }
 
+    // retrieves the version of our database format, -1 if it doesn't exist
+    // 1 = v1.0.0
+    public int getDatabaseVersion() {
+        if(mdb == null) {
+            return -1;
+        }
+        return mdb.getInt("courierdatabaseversion", -1);
+    }
+
+    public void setDatabaseVersion(int v) {
+        if(mdb == null) {
+            return;
+        }
+        mdb.set("courierdatabaseversion", v);
+    }
+
     // retrieves what we think is our specially allocated Map
     public short getCourierMapId() {
         if(mdb == null) {
@@ -90,6 +106,8 @@ public class CourierDB {
             return false;
         }
 
+        r = r.toLowerCase();
+        
         // nothing to say the player who wants to send a picked up Letter is the one with it in her storage
         String origin = getPlayer(id);
 
@@ -140,6 +158,8 @@ public class CourierDB {
             return false;
         }
 
+        s = s.toLowerCase();
+
         // update messageids
         List<Integer> messageids = mdb.getIntegerList(s + ".messageids");
         if(messageids == null) {
@@ -160,6 +180,66 @@ public class CourierDB {
         this.save(); // save after each stored message currently
 
         return true;
+    }
+
+    // this method is called when we detect a database version with case sensitive keys
+    // it simply lowercases all Player name keys
+    public void keysToLower() {
+        if(mdb == null) {
+            return;
+        }
+
+        Set<String> players = mdb.getKeys(false);
+        for (String r : players) {
+            String rlower = r.toLowerCase();
+
+            if(r.equals(rlower)) {
+                // this receiver needs no rewriting, only rewrite message senders when needed
+                List<Integer> messageids = mdb.getIntegerList(r + ".messageids");
+                if(messageids != null) { // a player who's only read others' mail would be null here I think
+                    for(Integer id : messageids) {
+                        String s = getSender(r, id);
+                        if(!s.equals(s.toLowerCase())) {
+                            mdb.set(rlower + "." + String.valueOf(id) + ".sender", s.toLowerCase());
+                        }
+                    }
+                }
+            } else {
+                // this receiver needs full rewriting
+                boolean newmail = mdb.getBoolean(r + ".newmail");
+                List<Integer> messageids = mdb.getIntegerList(r + ".messageids");
+                if(messageids == null) { // safety, should not happen in this case
+                    messageids = new ArrayList<Integer>();
+                }
+                List<Integer> newMessageids = mdb.getIntegerList(rlower + ".messageids");
+                if(newMessageids == null) { // most likely, but who knows?
+                    newMessageids = new ArrayList<Integer>();
+                }
+                for(Integer id : messageids) {
+                    // fetch a message
+                    String s = mdb.getString(r + "." + String.valueOf(id) + ".sender");
+                    String m = mdb.getString(r + "." + String.valueOf(id) + ".message");
+                    int date = mdb.getInt(r + "." + String.valueOf(id) + ".date");
+                    boolean delivered = mdb.getBoolean(r + "." + String.valueOf(id) + ".delivered");
+                    boolean read = mdb.getBoolean(r + "." + String.valueOf(id) + ".read");
+                    
+                    mdb.set(rlower + "." + String.valueOf(id) + ".sender", s.toLowerCase());
+                    mdb.set(rlower + "." + String.valueOf(id) + ".message", m);
+                    mdb.set(rlower + "." + String.valueOf(id) + ".date", date);
+                    mdb.set(rlower + "." + String.valueOf(id) + ".delivered", delivered);
+                    mdb.set(rlower + "." + String.valueOf(id) + ".read", read);
+
+                    newMessageids.add(id);
+
+                    mdb.set(r + "." + String.valueOf(id), null); // delete old message
+                }
+                mdb.set(rlower + ".messageids", newMessageids);
+                mdb.set(rlower + ".newmail", newmail);
+
+                mdb.set(r, null); // delete the old entry
+            }
+        }
+        this.save();
     }
     
     // used for legacy Letter conversion only
@@ -218,6 +298,9 @@ public class CourierDB {
         if(mdb == null || r == null) {
             return false;
         }
+        
+        r = r.toLowerCase();
+
         return mdb.getBoolean(r + ".newmail");
     }
     
@@ -227,6 +310,8 @@ public class CourierDB {
         if(mdb == null || r == null) {
             return -1;
         }
+
+        r = r.toLowerCase();
 
         List<Integer> messageids = mdb.getIntegerList(r + ".messageids");
         if(messageids != null) {
@@ -246,6 +331,8 @@ public class CourierDB {
         if(mdb == null || r == null) {
             return -1;
         }
+
+        r = r.toLowerCase();
 
         List<Integer> messageids = mdb.getIntegerList(r + ".messageids");
         if(messageids != null) {
@@ -283,6 +370,8 @@ public class CourierDB {
             return null;
         }
 
+        r = r.toLowerCase();
+
         return mdb.getString(r + "." + String.valueOf(id) + ".sender");
     }
     
@@ -290,6 +379,8 @@ public class CourierDB {
         if(mdb == null || r == null) {
             return null;
         }
+
+        r = r.toLowerCase();
 
         return mdb.getString(r + "." + String.valueOf(id) + ".message");
     }
@@ -299,6 +390,9 @@ public class CourierDB {
         if(mdb == null || r == null || id==-1) {
             return false;
         }
+
+        r = r.toLowerCase();
+
         return mdb.getBoolean(r + "." + String.valueOf(id) + ".delivered");
     }
 
@@ -308,6 +402,9 @@ public class CourierDB {
         if(mdb == null || r == null || id==-1) {
             return false;
         }
+
+        r = r.toLowerCase();
+
         mdb.set(r + "." + String.valueOf(id) + ".delivered", true);
         undeliveredMessageId(r); // DIRTY way of making sure "newmail" is cleared
         return true;
@@ -317,6 +414,9 @@ public class CourierDB {
         if(mdb == null || r == null) {
             return -1;
         }
+
+        r = r.toLowerCase();
+
         return mdb.getInt(r + "." + String.valueOf(id) + ".date");
     }
 
@@ -325,6 +425,9 @@ public class CourierDB {
         if(mdb == null || r == null || id==-1) {
             return false;
         }
+
+        r = r.toLowerCase();
+
         return mdb.getBoolean(r + "." + String.valueOf(id) + ".read");
     }
 
@@ -332,6 +435,9 @@ public class CourierDB {
         if(mdb == null || r == null || id==-1) {
             return false;
         }
+
+        r = r.toLowerCase();
+
         mdb.set(r + "." + String.valueOf(id) + ".read", true);
         return true;
     }

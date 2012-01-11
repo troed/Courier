@@ -129,6 +129,7 @@ public class Courier extends JavaPlugin {
     public static final int MAGIC_NUMBER = Integer.MAX_VALUE - 395743; // used to id our map
     public static final int MAX_ID = Short.MAX_VALUE; // really, we don't do negative numbers well atm
     public static final int MIN_ID = 1; // since unenchanted items are level 0
+    private static final int DBVERSION = 1; // used since 1.0.0
 
     private static Vault vault = null;
     private static Economy economy = null;
@@ -406,6 +407,16 @@ public class Courier extends JavaPlugin {
     public void onEnable() {
         this.loadConfig();
         courierdb.load();
+
+        if(courierdb.getDatabaseVersion() == -1) {
+            // todo: make a forced copy of messages.yml first?
+            // fixes http://dev.bukkit.org/server-mods/courier/tickets/32-player-never-gets-mail-uppercase-lowercase-username/
+            config.clog(Level.WARNING, "Case sensitive database found, rewriting ...");
+            courierdb.keysToLower();
+            courierdb.setDatabaseVersion(Courier.DBVERSION);
+            config.clog(Level.WARNING, "Case sensitive database found, rewriting ... done");
+        }
+
         boolean abort = false;
 
         // Register our events
