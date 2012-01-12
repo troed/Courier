@@ -50,7 +50,7 @@ public class LetterRenderer extends MapRenderer {
             }
             // todo: config setting whether to do this check or not
             // (heh, interesting for pvp war servers. "your mail has fallen into enemy hands". "they've read it!")
-            if(letter != null && player.getName().equals(letter.getReceiver())) {
+            if(letter != null && player.getName().equalsIgnoreCase(letter.getReceiver())) {
                 int drawPos = HEADER_POS;
                 if(!player.getName().equalsIgnoreCase(letter.getSender())) {
                     canvas.drawText(0, MinecraftFont.Font.getHeight() * drawPos, MinecraftFont.Font, letter.getHeader());
