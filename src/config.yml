@@ -3,7 +3,7 @@
 # Strings can use &0..&f color coding
 Courier:
   UseFees: false
-  Version: 0.9.10
+  Version: 0.9.11
   Fee:
     Send: 10
   Route:
