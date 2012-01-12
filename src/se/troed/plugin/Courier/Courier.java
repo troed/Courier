@@ -21,6 +21,7 @@ package se.troed.plugin.Courier;
 import net.milkbowl.vault.Vault;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.Location;
+import org.bukkit.block.Biome;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.enchantments.Enchantment;
@@ -344,7 +345,6 @@ public class Courier extends JavaPlugin {
                     if(spawnLoc != null && player.getWorld().hasStorm()) {
                         // I think I consider this to be a temporary solution to
                         // http://dev.bukkit.org/server-mods/courier/tickets/4-postmen-are-spawned-outside-even-if-its-raining/
-                        // Also, do endermen get hurt by snowfall? (and damage events for endermen in rain are lacking in Bukkit, right?)
                         //
                         // hey. so rails on a block cause my findSpawnLocation to choose the block above
                         // I guess there are additional checks I should add. emptiness?
@@ -355,10 +355,19 @@ public class Courier extends JavaPlugin {
                         // int getHighestBlockYAt (int x, int z); returns 0 when you call it from the Nether.
                         // https://bukkit.atlassian.net/browse/BUKKIT-451
 
-
-                        config.clog(Level.FINE, "Top sky facing block at Y: " + player.getWorld().getHighestBlockYAt(spawnLoc));
-                        if(player.getWorld().getHighestBlockYAt(spawnLoc) == spawnLoc.getBlockY()) {
-                            spawnLoc = null;
+                        // Minecraftwiki:
+                        // "Rain occurs in all biomes except Tundra, Taiga, and Desert."
+                        // "Snow will only fall in the Tundra and Taiga biomes"
+                        // .. but on my test server there's rain in Taiga. What gives?
+                        // .. and snow in ICE_PLAINS of course.
+                        // .. let's go with DESERT being safe and that's it. (Endermen are hurt by snow as well)
+                        Biome biome = player.getWorld().getBiome((int) spawnLoc.getX(), (int) spawnLoc.getZ());
+                        config.clog(Level.FINE, "SpawnLoc is in biome: " + biome);
+                        if(biome != Biome.DESERT) {
+                            config.clog(Level.FINE, "Top sky facing block at Y: " + player.getWorld().getHighestBlockYAt(spawnLoc));
+                            if(player.getWorld().getHighestBlockYAt(spawnLoc) == spawnLoc.getBlockY()) {
+                                spawnLoc = null;
+                            }
                         }
                     }
                     if (spawnLoc != null) {
@@ -445,6 +454,12 @@ public class Courier extends JavaPlugin {
         // Prepare the magic Courier Map we use for all rendering
         // and more importantly, the one all ItemStacks will point to
         short mapId = courierdb.getCourierMapId();
+        // check if the server admin has used Courier and then deleted the world
+        if(getServer().getMap(mapId) == null) {
+            getCConfig().clog(Level.SEVERE, "The Courier claimed map id " + mapId + " wasn't found in the world folder! Reclaiming.");
+            getCConfig().clog(Level.SEVERE, "If deleting the world (or maps) wasn't intended you should look into why this happened.");
+            mapId = -1;
+        }
         if(mapId == -1) {
             // we don't have an allocated map stored, see if there is one we've forgotten about
             for(short i=0; i<Short.MAX_VALUE; i++) {
