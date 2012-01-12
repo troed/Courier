@@ -74,15 +74,20 @@ public class Letter {
     // what to do about height? I could scroll the text ... :)
 
     private String format(String s) {
-        String[] splitwords = s.split("\\s+");
+//        String[] splitwords = s.split("\\s+");
         ArrayList<String> words = new ArrayList<String>();
-        Collections.addAll(words, splitwords);
+//        Collections.addAll(words, splitwords);
+        Collections.addAll(words, s.split("\\s+"));
         StringBuilder buffer = new StringBuilder();
         int i = 0;
         while(i < words.size()) {
             int width = 0;
             int x = 0;
             while(i < words.size() && (x+width) <= CANVAS_WIDTH) {
+                if(words.get(i).equals("&nl") || words.get(i).equals("\\n")) {
+                    i++;
+                    break; // inner loop break, will cause a newline
+                }
                 // seems to NPE in MapFont.java:52 if we include the color codes ("§12;" etc) - most likely a bug
                 // doesn't seem to be possible to generate those characters from the in-game console though
                 try {

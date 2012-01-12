@@ -12,6 +12,7 @@ import org.bukkit.inventory.ItemStack;
 import java.util.HashMap;
 import java.util.List;
 import java.util.logging.Level;
+import java.util.regex.Pattern;
 
 class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
     private final Courier plugin;
@@ -202,15 +203,18 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
 
                     if(send) {
                         // sign over this letter to recipient
-                        plugin.getCourierdb().sendMessage(letter.getId(), p.getName());
-                        // existing Letter now has outdated info, will automatically be recreated from db
-                        plugin.removeLetter(letter.getId());
-                        plugin.getLetterRenderer().forceClear();
+                        if(plugin.getCourierdb().sendMessage(letter.getId(), p.getName())) {
+                            // existing Letter now has outdated info, will automatically be recreated from db
+                            plugin.removeLetter(letter.getId());
+                            plugin.getLetterRenderer().forceClear();
 
-                        // remove item from hands, which kills the ItemStack association. It's now "gone"
-                        // from the control of this player. (if I implement additional receivers you could of course
-                        //  cc: yourself)
-                        player.setItemInHand(null);
+                            // remove item from hands, which kills the ItemStack association. It's now "gone"
+                            // from the control of this player. (if I implement additional receivers you could of course
+                            //  cc: yourself)
+                            player.setItemInHand(null);
+                        } else {
+                            plugin.getCConfig().clog(Level.WARNING, "Could not send message with ID: " + letter.getId());
+                        }
                     }
                 }
                 ret = true;
@@ -257,9 +261,19 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                 StringBuilder message = new StringBuilder();
                 if(letter != null) {
                     // new stuff appended to the old
-                    // (fetch from db, letter.getMessage contains newline formatted text)
+                    // fetch from db, letter.getMessage contains newline formatted text
                     message.append(plugin.getCourierdb().getMessage(letter.getReceiver(), id));
+                    if(!player.getName().equalsIgnoreCase(letter.getSender())) {
+                        // we're adding to existing text from someone else, add newlines
+                        // extra credits: detect if we were going to be on a new line anyway, then only append one
+                        message.append("\\n\\n"); // replaced with actual newlines by Letter, later
+                    }
                 }
+                // hey I added &nl a newline -> &nl      -> &nl
+                // hey I added\n a newline   -> added\n  -> added \n
+                // hey I added \na newline   -> \na      -> \n a
+                // hey I added\na newline    -> added\na -> added \n a
+                Pattern newlines = Pattern.compile("(\\s*\\\\n\\s*|\\s*&nl\\s*)");
                 for(int i=0; i<args.length; i++) {
                     // %loc -> [X,Y,Z] and such
                     // if this grows, break it out and make it configurable
@@ -267,14 +281,14 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                         Location loc = player.getLocation();
                         message.append("[" + loc.getBlockX() + "," + loc.getBlockY() + "," + loc.getBlockZ() + "]");
                     } else {
-                        message.append(args[i]);
+                        message.append(newlines.matcher(args[i]).replaceAll(" $1 ").trim()); // tokenize
                     }
                     message.append(" ");
                 }
-        
+
                 if (plugin.getCourierdb().storeMessage(id,
                         player.getName(),
-                        message.toString(),
+                        message.toString(), // .trim() but then /letter on /letter needs added space anyway
                         (int)(System.currentTimeMillis() / 1000L))) { // oh noes unix y2k issues!!!11
     
                     // no letter == we create and put in hands, or in inventory, or drop to ground
