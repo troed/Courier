@@ -361,6 +361,7 @@ public class Courier extends JavaPlugin {
                         // .. but on my test server there's rain in Taiga. What gives?
                         // .. and snow in ICE_PLAINS of course.
                         // .. let's go with DESERT being safe and that's it. (Endermen are hurt by snow as well)
+                        // .. maybe add BEACH later?
                         Biome biome = player.getWorld().getBiome((int) spawnLoc.getX(), (int) spawnLoc.getZ());
                         config.clog(Level.FINE, "SpawnLoc is in biome: " + biome);
                         if(biome != Biome.DESERT) {

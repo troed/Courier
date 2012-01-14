@@ -35,13 +35,12 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                 a = true;
             } else if(c.equals(Courier.CMD_LETTER) && p.hasPermission(Courier.PM_WRITE)) {
                 a = true;
+            } if(c.equals(Courier.CMD_COURIER)) {
+                a = true;
             }
             plugin.getCConfig().clog(Level.FINE, "Player command event");
         } else {
             // console operator is op, no player and no location
-            if(c.equals(Courier.CMD_COURIER)) {
-                a = true;
-            }
             plugin.getCConfig().clog(Level.FINE, "Server command event");
         }
         plugin.getCConfig().clog(Level.FINE, "Permission: " + a);
@@ -55,21 +54,34 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
         permission: courier.postman
         usage: /postman
     */
-    boolean commandInformation(CommandSender sender, String[] args) {
-        if (args != null && args.length > 0 && args[0].equalsIgnoreCase("fees")) {
-            if(plugin.getEconomy() != null) {
-                double fee = plugin.getCConfig().getFeeSend();
-                sender.sendMessage("Courier: The postage is " + plugin.getEconomy().format(fee));
-            } else {
-                sender.sendMessage("Courier: There's no cost for sending mail on this server");
+    boolean commandInformation(Player player, String[] args) {
+        boolean retVal = false;
+        if (args != null && args.length > 0) {
+            if (args[0].equalsIgnoreCase("fees")) {
+                if(plugin.getEconomy() != null) {
+                    double fee = plugin.getCConfig().getFeeSend();
+                    player.sendMessage("Courier: The postage is " + plugin.getEconomy().format(fee));
+                } else {
+                    player.sendMessage("Courier: There's no cost for sending mail on this server");
+                }
+                retVal = true;
+            } else if(args[0].equalsIgnoreCase("unread")) {
+                if(plugin.getCourierdb().deliverUnreadMessages(player.getName())) {
+                    player.sendMessage("Courier: The Postman will make extra deliveries");
+                } else {
+                    player.sendMessage("Courier: You have no unread mail");
+                }
+                retVal = true;
             }
             // todo: implement /courier list
         } else {
-            sender.sendMessage(ChatColor.WHITE + "/courier fees " + ChatColor.GRAY + ": Lists cost, if any, for Posting a Letter");
-            sender.sendMessage(ChatColor.WHITE + "/letter message" + ChatColor.GRAY + ": Creates a Letter or adds text to an existing one");
-            sender.sendMessage(ChatColor.WHITE + "/post playername" + ChatColor.GRAY + ": Posts the Letter you're holding to playername");
+            player.sendMessage(ChatColor.WHITE + "/letter message" + ChatColor.GRAY + ": Creates a Letter or adds text to an existing one");
+            player.sendMessage(ChatColor.WHITE + "/post playername" + ChatColor.GRAY + ": Posts the Letter you're holding to playername");
+            player.sendMessage(ChatColor.WHITE + "/courier fees " + ChatColor.GRAY + ": Lists cost, if any, for Posting a Letter");
+            player.sendMessage(ChatColor.WHITE + "/courier unread " + ChatColor.GRAY + ": Request re-delivery of any unread mail");
+            retVal = true;
         }
-        return true;
+        return retVal;
     }
 
     /*
@@ -203,7 +215,7 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
 
                     if(send) {
                         // sign over this letter to recipient
-                        if(plugin.getCourierdb().sendMessage(letter.getId(), p.getName())) {
+                        if(plugin.getCourierdb().sendMessage(letter.getId(), p.getName(), player.getName())) {
                             // existing Letter now has outdated info, will automatically be recreated from db
                             plugin.removeLetter(letter.getId());
                             plugin.getLetterRenderer().forceClear();
@@ -266,7 +278,7 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                     if(!player.getName().equalsIgnoreCase(letter.getSender())) {
                         // we're adding to existing text from someone else, add newlines
                         // extra credits: detect if we were going to be on a new line anyway, then only append one
-                        message.append("\\n\\n"); // replaced with actual newlines by Letter, later
+                        message.append("\\n \\n "); // replaced with actual newlines by Letter, later
                     }
                 }
                 // hey I added &nl a newline -> &nl      -> &nl
@@ -350,8 +362,8 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
 
         String cmd = command.getName().toLowerCase();
         if(cmd.equals(Courier.CMD_COURIER) && allowed(player, cmd)) {
-            // can be run from console, does not use player
-            ret = commandInformation(sender, args);
+            // not allowed to be run from the console, uses player
+            ret = commandInformation(player, args);
         } else if((cmd.equals(Courier.CMD_LETTER)) && allowed(player, cmd)) {
             // not allowed to be run from the console, uses player
             ret = commandLetter(player, args);

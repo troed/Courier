@@ -100,20 +100,23 @@ public class CourierDB {
         mdb.set("courierclaimedmap", (int)mapId);
     }
 
-    public boolean sendMessage(int id, String r) {
+    public boolean sendMessage(int id, String r, String s) {
         boolean ret = false;
-        if(mdb == null || r == null) {
+        if(mdb == null || r == null || s == null) {
             return false;
         }
 
         r = r.toLowerCase();
         
         // nothing to say the player who wants to send a picked up Letter is the one with it in her storage
+        // but if player2 steals a letter written by player1 and immediately sends to player3, player1
+        // should not be listed as sender. See outcommented getSender() below
+
         String origin = getPlayer(id);
 
         if(origin != null) {
             // alright, sign over to a specific receiver
-            String s = getSender(origin, id);
+//            String s = getSender(origin, id);
             String m = getMessage(origin, id);
             int date = getDate(origin, id);
 
@@ -159,6 +162,7 @@ public class CourierDB {
         }
 
         String skey = s.toLowerCase();
+        String origin = getPlayer(id);
 
         // update messageids
         List<Integer> messageids = mdb.getIntegerList(skey + ".messageids");
@@ -176,6 +180,16 @@ public class CourierDB {
         mdb.set(skey + "." + String.valueOf(id) + ".delivered", true);
         mdb.set(skey + "." + String.valueOf(id) + ".read", true);
         // we do not change .newmail when storing in our own storage, of course
+
+        if(!s.equalsIgnoreCase(origin)) {
+            // the current writer of this letter was not the same as the last, make sure it's moved
+            messageids = mdb.getIntegerList(origin + ".messageids");
+            if(messageids != null) { // safety check
+                messageids.remove(Integer.valueOf(id));
+            }
+            mdb.set(origin + ".messageids", messageids);
+            mdb.set(origin + "." + String.valueOf(id), null);            
+        }
         
         this.save(); // save after each stored message currently
 
@@ -189,22 +203,12 @@ public class CourierDB {
             return;
         }
 
+        // todo: save old mdb to backup file first
         Set<String> players = mdb.getKeys(false);
         for (String r : players) {
             String rlower = r.toLowerCase();
 
-            if(r.equals(rlower)) {
-                // this receiver needs no rewriting, only rewrite message senders when needed
-/*                List<Integer> messageids = mdb.getIntegerList(r + ".messageids");
-                if(messageids != null) { // a player who's only read others' mail would be null here I think
-                    for(Integer id : messageids) {
-                        String s = getSender(r, id);
-                        if(!s.equals(s.toLowerCase())) {
-                            mdb.set(rlower + "." + String.valueOf(id) + ".sender", s.toLowerCase());
-                        }
-                    }
-                }*/
-            } else {
+            if(!r.equals(rlower)) {
                 // this receiver needs full rewriting
                 boolean newmail = mdb.getBoolean(r + ".newmail");
                 List<Integer> messageids = mdb.getIntegerList(r + ".messageids");
@@ -223,7 +227,6 @@ public class CourierDB {
                     boolean delivered = mdb.getBoolean(r + "." + String.valueOf(id) + ".delivered");
                     boolean read = mdb.getBoolean(r + "." + String.valueOf(id) + ".read");
                     
-//                    mdb.set(rlower + "." + String.valueOf(id) + ".sender", s.toLowerCase());
                     mdb.set(rlower + "." + String.valueOf(id) + ".sender", s);
                     mdb.set(rlower + "." + String.valueOf(id) + ".message", m);
                     mdb.set(rlower + "." + String.valueOf(id) + ".date", date);
@@ -304,7 +307,33 @@ public class CourierDB {
 
         return mdb.getBoolean(r + ".newmail");
     }
-    
+
+    // runs through messageids, sets all unread messages to undelivered
+    // returns false when there are no unread messages
+    public boolean deliverUnreadMessages(String r) {
+        if(mdb == null || r == null) {
+            return false;
+        }
+
+        r = r.toLowerCase();
+
+        boolean newmail = false;
+        List<Integer> messageids = mdb.getIntegerList(r + ".messageids");
+        if(messageids != null) {
+            for(Integer id : messageids) {
+                boolean read = mdb.getBoolean(r + "." + String.valueOf(id) + ".read");
+                if(!read) {
+                    mdb.set(r + "." + String.valueOf(id) + ".delivered", false);
+                    newmail = true;
+                }
+            }
+        }
+        if(newmail) {
+            mdb.set(r + ".newmail", newmail);
+        }
+        return newmail;
+    }
+
     // runs through messageids, finds a message not read and returns the corresponding id
     // returns -1 on failure
     public int unreadMessageId(String r) {

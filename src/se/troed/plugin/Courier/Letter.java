@@ -14,21 +14,21 @@ public class Letter {
     private final int CANVAS_WIDTH = 90; // 96 is a temp fix. Changed to 90 in 0.9.10. Need to deal with this properly.
     @SuppressWarnings("UnusedDeclaration")
     private final int CANVAS_HEIGHT = 128;
-    private String receiver;
+    private final String receiver;
     @SuppressWarnings("FieldCanBeLocal")
-    private String sender;
+    private final String sender;
+    private final int id;
     private String message;
     private String header;
-    private int id;
     // note, this is JUST to avoid event spamming. Actual read status is saved in CourierDB
     private boolean read;
-    private Letter() {}
-    
-    private Letter(String s, String r, String m, int id) {
+
+    public Letter(String s, String r, String m, int id, boolean rd) {
         sender = s;
         receiver = r;
         this.id = id;
-        message = format(m);
+        message = (m != null ? format(m) : m);
+        read = rd;
         if(s != null && s.length() < 13) { // a nice version would do an actual check vs width, but [see issue with width]
             header = "§"+MapPalette.DARK_GRAY+";Letter from §"+MapPalette.DARK_GREEN+";" + sender + "§"+MapPalette.DARK_GRAY+";:";
         } else {
@@ -36,11 +36,6 @@ public class Letter {
         }
     }
 
-    public Letter(String s, String r, String m, int id, boolean rd) {
-        this(s, r, m, id);
-        read = rd;
-    }
-    
     public int getId() {
         return id;
     }

@@ -30,6 +30,7 @@ public class CourierConfig {
     private static final String POSTMAN_CANNOTDELIVER = "Courier.Postman.CannotDeliver";
     private static final String LETTER_DROP = "Courier.Letter.Drop";
     private static final String LETTER_INVENTORY = "Courier.Letter.Inventory";
+    private static final String PRIVACY_SEALED = "Privacy.SealedEnvelope";
     
     private final boolean useFees;
     private final double feeSend;
@@ -39,6 +40,7 @@ public class CourierConfig {
     private final int nextRoute;
     private final int spawnDistance;
     private final boolean breakSpawnProtection;
+    private final boolean sealedEnvelope;
     private String greeting = null;
     private String maildrop = null;
     private String inventory = null;
@@ -122,6 +124,8 @@ public class CourierConfig {
         clog(Level.FINE, LETTER_DROP + ": " + letterDrop);
         letterInventory = colorize(config.getString(LETTER_INVENTORY, "")); // added in 0.9.10
         clog(Level.FINE, LETTER_INVENTORY + ": " + letterInventory);
+        sealedEnvelope = config.getBoolean(PRIVACY_SEALED, true); // added in 0.9.11
+        clog(Level.FINE, PRIVACY_SEALED + ": " + sealedEnvelope);
     }
 
     public boolean getUseFees() {
@@ -150,6 +154,10 @@ public class CourierConfig {
     
     public boolean getBreakSpawnProtection() {
         return breakSpawnProtection;
+    }
+
+    public boolean getSealedEnvelope() {
+        return sealedEnvelope;
     }
 
     public String getGreeting() {

@@ -39,7 +39,7 @@ permissions:
     description: Allows players to use lazy name matching (suggestion list if more than one match)
     default: op
   courier.info:
-    description: Lists Courier information
+    description: General Courier commands
     default: true
   courier.theonepercent:
     description: No postage fees apply even if UseFees is set to true
