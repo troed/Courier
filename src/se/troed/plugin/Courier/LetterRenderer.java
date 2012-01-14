@@ -38,14 +38,15 @@ public class LetterRenderer extends MapRenderer {
         if(item != null && item.getType() == Material.MAP) {
             Letter letter = plugin.getLetter(item);
             if(clear || (letter != null && lastId != letter.getId())) {
-                System.out.println("Clear! New id: " + letter.getId());
                 for(int j = 0; j < CANVAS_HEIGHT; j++) {
                     for(int i = 0; i < CANVAS_WIDTH; i++) {
                         //                    canvas.setPixel(i, j, clearImage[j*128+i]);
                         canvas.setPixel(i, j, MapPalette.TRANSPARENT);
                     }
                 }
-                lastId = letter.getId();
+                if(letter != null) {
+                    lastId = letter.getId();
+                }
                 clear = false;
             }
             boolean show = false;
