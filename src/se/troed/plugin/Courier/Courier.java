@@ -403,7 +403,7 @@ public class Courier extends JavaPlugin {
                 postman.remove();
             }
         }
-        courierdb.save();
+        courierdb.save(null);
         deliveryId = -1;
         config.clog(Level.FINE, "Deliveries are now paused");
     }
@@ -419,12 +419,16 @@ public class Courier extends JavaPlugin {
         courierdb.load();
 
         if(courierdb.getDatabaseVersion() == -1) {
-            // todo: make a forced copy of messages.yml first?
             // fixes http://dev.bukkit.org/server-mods/courier/tickets/32-player-never-gets-mail-uppercase-lowercase-username/
             config.clog(Level.WARNING, "Case sensitive database found, rewriting ...");
-            courierdb.keysToLower();
-            courierdb.setDatabaseVersion(Courier.DBVERSION);
-            config.clog(Level.WARNING, "Case sensitive database found, rewriting ... done");
+            try {
+                courierdb.keysToLower();
+                courierdb.setDatabaseVersion(Courier.DBVERSION);
+                config.clog(Level.WARNING, "Case sensitive database found, rewriting ... done");
+            } catch (Exception e) {
+                config.clog(Level.SEVERE, "Case sensitive database rewriting failed! Visit plugin support forum");
+                config.clog(Level.SEVERE, "Your old pre-1.0.0 Courier database has been backed up");
+            }
         }
 
         boolean abort = false;

@@ -286,14 +286,14 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                 // hey I added \na newline   -> \na      -> \n a
                 // hey I added\na newline    -> added\na -> added \n a
                 Pattern newlines = Pattern.compile("(\\s*\\\\n\\s*|\\s*&nl\\s*)");
-                for(int i=0; i<args.length; i++) {
+                for (String arg : args) {
                     // %loc -> [X,Y,Z] and such
                     // if this grows, break it out and make it configurable
-                    if(args[i].equalsIgnoreCase("%loc") || args[i].equalsIgnoreCase("%pos")) {
+                    if (arg.equalsIgnoreCase("%loc") || arg.equalsIgnoreCase("%pos")) {
                         Location loc = player.getLocation();
                         message.append("[" + loc.getBlockX() + "," + loc.getBlockY() + "," + loc.getBlockZ() + "]");
                     } else {
-                        message.append(newlines.matcher(args[i]).replaceAll(" $1 ").trim()); // tokenize
+                        message.append(newlines.matcher(arg).replaceAll(" $1 ").trim()); // tokenize
                     }
                     message.append(" ");
                 }

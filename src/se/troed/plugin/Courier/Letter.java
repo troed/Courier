@@ -18,8 +18,8 @@ public class Letter {
     @SuppressWarnings("FieldCanBeLocal")
     private final String sender;
     private final int id;
-    private String message;
-    private String header;
+    private final String message;
+    private final String header;
     // note, this is JUST to avoid event spamming. Actual read status is saved in CourierDB
     private boolean read;
 

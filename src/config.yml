@@ -10,7 +10,7 @@ Courier:
     InitialWait: 10
     NextRoute: 60
   Privacy:
-    SealedEnvelope: false
+    SealedEnvelope: true
   Postman:
     QuickDespawn: 3
     Despawn: 20

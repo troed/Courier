@@ -55,10 +55,11 @@ public class CourierDB {
     }
 
     // only saving when plugin quits might lose a lot of messages
-    public boolean save() {
+    // if filename == null, uses default
+    public boolean save(String filename) {
         boolean ret = false;
         if(mdb != null) {
-            File db = new File(plugin.getDataFolder(), FILENAME);
+            File db = new File(plugin.getDataFolder(), filename != null ? filename : FILENAME);
             try {
                 mdb.save(db);
                 ret = true;
@@ -150,7 +151,7 @@ public class CourierDB {
                 mdb.set(origin + "." + String.valueOf(id), null);
             }
 
-            this.save();
+            this.save(null);
             ret = true;
         }
         return ret;    
@@ -191,7 +192,7 @@ public class CourierDB {
             mdb.set(origin + "." + String.valueOf(id), null);            
         }
         
-        this.save(); // save after each stored message currently
+        this.save(null); // save after each stored message currently
 
         return true;
     }
@@ -203,7 +204,14 @@ public class CourierDB {
             return;
         }
 
-        // todo: save old mdb to backup file first
+        // just for safety, back up db first, and don't allow the backup to be overwritten if it exists
+        // (if this method throws exceptions most admins will just likely try a few times .. )
+        String backup = FILENAME + ".100.backup";
+        File db = new File(plugin.getDataFolder(), backup);
+        if(!db.exists()) {
+            this.save(backup);
+        }
+        
         Set<String> players = mdb.getKeys(false);
         for (String r : players) {
             String rlower = r.toLowerCase();
@@ -243,7 +251,7 @@ public class CourierDB {
                 mdb.set(r, null); // delete the old entry
             }
         }
-        this.save();
+        this.save(null);
     }
     
     // used for legacy Letter conversion only

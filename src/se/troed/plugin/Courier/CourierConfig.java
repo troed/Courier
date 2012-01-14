@@ -30,7 +30,7 @@ public class CourierConfig {
     private static final String POSTMAN_CANNOTDELIVER = "Courier.Postman.CannotDeliver";
     private static final String LETTER_DROP = "Courier.Letter.Drop";
     private static final String LETTER_INVENTORY = "Courier.Letter.Inventory";
-    private static final String PRIVACY_SEALED = "Privacy.SealedEnvelope";
+    private static final String PRIVACY_SEALED = "Courier.Privacy.SealedEnvelope";
     
     private final boolean useFees;
     private final double feeSend;
@@ -156,6 +156,7 @@ public class CourierConfig {
         return breakSpawnProtection;
     }
 
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     public boolean getSealedEnvelope() {
         return sealedEnvelope;
     }
