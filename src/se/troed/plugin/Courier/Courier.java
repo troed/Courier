@@ -201,7 +201,7 @@ public class Courier extends JavaPlugin {
                 if(to != null) {
                     String from = getCourierdb().getSender(to, id);
                     String message = getCourierdb().getMessage(to, id);
-                    letter = new Letter(from, to, message, id, getCourierdb().getRead(to, id));
+                    letter = new Letter(from, to, message, id, getCourierdb().getRead(to, id), getCourierdb().getDate(to, id));
                     addLetter(id, letter);
                     getCConfig().clog(Level.FINE, "Letter " + id + " recreated from db for " + to);
                 } else {
@@ -418,6 +418,8 @@ public class Courier extends JavaPlugin {
         this.loadConfig();
         courierdb.load();
 
+        boolean abort = false;
+
         if(courierdb.getDatabaseVersion() == -1) {
             // fixes http://dev.bukkit.org/server-mods/courier/tickets/32-player-never-gets-mail-uppercase-lowercase-username/
             config.clog(Level.WARNING, "Case sensitive database found, rewriting ...");
@@ -428,71 +430,75 @@ public class Courier extends JavaPlugin {
             } catch (Exception e) {
                 config.clog(Level.SEVERE, "Case sensitive database rewriting failed! Visit plugin support forum");
                 config.clog(Level.SEVERE, "Your old pre-1.0.0 Courier database has been backed up");
+                abort = true;
             }
         }
 
-        boolean abort = false;
+        if(!abort) {
+            // Register our events
+            PluginManager pm = getServer().getPluginManager();
+            // Highest since we might need to override spawn deniers
+            pm.registerEvent(Event.Type.CREATURE_SPAWN, entityListener, Priority.Highest, this);
+            // I register as High on some events since I know I only modify for Endermen I've spawned
+            pm.registerEvent(Event.Type.ENTITY_TARGET, entityListener, Priority.High, this);
+            pm.registerEvent(Event.Type.ENTITY_DAMAGE, entityListener, Priority.High, this);
+            pm.registerEvent(Event.Type.ENDERMAN_PICKUP, entityListener, Priority.High, this);
+            pm.registerEvent(Event.Type.ENDERMAN_PLACE, entityListener, Priority.High, this);
+            pm.registerEvent(Event.Type.PLAYER_QUIT, playerListener, Priority.Monitor, this);
+            pm.registerEvent(Event.Type.PLAYER_JOIN, playerListener, Priority.Monitor, this);
+            pm.registerEvent(Event.Type.PLAYER_INTERACT_ENTITY, playerListener, Priority.Monitor, this);
+            pm.registerEvent(Event.Type.PLAYER_ITEM_HELD, playerListener, Priority.Monitor, this);
+            pm.registerEvent(Event.Type.PLAYER_PICKUP_ITEM, playerListener, Priority.Monitor, this);
+        //        pm.registerEvent(Event.Type.MAP_INITIALIZE, serverListener, Priority.Normal, this);
+        //        pm.registerEvent(Event.Type.SERVER_COMMAND, courierCommands, Priority.Normal, this);
+            pm.registerEvent(Event.Type.CUSTOM_EVENT, deliveryListener, Priority.Normal, this);
 
-        // Register our events
-        PluginManager pm = getServer().getPluginManager();
-        // Highest since we might need to override spawn deniers
-        pm.registerEvent(Event.Type.CREATURE_SPAWN, entityListener, Priority.Highest, this);
-        // I register as High on some events since I know I only modify for Endermen I've spawned
-        pm.registerEvent(Event.Type.ENTITY_TARGET, entityListener, Priority.High, this);
-        pm.registerEvent(Event.Type.ENTITY_DAMAGE, entityListener, Priority.High, this);
-        pm.registerEvent(Event.Type.ENDERMAN_PICKUP, entityListener, Priority.High, this);
-        pm.registerEvent(Event.Type.ENDERMAN_PLACE, entityListener, Priority.High, this);
-        pm.registerEvent(Event.Type.PLAYER_QUIT, playerListener, Priority.Monitor, this);
-        pm.registerEvent(Event.Type.PLAYER_JOIN, playerListener, Priority.Monitor, this);
-        pm.registerEvent(Event.Type.PLAYER_INTERACT_ENTITY, playerListener, Priority.Monitor, this);
-        pm.registerEvent(Event.Type.PLAYER_ITEM_HELD, playerListener, Priority.Monitor, this);
-        pm.registerEvent(Event.Type.PLAYER_PICKUP_ITEM, playerListener, Priority.Monitor, this);
-//        pm.registerEvent(Event.Type.MAP_INITIALIZE, serverListener, Priority.Normal, this);
-//        pm.registerEvent(Event.Type.SERVER_COMMAND, courierCommands, Priority.Normal, this);
-        pm.registerEvent(Event.Type.CUSTOM_EVENT, deliveryListener, Priority.Normal, this);
-
-        getCommand(CMD_POSTMAN).setExecutor(courierCommands);
-        getCommand(CMD_COURIER).setExecutor(courierCommands);
-        getCommand(CMD_POST).setExecutor(courierCommands);
-        getCommand(CMD_LETTER).setExecutor(courierCommands);
-
-        // Prepare the magic Courier Map we use for all rendering
-        // and more importantly, the one all ItemStacks will point to
-        short mapId = courierdb.getCourierMapId();
-        // check if the server admin has used Courier and then deleted the world
-        if(getServer().getMap(mapId) == null) {
-            getCConfig().clog(Level.SEVERE, "The Courier claimed map id " + mapId + " wasn't found in the world folder! Reclaiming.");
-            getCConfig().clog(Level.SEVERE, "If deleting the world (or maps) wasn't intended you should look into why this happened.");
-            mapId = -1;
+            getCommand(CMD_POSTMAN).setExecutor(courierCommands);
+            getCommand(CMD_COURIER).setExecutor(courierCommands);
+            getCommand(CMD_POST).setExecutor(courierCommands);
+            getCommand(CMD_LETTER).setExecutor(courierCommands);
         }
-        if(mapId == -1) {
-            // we don't have an allocated map stored, see if there is one we've forgotten about
-            for(short i=0; i<Short.MAX_VALUE; i++) {
-                MapView mv = getServer().getMap(i);
-                if(mv != null && mv.getCenterX() == Courier.MAGIC_NUMBER && mv.getCenterZ() == 0 ) {
-                    // there we go, a nice Courier Letter map to render with
-                    mapId = i;
-                    courierdb.setCourierMapId(mapId);
-                    getCConfig().clog(Level.INFO, "Found existing Courier map with id " + mv.getId());
-                    break;
-                // else if getCenterX == MAGIC_NUMBER it's a legacy Letter and will be handled by PlayerListener
-                } else if(mv == null) {
-                    // no Courier Map found and we've gone through them all, we need to create one for our use
-                    // (in reality this might be triggered if the admin has deleted some maps, nothing I can do)
-                    // Maps are saved in the world-folders, use default world(0) trick
-                    mv = getServer().createMap(getServer().getWorlds().get(0));
-                    mv.setCenterX(Courier.MAGIC_NUMBER);
-                    mv.setCenterZ(0); // legacy Courier Letters have a unix timestamp here instead
-                    mapId = mv.getId();
-                    getCConfig().clog(Level.INFO, "Rendering map claimed with the id " + mv.getId());
-                    courierdb.setCourierMapId(mapId);
-                    break;
+
+        short mapId = 0;
+        if(!abort) {
+            // Prepare the magic Courier Map we use for all rendering
+            // and more importantly, the one all ItemStacks will point to
+            mapId = courierdb.getCourierMapId();
+            // check if the server admin has used Courier and then deleted the world
+            if(getServer().getMap(mapId) == null) {
+                getCConfig().clog(Level.SEVERE, "The Courier claimed map id " + mapId + " wasn't found in the world folder! Reclaiming.");
+                getCConfig().clog(Level.SEVERE, "If deleting the world (or maps) wasn't intended you should look into why this happened.");
+                mapId = -1;
+            }
+            if(mapId == -1) {
+                // we don't have an allocated map stored, see if there is one we've forgotten about
+                for(short i=0; i<Short.MAX_VALUE; i++) {
+                    MapView mv = getServer().getMap(i);
+                    if(mv != null && mv.getCenterX() == Courier.MAGIC_NUMBER && mv.getCenterZ() == 0 ) {
+                        // there we go, a nice Courier Letter map to render with
+                        mapId = i;
+                        courierdb.setCourierMapId(mapId);
+                        getCConfig().clog(Level.INFO, "Found existing Courier map with id " + mv.getId());
+                        break;
+                    // else if getCenterX == MAGIC_NUMBER it's a legacy Letter and will be handled by PlayerListener
+                    } else if(mv == null) {
+                        // no Courier Map found and we've gone through them all, we need to create one for our use
+                        // (in reality this might be triggered if the admin has deleted some maps, nothing I can do)
+                        // Maps are saved in the world-folders, use default world(0) trick
+                        mv = getServer().createMap(getServer().getWorlds().get(0));
+                        mv.setCenterX(Courier.MAGIC_NUMBER);
+                        mv.setCenterZ(0); // legacy Courier Letters have a unix timestamp here instead
+                        mapId = mv.getId();
+                        getCConfig().clog(Level.INFO, "Rendering map claimed with the id " + mv.getId());
+                        courierdb.setCourierMapId(mapId);
+                        break;
+                    }
                 }
             }
-        }
-        if(mapId == -1) {
-            getCConfig().clog(Level.SEVERE, "Could not allocate a Map. This is a fatal error.");
-            abort = true;
+            if(mapId == -1) {
+                getCConfig().clog(Level.SEVERE, "Could not allocate a Map. This is a fatal error.");
+                abort = true;
+            }
         }
 
         if(!abort) {

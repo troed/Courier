@@ -59,13 +59,21 @@ public class LetterRenderer extends MapRenderer {
             // todo: idea for pvp war servers: "your mail has fallen into enemy hands". "they've read it!")
             if(letter != null && show) {
                 int drawPos = HEADER_POS;
-                if(!letter.getReceiver().equalsIgnoreCase(letter.getSender())) {
+//                if(!letter.getReceiver().equalsIgnoreCase(letter.getSender())) {
+                if(letter.getHeader() != null) {
                     canvas.drawText(0, MinecraftFont.Font.getHeight() * drawPos, MinecraftFont.Font, letter.getHeader());
                     drawPos = BODY_POS;
                 }
-                canvas.drawText(0, MinecraftFont.Font.getHeight() * drawPos, MinecraftFont.Font, "§"+ MapPalette.DARK_GRAY+";"+ letter.getMessage());
 
-                // todo: add date
+                canvas.drawText(0,
+                                MinecraftFont.Font.getHeight() * drawPos,
+                                MinecraftFont.Font, Letter.MESSAGE_COLOR + letter.getMessage());
+
+                if(letter.getDisplayDate() != null) {
+                    canvas.drawText(letter.getDisplayDatePos(),
+                                    0,
+                                    MinecraftFont.Font, Letter.DATE_COLOR + letter.getDisplayDate());
+                }
 
                 // this is the actual time we can be sure a letter has been read
                 // post an event to make sure we don't block the rendering pipeline
@@ -75,7 +83,8 @@ public class LetterRenderer extends MapRenderer {
                     letter.setRead(true);
                 }
             } else if(letter != null) {
-                String temp = "§"+MapPalette.DARK_GRAY+";Sorry, only §"+MapPalette.DARK_GREEN+";" + letter.getReceiver() + "\n§"+MapPalette.DARK_GRAY+";can read this letter";
+                String temp = Letter.HEADER_COLOR + "Sorry, only " + Letter.HEADER_FROM_COLOR +
+                              letter.getReceiver() + "\n" + Letter.HEADER_COLOR + "can read this letter";
                 canvas.drawText(0, MinecraftFont.Font.getHeight()*HEADER_POS, MinecraftFont.Font, temp);
             }
         }
