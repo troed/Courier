@@ -48,10 +48,15 @@ public class CourierDB {
     }
 
     // reading the whole message db into memory, is that a real problem?
+    // returns true if there already was a db
     public boolean load() {
+        boolean exist = false;
         File db = new File(plugin.getDataFolder(), FILENAME);
+        if(db.exists()) {
+            exist = true;
+        }
         mdb = YamlConfiguration.loadConfiguration(db);
-        return true;
+        return exist;
     }
 
     // only saving when plugin quits might lose a lot of messages
@@ -182,7 +187,7 @@ public class CourierDB {
         mdb.set(skey + "." + String.valueOf(id) + ".read", true);
         // we do not change .newmail when storing in our own storage, of course
 
-        if(!s.equalsIgnoreCase(origin)) {
+        if(origin != null && !s.equalsIgnoreCase(origin)) {
             // the current writer of this letter was not the same as the last, make sure it's moved
             messageids = mdb.getIntegerList(origin + ".messageids");
             if(messageids != null) { // safety check

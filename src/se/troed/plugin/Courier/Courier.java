@@ -416,11 +416,12 @@ public class Courier extends JavaPlugin {
 
     public void onEnable() {
         this.loadConfig();
-        courierdb.load();
+        boolean dbExist = courierdb.load();
 
         boolean abort = false;
 
-        if(courierdb.getDatabaseVersion() == -1) {
+        // detect if we have a v0.9.x -> v1.0.0 upgrade needed
+        if(dbExist && courierdb.getDatabaseVersion() == -1) {
             // fixes http://dev.bukkit.org/server-mods/courier/tickets/32-player-never-gets-mail-uppercase-lowercase-username/
             config.clog(Level.WARNING, "Case sensitive database found, rewriting ...");
             try {
@@ -467,7 +468,7 @@ public class Courier extends JavaPlugin {
             // and more importantly, the one all ItemStacks will point to
             mapId = courierdb.getCourierMapId();
             // check if the server admin has used Courier and then deleted the world
-            if(getServer().getMap(mapId) == null) {
+            if(mapId != -1 && getServer().getMap(mapId) == null) {
                 getCConfig().clog(Level.SEVERE, "The Courier claimed map id " + mapId + " wasn't found in the world folder! Reclaiming.");
                 getCConfig().clog(Level.SEVERE, "If deleting the world (or maps) wasn't intended you should look into why this happened.");
                 mapId = -1;
