@@ -201,7 +201,7 @@ public class Courier extends JavaPlugin {
                 if(to != null) {
                     String from = getCourierdb().getSender(to, id);
                     String message = getCourierdb().getMessage(to, id);
-                    letter = new Letter(from, to, message, id, getCourierdb().getRead(to, id), getCourierdb().getDate(to, id));
+                    letter = new Letter(this, from, to, message, id, getCourierdb().getRead(to, id), getCourierdb().getDate(to, id));
                     addLetter(id, letter);
                     getCConfig().clog(Level.FINE, "Letter " + id + " recreated from db for " + to);
                 } else {
@@ -446,7 +446,9 @@ public class Courier extends JavaPlugin {
             pm.registerEvent(Event.Type.ENDERMAN_PLACE, entityListener, Priority.High, this);
             pm.registerEvent(Event.Type.PLAYER_QUIT, playerListener, Priority.Monitor, this);
             pm.registerEvent(Event.Type.PLAYER_JOIN, playerListener, Priority.Monitor, this);
+            pm.registerEvent(Event.Type.PLAYER_INTERACT, playerListener, Priority.High, this);
             pm.registerEvent(Event.Type.PLAYER_INTERACT_ENTITY, playerListener, Priority.Monitor, this);
+//            pm.registerEvent(Event.Type.PLAYER_ANIMATION, playerListener, Priority.Normal, this);
             pm.registerEvent(Event.Type.PLAYER_ITEM_HELD, playerListener, Priority.Monitor, this);
             pm.registerEvent(Event.Type.PLAYER_PICKUP_ITEM, playerListener, Priority.Monitor, this);
         //        pm.registerEvent(Event.Type.MAP_INITIALIZE, serverListener, Priority.Normal, this);

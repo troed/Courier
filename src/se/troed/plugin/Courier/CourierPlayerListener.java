@@ -3,6 +3,7 @@ package se.troed.plugin.Courier;
 import org.bukkit.Material;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Enderman;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.player.*;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.map.MapCanvas;
@@ -20,6 +21,32 @@ class CourierPlayerListener extends PlayerListener {
     public CourierPlayerListener(Courier instance) {
         plugin = instance;
     }
+
+    public void onPlayerInteract(PlayerInteractEvent e) {
+        if(e.getMaterial() == Material.MAP && e.getItem().containsEnchantment(Enchantment.DURABILITY)) {
+            Letter letter = plugin.getLetter(e.getItem());
+            if(letter != null) {
+                plugin.getCConfig().clog(Level.FINE, e.getPlayer().getDisplayName() + " navigating letter");
+                Action act = e.getAction();
+                if(act == Action.LEFT_CLICK_BLOCK || act == Action.LEFT_CLICK_AIR) {
+                    letter.backPage();
+                    e.setCancelled(true);
+                } else if(act == Action.RIGHT_CLICK_BLOCK || act == Action.RIGHT_CLICK_AIR) {
+                    letter.advancePage();
+                    e.setCancelled(true);
+                }
+            }
+        }
+    }
+    
+/*    public void onPlayerAnimation(PlayerAnimationEvent e) {
+        plugin.getCConfig().clog(Level.FINE, e.getPlayer().getDisplayName() + " animating");
+        ItemStack item = e.getPlayer().getItemInHand();
+        if(item.getType() == Material.MAP && item.containsEnchantment(Enchantment.DURABILITY)) {
+            plugin.getCConfig().clog(Level.FINE, e.getPlayer().getDisplayName() + " animating letter");
+            e.setCancelled(true);
+        }
+    }*/
 
     public void onPlayerInteractEntity(PlayerInteractEntityEvent e) {
         Postman postman = plugin.getPostman(e.getRightClicked().getUniqueId());

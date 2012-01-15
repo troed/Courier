@@ -65,6 +65,9 @@ public class LetterRenderer extends MapRenderer {
                     drawPos = BODY_POS;
                 }
 
+                canvas.drawText(letter.getLeftMarkerPos(), MinecraftFont.Font.getHeight(), MinecraftFont.Font, letter.getLeftMarker());
+                canvas.drawText(letter.getRightMarkerPos(), MinecraftFont.Font.getHeight(), MinecraftFont.Font, letter.getRightMarker());
+
                 canvas.drawText(0,
                                 MinecraftFont.Font.getHeight() * drawPos,
                                 MinecraftFont.Font, Letter.MESSAGE_COLOR + letter.getMessage());

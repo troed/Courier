@@ -1,11 +1,9 @@
 package se.troed.plugin.Courier;
 
 import org.bukkit.map.*;
+import org.bukkit.plugin.Plugin;
 
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Collections;
-import java.util.Locale;
+import java.util.*;
 
 /**
  * A Letter is a cached database entry with text pre-formatted for Map rendering
@@ -21,23 +19,28 @@ public class Letter {
     static final String HEADER_COLOR = "§"+(MapPalette.DARK_BROWN)+";";
     static final String HEADER_FROM_COLOR = "§"+(MapPalette.DARK_GREEN)+";";
     static final String MESSAGE_COLOR = "§"+(MapPalette.DARK_BROWN)+";";
+    static final String MARKER_COLOR = "§"+(MapPalette.DARK_GREEN)+";";
+    private final int MAP_HEIGHT_LINES = 12; // we get 12 full lines of text body into a map
+    private final Courier plugin;
     private final String receiver;
     @SuppressWarnings("FieldCanBeLocal")
     private final String sender;
     private final int id;
-    private final String message;
+//    private final String message;
+    private List<String> message;
     private final String header;
     private final int date;
     private final String displayDate;
     private final int displayDatePos;
     // note, this is JUST to avoid event spamming. Actual read status is saved in CourierDB
     private boolean read;
+    private int currentPage = 0;
 
-    public Letter(String s, String r, String m, int id, boolean rd, int date) {
+    public Letter(Courier plug, String s, String r, String m, int id, boolean rd, int date) {
+        plugin = plug;
         sender = s;
         receiver = r;
         this.id = id;
-        message = (m != null ? format(m) : m);
         read = rd;
         this.date = date;
         if(date > 0) {
@@ -62,6 +65,8 @@ public class Letter {
         } else {
             header = null; // tested by LetterRenderer
         }
+        // must be done after header, we use that knowledge for height calculation
+        setMessage(m);
     }
 
     public int getId() {
@@ -80,10 +85,55 @@ public class Letter {
         return header;
     }
     
-    public String getMessage() {
-        return message;
+    public void setMessage(String m) {
+        int size;
+        if(message != null) {
+            size = message.size();
+        } else {
+            size = -1;
+        }
+        message = (m != null ? format(m) : null);
+        if(message != null) {
+            if(size != -1 && message.size() > size) {
+                advancePage();
+            }
+        }
     }
     
+    public String getMessage() {
+        return message.get(currentPage);
+    }
+
+    public void advancePage() {
+        if(currentPage < message.size()-1) {
+            currentPage++;
+            plugin.getLetterRenderer().forceClear();
+        }
+    }
+
+    public void backPage() {
+        if(currentPage > 0) {
+            currentPage--;
+            plugin.getLetterRenderer().forceClear();
+        }
+    }
+    
+    public int getLeftMarkerPos() {
+        return 48;
+    }
+
+    public String getLeftMarker() {
+        return currentPage > 0 ? MARKER_COLOR + "<<" : "";
+    }
+
+    public int getRightMarkerPos() {
+        return 64;
+    }
+    
+    public String getRightMarker() {
+        return currentPage < message.size()-1 ? MARKER_COLOR + ">>" : "";
+    }
+
     @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     public boolean getRead() {
         return read;
@@ -102,14 +152,14 @@ public class Letter {
     }
 
     // splits and newlines a String to fit MapCanvas width
-    // what to do about height? I could scroll the text ... :)
-
-    private String format(String s) {
-//        String[] splitwords = s.split("\\s+");
+    // returns a list of pages
+    private List<String> format(String s) {
         ArrayList<String> words = new ArrayList<String>();
-//        Collections.addAll(words, splitwords);
         Collections.addAll(words, s.split("\\s+"));
+        ArrayList<String> pages = new ArrayList<String>();
         StringBuilder buffer = new StringBuilder();
+        int height = 0;
+        int page = 0; // our current page
         int i = 0;
         while(i < words.size()) {
             int width = 0;
@@ -146,8 +196,18 @@ public class Letter {
                 }
             }
             buffer.append("\n");
+            height++;
+            if(height == MAP_HEIGHT_LINES || (header != null && page == 0 && height == MAP_HEIGHT_LINES-2)) {
+                height = 0;
+                pages.add(buffer.toString());
+                buffer.setLength(0); // clear();
+                page++;
+            }
 //            System.out.println("newline");
         }
-        return buffer.toString();
+        if(pages.size() == page) {
+            pages.add(buffer.toString());
+        }
+        return pages;
     }
 }

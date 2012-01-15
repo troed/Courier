@@ -270,6 +270,7 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                 // Minecraftfont isValid(message)
                 // todo: I've seen strange stuff here with regards to 8 bit ascii
         
+                boolean quickRender = true;
                 StringBuilder message = new StringBuilder();
                 if(letter != null) {
                     // new stuff appended to the old
@@ -279,6 +280,7 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                         // we're adding to existing text from someone else, add newlines
                         // extra credits: detect if we were going to be on a new line anyway, then only append one
                         message.append("\\n \\n "); // replaced with actual newlines by Letter, later
+                        quickRender = false;
                     }
                 }
                 // hey I added &nl a newline -> &nl      -> &nl
@@ -334,8 +336,12 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                         }
                     } else {
                         // existing Letter now has outdated info, will automatically be recreated from db
-                        plugin.removeLetter(id);
-                        plugin.getLetterRenderer().forceClear();
+                        if(quickRender) {
+                            letter.setMessage(message.toString());
+                        } else {
+                            plugin.removeLetter(id);
+                            plugin.getLetterRenderer().forceClear();
+                        } 
                     }
                 } else {
                     plugin.getCConfig().clog(Level.SEVERE, "Could not store letter in database!");
