@@ -270,7 +270,7 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                 // Minecraftfont isValid(message)
                 // todo: I've seen strange stuff here with regards to 8 bit ascii
         
-                boolean quickRender = true;
+                boolean useCached = true;
                 StringBuilder message = new StringBuilder();
                 if(letter != null) {
                     // new stuff appended to the old
@@ -280,7 +280,7 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                         // we're adding to existing text from someone else, add newlines
                         // extra credits: detect if we were going to be on a new line anyway, then only append one
                         message.append("\\n \\n "); // replaced with actual newlines by Letter, later
-                        quickRender = false;
+                        useCached = false;
                     }
                 }
                 // hey I added &nl a newline -> &nl      -> &nl
@@ -335,10 +335,11 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                             player.sendMap(plugin.getServer().getMap(plugin.getCourierdb().getCourierMapId()));
                         }
                     } else {
-                        // existing Letter now has outdated info, will automatically be recreated from db
-                        if(quickRender) {
+                        if(useCached) {
+                            // set Message directly, we know no other info changed and want to keep current page info
                             letter.setMessage(message.toString());
                         } else {
+                            // existing Letter now has outdated info, will automatically be recreated from db
                             plugin.removeLetter(id);
                             plugin.getLetterRenderer().forceClear();
                         } 

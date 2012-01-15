@@ -84,7 +84,9 @@ public class Letter {
     public String getHeader() {
         return header;
     }
-    
+
+    // if we have more pages after format() than before, switch to the new page
+    // hmm maybe should always switch to the _last_ page? extreme case
     public void setMessage(String m) {
         int size;
         if(message != null) {
@@ -195,13 +197,16 @@ public class Letter {
                     i++;
                 }
             }
-            buffer.append("\n");
-            height++;
-            if(height == MAP_HEIGHT_LINES || (header != null && page == 0 && height == MAP_HEIGHT_LINES-2)) {
-                height = 0;
-                pages.add(buffer.toString());
-                buffer.setLength(0); // clear();
-                page++;
+            // if there's more to come, newline and check if we need a new page
+            if(i < words.size()) {
+                buffer.append("\n");
+                height++;
+                if(height == MAP_HEIGHT_LINES || (header != null && page == 0 && height == MAP_HEIGHT_LINES-2)) {
+                    height = 0;
+                    pages.add(buffer.toString());
+                    buffer.setLength(0); // clear();
+                    page++;
+                }
             }
 //            System.out.println("newline");
         }
