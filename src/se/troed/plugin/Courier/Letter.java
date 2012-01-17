@@ -4,6 +4,7 @@ import org.bukkit.map.*;
 import org.bukkit.plugin.Plugin;
 
 import java.util.*;
+import java.util.logging.Level;
 
 /**
  * A Letter is a cached database entry with text pre-formatted for Map rendering
@@ -31,7 +32,7 @@ public class Letter {
     private final String header;
     private final int date;
     private final String displayDate;
-    private final int displayDatePos;
+    private int displayDatePos;
     // note, this is JUST to avoid event spamming. Actual read status is saved in CourierDB
     private boolean read;
     private int currentPage = 0;
@@ -48,10 +49,15 @@ public class Letter {
             Calendar calendar = Calendar.getInstance();
             calendar.setLenient(true);
             calendar.setTimeInMillis((long)(date) * 1000); // convert back from unix time
-            String month = calendar.getDisplayName(Calendar.MONTH, Calendar.LONG, Locale.getDefault());
+            String month = calendar.getDisplayName(Calendar.MONTH, Calendar.LONG, Locale.US);
             int day = calendar.get(Calendar.DAY_OF_MONTH);
             displayDate = (month != null ? month : "") + " " + day;
-            displayDatePos = 112 - MinecraftFont.Font.getWidth(displayDate); // getWidth() must be so off
+            try {
+                displayDatePos = 112 - MinecraftFont.Font.getWidth(displayDate); // getWidth() must be so off
+            } catch (IllegalArgumentException e) {
+                plugin.getCConfig().clog(Level.SEVERE, "Caught IllegalArgumentException in MinecraftFont.Font.getWidth()");
+                displayDatePos = 64; // whatever
+            }
         } else {
             displayDate = null;
             displayDatePos = 0;
@@ -177,7 +183,7 @@ public class Letter {
                     width = MinecraftFont.Font.getWidth(words.get(i)); // NPE warning!
                 } catch (NullPointerException e) {
                     i++; // obviously needs skipping
-                    System.out.println("[COURIER]: Severe! Caught NullPointerException in MinecraftFont.Font.getWidth()");
+                    plugin.getCConfig().clog(Level.SEVERE, "Caught NullPointerException in MinecraftFont.Font.getWidth()");
                 }
                 if(width > CANVAS_WIDTH) {
                     // always splits words in half, if they're still too long it wraps around and splits again ..
