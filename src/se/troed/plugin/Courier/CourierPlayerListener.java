@@ -3,15 +3,13 @@ package se.troed.plugin.Courier;
 import org.bukkit.Material;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Enderman;
+import org.bukkit.entity.Villager;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.*;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.map.MapCanvas;
 import org.bukkit.map.MapView;
-import org.bukkit.entity.Entity;
 import org.bukkit.material.MaterialData;
 
-import java.util.Date;
 import java.util.HashMap;
 import java.util.logging.Level;
 
@@ -65,7 +63,12 @@ class CourierPlayerListener extends PlayerListener {
                     if(inventory != null && !inventory.isEmpty()) {
                         e.getPlayer().sendMessage(inventory);
                     }
-                    ((Enderman)e.getRightClicked()).setCarriedMaterial(new MaterialData(Material.AIR));
+                    if(e.getRightClicked() instanceof Enderman) {
+                        ((Enderman)e.getRightClicked()).setCarriedMaterial(new MaterialData(Material.AIR));
+                    } else if(e.getRightClicked() instanceof Villager) {
+                        ((Villager) e.getRightClicked()).setTarget(null);
+                    }
+
                     // delivered
                     CourierDeliveryEvent event = new CourierDeliveryEvent(CourierDeliveryEvent.COURIER_DELIVERED, e.getPlayer(), letter.getEnchantmentLevel(Enchantment.DURABILITY));
                     plugin.getServer().getPluginManager().callEvent(event);
@@ -80,7 +83,12 @@ class CourierPlayerListener extends PlayerListener {
 
                 // quick render
                 e.getPlayer().sendMap(plugin.getServer().getMap(plugin.getCourierdb().getCourierMapId()));
-                ((Enderman)e.getRightClicked()).setCarriedMaterial(new MaterialData(Material.AIR));
+
+                if(e.getRightClicked() instanceof Enderman) {
+                    ((Enderman)e.getRightClicked()).setCarriedMaterial(new MaterialData(Material.AIR));
+                } else if(e.getRightClicked() instanceof Villager) {
+                    ((Villager) e.getRightClicked()).setTarget(null);
+                }
 
                 // delivered
                 CourierDeliveryEvent event = new CourierDeliveryEvent(CourierDeliveryEvent.COURIER_DELIVERED, e.getPlayer(), letter.getEnchantmentLevel(Enchantment.DURABILITY));

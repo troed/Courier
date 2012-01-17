@@ -36,7 +36,7 @@ class CourierEntityListener extends EntityListener {
         }
     }
 
-    // postmen aren't block thieves
+    // enderpostmen aren't block thieves
     public void onEndermanPickup(EndermanPickupEvent e) {
         if(!e.isCancelled() && plugin.getPostman(e.getEntity().getUniqueId()) != null) {
             plugin.getCConfig().clog(Level.FINE, "Prevented postman thief");
@@ -53,7 +53,7 @@ class CourierEntityListener extends EntityListener {
 
     // in theory we could add another listener at Monitor priority for announce() ..
     public void onCreatureSpawn(CreatureSpawnEvent e) {
-        if(e.getCreatureType() == CreatureType.ENDERMAN) {
+        if(e.getCreatureType() == Courier.POSTMANTYPE) {
             // we end up here before we've had a chance to log and store our Postman uuids!
             // this means we cannot reliably override spawn deniers with perfect identification.
             // We match on Location instead but it's not pretty. Might be the only solution though.

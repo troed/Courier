@@ -25,6 +25,7 @@ import org.bukkit.block.Biome;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.CreatureType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.Event.Priority;
@@ -131,6 +132,7 @@ public class Courier extends JavaPlugin {
     public static final int MAX_ID = Short.MAX_VALUE; // really, we don't do negative numbers well atm
     public static final int MIN_ID = 1; // since unenchanted items are level 0
     private static final int DBVERSION = 1; // used since 1.0.0
+    public static final CreatureType POSTMANTYPE = CreatureType.VILLAGER;
 
     private static Vault vault = null;
     private static Economy economy = null;
@@ -164,7 +166,7 @@ public class Courier extends JavaPlugin {
     
     public void addSpawner(Location l, Postman p) {
         // if this just keeps on growing we could detect and warn the admin that something is blocking
-        // even our detection of Enderman spawn events. Regular cleanup thread?
+        // even our detection of Postman spawn events. Regular cleanup thread?
         spawners.put(l, p);
         getCConfig().clog(Level.FINE, spawners.size() + " spawners in queue");
     }
@@ -224,7 +226,7 @@ public class Courier extends JavaPlugin {
 
     /**
      * Picks a spot suitably in front of the player's eyes and checks to see if there's room 
-     * for a postman (Enderman) to spawn in line-of-sight
+     * for a postman to spawn in line-of-sight
      * 
      * Currently this can fail badly not checking whether we're on the same Y ..
      *
@@ -252,12 +254,17 @@ public class Courier extends JavaPlugin {
                     block = block.getRelative(BlockFace.DOWN, 1);
                 }
                 // verify this is something we can stand on and that we fit
-                if(!block.getRelative(BlockFace.DOWN, 1).isLiquid() && block.getRelative(BlockFace.UP, 1).isEmpty() && block.getRelative(BlockFace.UP, 2).isEmpty()) {
-                    Location tLoc = block.getLocation();
-                    getCConfig().clog(Level.FINE, "findSpawnLocation got location! [" + tLoc.getBlockX() + "," + tLoc.getBlockY() + "," + tLoc.getBlockZ() + "]");
+                if(!block.getRelative(BlockFace.DOWN, 1).isLiquid() && block.getRelative(BlockFace.UP, 1).isEmpty()) {
+// todo: remove hackish code, make pretty
+                    if(POSTMANTYPE == CreatureType.ENDERMAN && !block.getRelative(BlockFace.UP, 2).isEmpty()) {
+                        // Enderpostmen doesn't fit
+                    } else {
+                        Location tLoc = block.getLocation();
+                        getCConfig().clog(Level.FINE, "findSpawnLocation got location! [" + tLoc.getBlockX() + "," + tLoc.getBlockY() + "," + tLoc.getBlockZ() + "]");
 
-                    // make sure we spawn in the middle of the blocks, not at the corner
-                    sLoc = new Location(tLoc.getWorld(), tLoc.getBlockX()+0.5, tLoc.getBlockY(), tLoc.getBlockZ()+0.5);
+                        // make sure we spawn in the middle of the blocks, not at the corner
+                        sLoc = new Location(tLoc.getWorld(), tLoc.getBlockX()+0.5, tLoc.getBlockY(), tLoc.getBlockZ()+0.5);
+                    }
                 }
             }
         }
@@ -342,13 +349,13 @@ public class Courier extends JavaPlugin {
                 config.clog(Level.FINE, "Undelivered messageid: " + undeliveredMessageId);
                 if (undeliveredMessageId != -1) {
                     Location spawnLoc = findSpawnLocation(player);
-                    if(spawnLoc != null && player.getWorld().hasStorm()) {
+                    if(spawnLoc != null && player.getWorld().hasStorm() && POSTMANTYPE == CreatureType.ENDERMAN) {
                         // I think I consider this to be a temporary solution to
                         // http://dev.bukkit.org/server-mods/courier/tickets/4-postmen-are-spawned-outside-even-if-its-raining/
                         //
                         // hey. so rails on a block cause my findSpawnLocation to choose the block above
                         // I guess there are additional checks I should add. emptiness?
-                        // todo: that also means we try to spawn a postman on top of rails even in rain
+                        // todo: that also means we try to spawn an enderpostman on top of rails even in rain
                         // todo: and glass blocks _don't_ seem to be included in "getHighest..." which I feel is wrong ("non-air")
                         // see https://bukkit.atlassian.net/browse/BUKKIT-445
                         //
@@ -372,7 +379,8 @@ public class Courier extends JavaPlugin {
                         }
                     }
                     if (spawnLoc != null) {
-                        Postman postman = new Postman(this, player, undeliveredMessageId);
+//                        Postman postman = new VillagerPostman(this, player, undeliveredMessageId);
+                        Postman postman = Postman.create(this, player, undeliveredMessageId);
                         // separate instantiation from spawning, save spawnLoc in instantiation
                         // and create a new method to lookup unspawned locations. Use loc matching
                         // in onCreatureSpawn as mob-denier override variable.
@@ -440,11 +448,13 @@ public class Courier extends JavaPlugin {
             PluginManager pm = getServer().getPluginManager();
             // Highest since we might need to override spawn deniers
             pm.registerEvent(Event.Type.CREATURE_SPAWN, entityListener, Priority.Highest, this);
-            // I register as High on some events since I know I only modify for Endermen I've spawned
-            pm.registerEvent(Event.Type.ENTITY_TARGET, entityListener, Priority.High, this);
+            // I register as High on some events since I know I only modify for Postmen I've spawned
             pm.registerEvent(Event.Type.ENTITY_DAMAGE, entityListener, Priority.High, this);
-            pm.registerEvent(Event.Type.ENDERMAN_PICKUP, entityListener, Priority.High, this);
-            pm.registerEvent(Event.Type.ENDERMAN_PLACE, entityListener, Priority.High, this);
+            if(POSTMANTYPE == CreatureType.ENDERMAN) {
+                pm.registerEvent(Event.Type.ENTITY_TARGET, entityListener, Priority.High, this);
+                pm.registerEvent(Event.Type.ENDERMAN_PICKUP, entityListener, Priority.High, this);
+                pm.registerEvent(Event.Type.ENDERMAN_PLACE, entityListener, Priority.High, this);
+            }
             pm.registerEvent(Event.Type.PLAYER_QUIT, playerListener, Priority.Monitor, this);
             pm.registerEvent(Event.Type.PLAYER_JOIN, playerListener, Priority.Monitor, this);
             pm.registerEvent(Event.Type.PLAYER_INTERACT, playerListener, Priority.High, this);

@@ -107,7 +107,8 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                 if(from != null && message != null) {
                     Location spawnLoc = plugin.findSpawnLocation(player);
                     if(spawnLoc != null) {
-                        Postman postman = new Postman(plugin, player, undeliveredMessageId);
+//                        Postman postman = new VillagerPostman(plugin, player, undeliveredMessageId);
+                        Postman postman = Postman.create(plugin, player, undeliveredMessageId);
                         plugin.addSpawner(spawnLoc, postman);
                         postman.spawn(spawnLoc);
                         plugin.addPostman(postman);
@@ -345,11 +346,13 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                         } 
                     }
                 } else {
+                    player.sendMessage("Courier: Could not create the letter! Notify your admin!");
                     plugin.getCConfig().clog(Level.SEVERE, "Could not store letter in database!");
                 }
                 ret = true;
             } else {
-                plugin.getCConfig().clog(Level.SEVERE, "Out of unique message IDs! Notify your admin!");
+                player.sendMessage("Courier: Out of unique message IDs! Notify your admin!");
+                plugin.getCConfig().clog(Level.SEVERE, "Out of unique message IDs!");
                 ret = true;
             }
         }
