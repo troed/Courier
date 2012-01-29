@@ -8,7 +8,6 @@ softdepend: [Vault]
 commands:
   postman:
     description: Spawns a postman
-    aliases: [mailman, postie]
     permission: courier.postman
     usage: /postman
   courier:
@@ -17,12 +16,12 @@ commands:
     usage: /courier
   post:
     description: Sends the letter currently held in hand to someone
-    aliases: [mail, send]
+    aliases: [mail]
     permission: courier.send
     usage: /post playername
   letter:
     description: Creates a letter
-    aliases: [note, write]
+    aliases: [note]
     permission: courier.write
     usage: /letter message        # Can be repeated to add additional text to existing handheld letter
 permissions:

@@ -23,5 +23,6 @@ Courier:
     Inventory: '&7Courier: &fYou had your hands full, the Postman put the mail in your inventory for you.'
     CannotDeliver: '&7Courier: &fA Postman has mail for you but was not allowed in this place.'
   Letter:
+    ShowDate: true
     Drop: '&7Courier: &fYour inventory is full, the letter was dropped onto the ground.'
     Inventory: '&7Courier: &fYou had your hands full, the letter can be found in your inventory.'

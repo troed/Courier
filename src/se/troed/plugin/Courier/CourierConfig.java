@@ -10,7 +10,7 @@ import java.util.logging.Logger;
 
 
 public class CourierConfig {
-    private static final boolean debug = false;
+    private static final boolean debug = true;
 
     private final Logger log;
     
@@ -32,6 +32,7 @@ public class CourierConfig {
     private static final String POSTMAN_CANNOTDELIVER = "Courier.Postman.CannotDeliver";
     private static final String LETTER_DROP = "Courier.Letter.Drop";
     private static final String LETTER_INVENTORY = "Courier.Letter.Inventory";
+    private static final String LETTER_SHOWDATE = "Courier.Letter.ShowDate";
     private static final String PRIVACY_SEALED = "Courier.Privacy.SealedEnvelope";
     
     private final boolean useFees;
@@ -43,6 +44,7 @@ public class CourierConfig {
     private final int spawnDistance;
     private final boolean breakSpawnProtection;
     private final boolean sealedEnvelope;
+    private final boolean showDate;
     private CreatureType type = null;
     private String greeting = null;
     private String maildrop = null;
@@ -132,6 +134,8 @@ public class CourierConfig {
         clog(Level.FINE, POSTMAN_INVENTORY + ": " + inventory);
         cannotDeliver = colorize(config.getString(POSTMAN_CANNOTDELIVER, "")); // added in 0.9.6
         clog(Level.FINE, POSTMAN_CANNOTDELIVER + ": " + cannotDeliver);
+        showDate = config.getBoolean(LETTER_SHOWDATE, true); // added in 1.1.0
+        clog(Level.FINE, LETTER_SHOWDATE + ": " + showDate);
         letterDrop = colorize(config.getString(LETTER_DROP, "")); // added in 0.9.10
         clog(Level.FINE, LETTER_DROP + ": " + letterDrop);
         letterInventory = colorize(config.getString(LETTER_INVENTORY, "")); // added in 0.9.10
@@ -167,7 +171,11 @@ public class CourierConfig {
     public int getSpawnDistance() {
         return spawnDistance;
     }
-    
+
+    public boolean getShowDate() {
+        return showDate;
+    }
+
     public boolean getBreakSpawnProtection() {
         return breakSpawnProtection;
     }

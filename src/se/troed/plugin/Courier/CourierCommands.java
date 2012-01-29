@@ -8,6 +8,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.*;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.map.MinecraftFont;
 
 import java.util.HashMap;
 import java.util.List;
@@ -267,10 +268,6 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                 id = letter.getId();
             }
             if(id != -1) {
-                // todo: figure out max length of console input and show if a cutoff was [likely] made (?)
-                // Minecraftfont isValid(message)
-                // todo: I've seen strange stuff here with regards to 8 bit ascii
-        
                 boolean useCached = true;
                 StringBuilder message = new StringBuilder();
                 if(letter != null) {
@@ -289,16 +286,31 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                 // hey I added \na newline   -> \na      -> \n a
                 // hey I added\na newline    -> added\na -> added \n a
                 Pattern newlines = Pattern.compile("(\\s*\\\\n\\s*|\\s*&nl\\s*)");
-                for (String arg : args) {
-                    // %loc -> [X,Y,Z] and such
-                    // if this grows, break it out and make it configurable
-                    if (arg.equalsIgnoreCase("%loc") || arg.equalsIgnoreCase("%pos")) {
-                        Location loc = player.getLocation();
-                        message.append("[" + loc.getBlockX() + "," + loc.getBlockY() + "," + loc.getBlockZ() + "]");
-                    } else {
-                        message.append(newlines.matcher(arg).replaceAll(" $1 ").trim()); // tokenize
+                boolean invalid = false;
+                try {
+                    for (String arg : args) {
+                        // http://dev.bukkit.org/server-mods/courier/tickets/34-illegal-argument-exception-in-map-font/
+                        if(!MinecraftFont.Font.isValid(arg)) {
+                            invalid = true;
+                            continue;
+                        }
+                        // %loc -> [X,Y,Z] and such
+                        // if this grows, break it out and make it configurable
+                        if (arg.equalsIgnoreCase("%loc") || arg.equalsIgnoreCase("%pos")) {
+                            Location loc = player.getLocation();
+                            message.append("[" + loc.getBlockX() + "," + loc.getBlockY() + "," + loc.getBlockZ() + "]");
+                        } else {
+                            message.append(newlines.matcher(arg).replaceAll(" $1 ").trim()); // tokenize
+                        }
+                        message.append(" ");
                     }
-                    message.append(" ");
+                } catch (Exception e) {
+                    plugin.getCConfig().clog(Level.SEVERE, "Courier: Caught Exception in MinecraftFont.isValid()");
+                    invalid = true;
+                }
+
+                if(invalid) {
+                    player.sendMessage("Courier: Parts of the entered text cannot be displayed and was skipped");
                 }
 
                 if (plugin.getCourierdb().storeMessage(id,

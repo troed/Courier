@@ -44,18 +44,29 @@ public class Letter {
         this.id = id;
         read = rd;
         this.date = date;
-        if(date > 0) {
-            // Date date = new Date((long)(letter.getDate()) * 1000); // convert back from unix time
+        // http://dev.bukkit.org/server-mods/courier/tickets/35-make-show-date-configurable/
+        if(date > 0 && plugin.getCConfig().getShowDate()) {
             Calendar calendar = Calendar.getInstance();
             calendar.setLenient(true);
             calendar.setTimeInMillis((long)(date) * 1000); // convert back from unix time
-            String month = calendar.getDisplayName(Calendar.MONTH, Calendar.LONG, Locale.US);
+
+            String month = calendar.getDisplayName(Calendar.MONTH, Calendar.LONG, Locale.getDefault());
+            boolean valid;
+            try {
+                valid = MinecraftFont.Font.isValid(month);
+            } catch (Exception e) {
+                plugin.getCConfig().clog(Level.SEVERE, "Caught exception in MinecraftFont.Font.isValid()");
+                valid = false;
+            }
+            if(!valid) {
+                month = calendar.getDisplayName(Calendar.MONTH, Calendar.LONG, Locale.US);
+            }
             int day = calendar.get(Calendar.DAY_OF_MONTH);
             displayDate = (month != null ? month : "") + " " + day;
             try {
                 displayDatePos = 112 - MinecraftFont.Font.getWidth(displayDate); // getWidth() must be so off
-            } catch (IllegalArgumentException e) {
-                plugin.getCConfig().clog(Level.SEVERE, "Caught IllegalArgumentException in MinecraftFont.Font.getWidth()");
+            } catch (Exception e) {
+                plugin.getCConfig().clog(Level.SEVERE, "Caught exception in MinecraftFont.Font.getWidth()");
                 displayDatePos = 64; // whatever
             }
         } else {
@@ -181,9 +192,9 @@ public class Letter {
                 // doesn't seem to be possible to generate those characters from the in-game console though
                 try {
                     width = MinecraftFont.Font.getWidth(words.get(i)); // NPE warning!
-                } catch (NullPointerException e) {
+                } catch (Exception e) {
                     i++; // obviously needs skipping
-                    plugin.getCConfig().clog(Level.SEVERE, "Caught NullPointerException in MinecraftFont.Font.getWidth()");
+                    plugin.getCConfig().clog(Level.SEVERE, "Caught Exception in MinecraftFont.Font.getWidth()");
                 }
                 if(width > CANVAS_WIDTH) {
                     // always splits words in half, if they're still too long it wraps around and splits again ..
@@ -192,7 +203,11 @@ public class Letter {
                     String s2 = orig.substring(s1.length() - 1); // -1 since we added "-" above
                     words.add(i, s1);
                     words.set(i+1, s2);
-                    width = MinecraftFont.Font.getWidth(words.get(i)); // NPE warning!
+                    try {
+                        width = MinecraftFont.Font.getWidth(words.get(i)); // NPE warning!
+                    } catch (Exception e) {
+                        plugin.getCConfig().clog(Level.SEVERE, "Caught Exception in MinecraftFont.Font.getWidth()");
+                    }
 //                    System.out.println("Split " + orig + " into " + s1 + " and " + s2);
                 }
                 if((x+width) <= CANVAS_WIDTH) {
