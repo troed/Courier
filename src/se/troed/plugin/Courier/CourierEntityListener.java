@@ -16,7 +16,7 @@ class CourierEntityListener extends EntityListener {
     // don't allow postmen to attack players
     public void onEntityTarget(EntityTargetEvent e) {
         if(!e.isCancelled() && plugin.getPostman(e.getEntity().getUniqueId()) != null) {
-            plugin.getCConfig().clog(Level.FINE, "Cancel angry enderman");
+            plugin.getCConfig().clog(Level.FINE, "Cancel angry postman");
             e.setCancelled(true);
         }
     }
@@ -53,7 +53,7 @@ class CourierEntityListener extends EntityListener {
 
     // in theory we could add another listener at Monitor priority for announce() ..
     public void onCreatureSpawn(CreatureSpawnEvent e) {
-        if(e.getCreatureType() == Courier.POSTMANTYPE) {
+        if(e.getCreatureType() == plugin.getCConfig().getType()) {
             // we end up here before we've had a chance to log and store our Postman uuids!
             // this means we cannot reliably override spawn deniers with perfect identification.
             // We match on Location instead but it's not pretty. Might be the only solution though.

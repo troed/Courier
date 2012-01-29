@@ -18,6 +18,7 @@ import org.bukkit.inventory.ItemStack;
 public abstract class Postman {
 
     protected Creature postman;
+    protected CreatureType type;
     protected final Courier plugin;
     protected final ItemStack letterItem;
     protected UUID uuid;
@@ -25,31 +26,52 @@ public abstract class Postman {
     protected int taskId;
     protected Runnable runnable;
     protected final Player player;
-    
-    protected Postman(Courier plug, Player p, int id) {
+
+    protected Postman(Courier plug, Player p, int id, CreatureType t) {
         plugin = plug;
         player = p;
+        type = t;
         // Postmen, like players doing /letter, can create actual Items
         letterItem = new ItemStack(Material.MAP, 1, plug.getCourierdb().getCourierMapId());
         letterItem.addUnsafeEnchantment(Enchantment.DURABILITY, id);
     }
     
     static Postman create(Courier plug, Player p, int id) {
-        if(Courier.POSTMANTYPE == CreatureType.ENDERMAN) {
-            return new EnderPostman(plug, p, id);
-        } else if (Courier.POSTMANTYPE == CreatureType.VILLAGER) {
-            return new VillagerPostman(plug, p, id);
+        if(plug.getCConfig().getType() == CreatureType.ENDERMAN) {
+            return new EnderPostman(plug, p, id, plug.getCConfig().getType());
+        } else {
+            return new CreaturePostman(plug, p, id, plug.getCConfig().getType());
         }
-        return null;
     }
 
     // must be implemented
-//    public abstract CreatureType getType();
     public abstract void spawn(Location l);
 
-    public int getHeight() {
-        plugin.getCConfig().clog(Level.FINE, "Postman is " + (int)Math.round(postman.getEyeHeight(true)) + " blocks high");
-        return (int)Math.round(postman.getEyeHeight(true));
+    public CreatureType getType() {
+        return type;
+    }
+
+    // yes I know this fails in many cases, we only "promise" Endermen and Villagers for now
+    // would need to contain all Creatures for this to work realiably
+    static int getHeight(Courier plug) {
+        CreatureType type = plug.getCConfig().getType();
+        if(type == CreatureType.ENDERMAN) {
+            return 3;
+        } else if(type == CreatureType.VILLAGER ||
+                  type == CreatureType.BLAZE ||
+                  type == CreatureType.COW ||
+                  type == CreatureType.CREEPER ||
+                  type == CreatureType.MUSHROOM_COW ||
+                  type == CreatureType.PIG_ZOMBIE ||
+                  type == CreatureType.SHEEP ||
+                  type == CreatureType.SKELETON ||
+                  type == CreatureType.SNOWMAN ||
+                  type == CreatureType.SQUID ||
+                  type == CreatureType.ZOMBIE) {
+            return 2;
+        } else {
+            return 1;
+        }
     }
 
     public ItemStack getLetterItem() {

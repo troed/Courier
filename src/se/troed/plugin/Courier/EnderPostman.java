@@ -7,15 +7,11 @@ import org.bukkit.entity.Enderman;
 import org.bukkit.entity.Player;
 import org.bukkit.material.MaterialData;
 
-public class EnderPostman extends Postman {
+public class EnderPostman extends CreaturePostman {
 
-    EnderPostman(Courier plug, Player p, int id) {
-        super(plug, p, id);
+    EnderPostman(Courier plug, Player p, int id, CreatureType t) {
+        super(plug, p, id, t);
     }
-
-/*    public CreatureType getType() {
-        return CreatureType.ENDERMAN;
-    }*/
 
     public void spawn(Location l) {
         postman = (Enderman) player.getWorld().spawnCreature(l, CreatureType.ENDERMAN);

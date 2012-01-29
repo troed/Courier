@@ -1,6 +1,7 @@
 package se.troed.plugin.Courier;
 
 import org.bukkit.ChatColor;
+import org.bukkit.entity.CreatureType;
 import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.configuration.file.FileConfiguration;
 
@@ -22,6 +23,7 @@ public class CourierConfig {
     private static final String POSTMAN_DESPAWN = "Courier.Postman.Despawn";
     private static final String ROUTE_INITIALWAIT = "Courier.Route.InitialWait";
     private static final String ROUTE_NEXTROUTE = "Courier.Route.NextRoute";
+    private static final String POSTMAN_TYPE = "Courier.Postman.Type";
     private static final String POSTMAN_SPAWNDISTANCE = "Courier.Postman.SpawnDistance";
     private static final String POSTMAN_BREAKSPAWNPROTECTION = "Courier.Postman.BreakSpawnProtection";
     private static final String POSTMAN_GREETING = "Courier.Postman.Greeting";
@@ -41,6 +43,7 @@ public class CourierConfig {
     private final int spawnDistance;
     private final boolean breakSpawnProtection;
     private final boolean sealedEnvelope;
+    private CreatureType type = null;
     private String greeting = null;
     private String maildrop = null;
     private String inventory = null;
@@ -108,6 +111,15 @@ public class CourierConfig {
         clog(Level.FINE, ROUTE_INITIALWAIT + ": " + initialWait);
         nextRoute = config.getInt(ROUTE_NEXTROUTE);
         clog(Level.FINE, ROUTE_NEXTROUTE + ": " + nextRoute);
+
+        String stype = config.getString(POSTMAN_TYPE, "Enderman"); // added in 1.1.0
+        type = CreatureType.fromName(stype);
+        if(type == null) {
+            type = CreatureType.ENDERMAN;
+            clog(Level.WARNING, "Postman.Type: " + stype + " is not a valid Creature, using default.");
+        }
+        clog(Level.FINE, POSTMAN_TYPE + ": " + type.getName());
+
         spawnDistance = config.getInt(POSTMAN_SPAWNDISTANCE);
         clog(Level.FINE, POSTMAN_SPAWNDISTANCE + ": " + spawnDistance);
         breakSpawnProtection = config.getBoolean(POSTMAN_BREAKSPAWNPROTECTION, true); // added in 0.9.6
@@ -146,6 +158,10 @@ public class CourierConfig {
 
     public int getNextRoute() {
         return nextRoute;
+    }
+    
+    public CreatureType getType() {
+        return type;
     }
 
     public int getSpawnDistance() {

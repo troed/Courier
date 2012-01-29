@@ -49,71 +49,12 @@ import java.util.logging.Level;
  * - I find it unlikely anyone will ever seriously craft a map at that location, it will have to do.
  * - Other plugin developers can use this fact to skip Courier Letters when they traverse maps
  *
- * LEGACY: Additionally, Courier letter z-value is the unix timestamp when they were created.
- *
  * How to deal with players who NEVER accept delivery? We'll spawn an immense number of postmen
  * and Items over time! I do not track how many times a single mail has been delivered, maybe I should?
- *
- * LEGACY: For recycling purposes, good info:
- * - http://www.minecraftwiki.net/wiki/Map_Item_Format
- *
- * LEGACY: switching out maps dyamically for the user will fail a lot of cases where itemheldevent
- * isn't triggered. that might be fixed though, but isn't currently:
- * https://bukkit.atlassian.net/browse/BUKKIT-437
- * if it WAS to be fixed, then maybe I could use one _real_ map and just fake all the others
- * switching out dynamically based on our magic X-value
- *
- *
- * = /letter creates an entry in the database, with it's own UUID (unrelated to Minecraft)
- *   and immediately creates a MapItem according to below for the player
- *
- *     we should still have our own letteruuid which mapid maps (hah) towards, making it possible to
- *     re-map mapids to other letteruuids. we could also store a back reference to which mapids reference
- *     which letteruuids - making it possible to immediately recycle those maps when a letter is deleted or
- *     recycled.
- *
- *     we would need a table which just lists all the mapids we've allocated for Courier of course. need
- *     to be able to detect that we've run out and trigger some form of deallocation of the oldest ones
- *     - and that should probably not be one per new message but free up a block of them when done. possibly
- *     a slow operation.
- *
- * = /post recipient takes the LetterItem held in the player's hands and removes it. Will get recreated
- *   by the Postman anyway.
- *
- * = deliveries create MapItems, and their UUIDs are mapped to the UUID in our database. One new such
- *   UUID mapping for each new Item we ever create point to a letter (to do - detect if they despawn and remove)
- *
- * = picking up item, check X for courier (Z now becomes worthless), lookup in itemuuids database
- *   and create the Letter object in LetterRenderer structure from letteruuids table.
- *   - wait what? when picking up an item all that is already done. I have an Item.
- *
- * = deliverythread checks newmail and sends out deliveries. new itemuuid if no itemuuid for that letteruuid
- *   already exists (sounds like a backwards lookup, hmm)
  *
  * ISSUE: Currently no quick rendering (sendMap) works. Not sure this is fixable - I guess it understands
  *        we're using the same MapID for everything.
  *
- * Oh my it was ages since I last did database design. Bukkit persistence is Ebeans and objects.
- *
- * table player
- * key: player1 | data: newmail, itemuuid1, itemuuid2, itemuuid3
- * key: player2 | data: newmail, itemuuid2
- *
- * table itemuuids
- * key: itemuuid1 | letteruuid1
- *      itemuuid2 | letteruuid2
- *      itemuuid3 | letteruuid1
- *
- * table letteruuids
- * key: letteruuid1 | sender, player1, message, delivered, read, date
- *
- * table mapidpool
- * itemuuid1, itemuuid2, itemuuid3 etc ...
- *
- * create a conversion routine from messages.yml to database, run it every time the database disappears for
- * beta testing
- *
- * Q: there IS something fishy about maps being per-world. how is that info put into the ItemStack? the data byte?
  */
 public class Courier extends JavaPlugin {
     // these must match plugin.yml
@@ -132,7 +73,6 @@ public class Courier extends JavaPlugin {
     public static final int MAX_ID = Short.MAX_VALUE; // really, we don't do negative numbers well atm
     public static final int MIN_ID = 1; // since unenchanted items are level 0
     private static final int DBVERSION = 1; // used since 1.0.0
-    public static final CreatureType POSTMANTYPE = CreatureType.VILLAGER;
 
     private static Vault vault = null;
     private static Economy economy = null;
@@ -254,10 +194,11 @@ public class Courier extends JavaPlugin {
                     block = block.getRelative(BlockFace.DOWN, 1);
                 }
                 // verify this is something we can stand on and that we fit
-                if(!block.getRelative(BlockFace.DOWN, 1).isLiquid() && block.getRelative(BlockFace.UP, 1).isEmpty()) {
-// todo: remove hackish code, make pretty
-                    if(POSTMANTYPE == CreatureType.ENDERMAN && !block.getRelative(BlockFace.UP, 2).isEmpty()) {
-                        // Enderpostmen doesn't fit
+                if(!block.getRelative(BlockFace.DOWN, 1).isLiquid()) {
+                    if(Postman.getHeight(this) > 2 && (!block.getRelative(BlockFace.UP, 1).isEmpty() || !block.getRelative(BlockFace.UP, 2).isEmpty())) {
+                        // Enderpostmen don't fit
+                    } else if(Postman.getHeight(this) > 1 && !block.getRelative(BlockFace.UP, 1).isEmpty()) {
+                        // "normal" height Creatures don't fit
                     } else {
                         Location tLoc = block.getLocation();
                         getCConfig().clog(Level.FINE, "findSpawnLocation got location! [" + tLoc.getBlockX() + "," + tLoc.getBlockY() + "," + tLoc.getBlockZ() + "]");
@@ -349,19 +290,12 @@ public class Courier extends JavaPlugin {
                 config.clog(Level.FINE, "Undelivered messageid: " + undeliveredMessageId);
                 if (undeliveredMessageId != -1) {
                     Location spawnLoc = findSpawnLocation(player);
-                    if(spawnLoc != null && player.getWorld().hasStorm() && POSTMANTYPE == CreatureType.ENDERMAN) {
-                        // I think I consider this to be a temporary solution to
-                        // http://dev.bukkit.org/server-mods/courier/tickets/4-postmen-are-spawned-outside-even-if-its-raining/
-                        //
+                    if(spawnLoc != null && player.getWorld().hasStorm() && config.getType() == CreatureType.ENDERMAN) {
                         // hey. so rails on a block cause my findSpawnLocation to choose the block above
                         // I guess there are additional checks I should add. emptiness?
                         // todo: that also means we try to spawn an enderpostman on top of rails even in rain
                         // todo: and glass blocks _don't_ seem to be included in "getHighest..." which I feel is wrong ("non-air")
                         // see https://bukkit.atlassian.net/browse/BUKKIT-445
-                        //
-                        // int getHighestBlockYAt (int x, int z); returns 0 when you call it from the Nether.
-                        // https://bukkit.atlassian.net/browse/BUKKIT-451
-
                         // Minecraftwiki:
                         // "Rain occurs in all biomes except Tundra, Taiga, and Desert."
                         // "Snow will only fall in the Tundra and Taiga biomes"
@@ -379,7 +313,7 @@ public class Courier extends JavaPlugin {
                         }
                     }
                     if (spawnLoc != null) {
-//                        Postman postman = new VillagerPostman(this, player, undeliveredMessageId);
+//                        Postman postman = new CreaturePostman(this, player, undeliveredMessageId);
                         Postman postman = Postman.create(this, player, undeliveredMessageId);
                         // separate instantiation from spawning, save spawnLoc in instantiation
                         // and create a new method to lookup unspawned locations. Use loc matching
@@ -450,7 +384,8 @@ public class Courier extends JavaPlugin {
             pm.registerEvent(Event.Type.CREATURE_SPAWN, entityListener, Priority.Highest, this);
             // I register as High on some events since I know I only modify for Postmen I've spawned
             pm.registerEvent(Event.Type.ENTITY_DAMAGE, entityListener, Priority.High, this);
-            if(POSTMANTYPE == CreatureType.ENDERMAN) {
+            if(config.getType() == CreatureType.ENDERMAN) {
+                // todo: in new event system, if possible, extend to all Monsters
                 pm.registerEvent(Event.Type.ENTITY_TARGET, entityListener, Priority.High, this);
                 pm.registerEvent(Event.Type.ENDERMAN_PICKUP, entityListener, Priority.High, this);
                 pm.registerEvent(Event.Type.ENDERMAN_PLACE, entityListener, Priority.High, this);

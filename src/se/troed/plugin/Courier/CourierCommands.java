@@ -107,7 +107,7 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                 if(from != null && message != null) {
                     Location spawnLoc = plugin.findSpawnLocation(player);
                     if(spawnLoc != null) {
-//                        Postman postman = new VillagerPostman(plugin, player, undeliveredMessageId);
+//                        Postman postman = new CreaturePostman(plugin, player, undeliveredMessageId);
                         Postman postman = Postman.create(plugin, player, undeliveredMessageId);
                         plugin.addSpawner(spawnLoc, postman);
                         postman.spawn(spawnLoc);

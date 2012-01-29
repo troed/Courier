@@ -1,9 +1,10 @@
 # Config file version is used internally to detect non backward compatible breaks
 # All times are in seconds, distances in blocks
 # Strings can use &0..&f color coding
+# Courier has been tested with Postman.Type 'Enderman' and 'Villager', but will accept all Creature-types
 Courier:
   UseFees: false
-  Version: 1.0.0
+  Version: 1.1.0
   Fee:
     Send: 10
   Route:
@@ -12,6 +13,7 @@ Courier:
   Privacy:
     SealedEnvelope: true
   Postman:
+    Type: 'Enderman'
     QuickDespawn: 3
     Despawn: 20
     SpawnDistance: 10
