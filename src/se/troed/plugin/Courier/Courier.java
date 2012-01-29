@@ -353,6 +353,15 @@ public class Courier extends JavaPlugin {
 
     public void onEnable() {
         this.loadConfig();
+
+        try {
+            this.saveResource("translations/readme.txt", true);
+            this.saveResource("translations/config_french.yml", true);
+            this.saveResource("translations/config_swedish.yml", true);
+        } catch (Exception e) {
+            config.clog(Level.WARNING, "Unable to copy translations from .jar to plugin folder");
+        }
+
         boolean dbExist = courierdb.load();
 
         boolean abort = false;

@@ -61,25 +61,25 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
             if (args[0].equalsIgnoreCase("fees")) {
                 if(plugin.getEconomy() != null) {
                     double fee = plugin.getCConfig().getFeeSend();
-                    player.sendMessage("Courier: The postage is " + plugin.getEconomy().format(fee));
+                    player.sendMessage(plugin.getCConfig().getInfoFee(plugin.getEconomy().format(fee)));
                 } else {
-                    player.sendMessage("Courier: There's no cost for sending mail on this server");
+                    player.sendMessage(plugin.getCConfig().getInfoNoFee());
                 }
                 retVal = true;
             } else if(args[0].equalsIgnoreCase("unread")) {
                 if(plugin.getCourierdb().deliverUnreadMessages(player.getName())) {
-                    player.sendMessage("Courier: The Postman will make extra deliveries");
+                    player.sendMessage(plugin.getCConfig().getPostmanExtraDeliveries());
                 } else {
-                    player.sendMessage("Courier: You have no unread mail");
+                    player.sendMessage(plugin.getCConfig().getPostmanNoUnreadMail());
                 }
                 retVal = true;
             }
             // todo: implement /courier list
         } else {
-            player.sendMessage(ChatColor.WHITE + "/letter message" + ChatColor.GRAY + ": Creates a Letter or adds text to an existing one");
-            player.sendMessage(ChatColor.WHITE + "/post playername" + ChatColor.GRAY + ": Posts the Letter you're holding to playername");
-            player.sendMessage(ChatColor.WHITE + "/courier fees " + ChatColor.GRAY + ": Lists cost, if any, for Posting a Letter");
-            player.sendMessage(ChatColor.WHITE + "/courier unread " + ChatColor.GRAY + ": Request re-delivery of any unread mail");
+            player.sendMessage(plugin.getCConfig().getInfoLine1());
+            player.sendMessage(plugin.getCConfig().getInfoLine2());
+            player.sendMessage(plugin.getCConfig().getInfoLine3());
+            player.sendMessage(plugin.getCConfig().getInfoLine4());
             retVal = true;
         }
         return retVal;
@@ -96,6 +96,7 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
         if(plugin.getCourierdb().undeliveredMail(player.getName())) {
             int undeliveredMessageId = plugin.getCourierdb().undeliveredMessageId(player.getName());
             if(undeliveredMessageId != -1) {
+                // this is really a command meant for testing, no need for translation
                 player.sendMessage("You've got mail waiting for delivery!");
 
                 // Is it the FIRST map viewed on server start that gets the wrong id when rendering?
@@ -143,10 +144,10 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
             if(plugin.getEconomy() != null &&
                     plugin.getEconomy().getBalance(player.getName()) < plugin.getCConfig().getFeeSend() &&
                     !player.hasPermission(Courier.PM_THEONEPERCENT)) {
-                player.sendMessage("Courier: Sorry, you don't have enough credit to cover postage (" + plugin.getEconomy().format(plugin.getCConfig().getFeeSend())+ ")");
+                player.sendMessage(plugin.getCConfig().getPostNoCredit(plugin.getEconomy().format(plugin.getCConfig().getFeeSend())));
                 ret = true;
             } else if(args == null || args.length < 1) {
-                player.sendMessage("Courier: Error, no recipient to post your letter to!");
+                player.sendMessage(plugin.getCConfig().getPostNoRecipient());
             // /post player1 player2 player3 etc in the future?
             } else {
                 OfflinePlayer[] offPlayers = plugin.getServer().getOfflinePlayers();
@@ -174,7 +175,7 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                     if(players != null && players.size() == 1) {
                         // we got one exact match
                         // p = players.get(0); // don't, could be embarrassing if wrong
-                        player.sendMessage("Courier: Couldn't find " + args[0] + ". Did you mean " + players.get(0).getName() + "?");
+                        player.sendMessage(plugin.getCConfig().getPostDidYouMean(args[0], players.get(0).getName()));
                     } else if (players != null && players.size() > 1 && player.hasPermission(Courier.PM_LIST)) {
                         // more than one possible match found
                         StringBuilder suggestList = new StringBuilder();
@@ -189,11 +190,11 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                             }
                         }
                         // players listing who's online. If so, that could be a permission also valid for /courier list
-                        player.sendMessage("Courier: Couldn't find " + args[0] + ". Did you mean anyone of these players?");
-                        player.sendMessage("Courier: " + suggestList.toString());
+                        player.sendMessage(plugin.getCConfig().getPostDidYouMeanList(args[0]));
+                        player.sendMessage(plugin.getCConfig().getPostDidYouMeanList2(suggestList.toString()));
                     } else {
                         // time to give up
-                        player.sendMessage("Courier: There's no player on this server with the name " + args[0]);
+                        player.sendMessage(plugin.getCConfig().getPostNoSuchPlayer(args[0]));
                     }
                 }
                 if(p != null) {
@@ -204,14 +205,14 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                         double fee = plugin.getCConfig().getFeeSend();
                         EconomyResponse er = plugin.getEconomy().withdrawPlayer(player.getName(), fee);
                         if(er.transactionSuccess()) {
-                            player.sendMessage("Courier: Letter to " + p.getName() + " sent! Postage fee of " + plugin.getEconomy().format(fee)+ " paid");
+                            player.sendMessage(plugin.getCConfig().getPostLetterSentFee(p.getName(), plugin.getEconomy().format(fee)));
                             send = true;
                         } else {
-                            player.sendMessage("Courier: There was a problem withdrawing funds for postage. Please tell your admin.");
+                            player.sendMessage(plugin.getCConfig().getPostFundProblem());
                             plugin.getCConfig().clog(Level.WARNING, "Could not withdraw postage fee from " + p.getName());
                         }
                     } else {
-                        player.sendMessage("Courier: Letter to " + p.getName() + " sent!");
+                        player.sendMessage(plugin.getCConfig().getPostLetterSent(p.getName()));
                         send = true;
                     }
 
@@ -234,7 +235,7 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                 ret = true;
             }
         } else {
-            player.sendMessage("Courier: You must be holding the letter you want to post! See /courier");
+            player.sendMessage(plugin.getCConfig().getPostNoLetter());
         }
         return ret;
     }
@@ -251,7 +252,7 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
         // letter message - builds upon message in hand. We must be sender, I think.
         boolean ret = false;
         if(args == null || args.length < 1) {
-            player.sendMessage("Courier: Error, no text to add to letter!");
+            player.sendMessage(plugin.getCConfig().getLetterNoText());
         } else {
             ItemStack item = player.getItemInHand();
             Letter letter = null;
@@ -305,12 +306,12 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                         message.append(" ");
                     }
                 } catch (Exception e) {
-                    plugin.getCConfig().clog(Level.SEVERE, "Courier: Caught Exception in MinecraftFont.isValid()");
+                    plugin.getCConfig().clog(Level.SEVERE, "Caught Exception in MinecraftFont.isValid()");
                     invalid = true;
                 }
 
                 if(invalid) {
-                    player.sendMessage("Courier: Parts of the entered text cannot be displayed and was skipped");
+                    player.sendMessage(plugin.getCConfig().getLetterSkippedText());
                 }
 
                 if (plugin.getCourierdb().storeMessage(id,
@@ -358,12 +359,12 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                         } 
                     }
                 } else {
-                    player.sendMessage("Courier: Could not create the letter! Notify your admin!");
+                    player.sendMessage(plugin.getCConfig().getLetterCreateFailed());
                     plugin.getCConfig().clog(Level.SEVERE, "Could not store letter in database!");
                 }
                 ret = true;
             } else {
-                player.sendMessage("Courier: Out of unique message IDs! Notify your admin!");
+                player.sendMessage(plugin.getCConfig().getLetterNoMoreUIDs());
                 plugin.getCConfig().clog(Level.SEVERE, "Out of unique message IDs!");
                 ret = true;
             }

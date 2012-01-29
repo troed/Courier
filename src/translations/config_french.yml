@@ -23,16 +23,16 @@ Courier:
     Despawn: 20
     SpawnDistance: 10
     BreakSpawnProtection: true
-    Greeting: "&7Courier: &fA Postman has arrived with your mail!"
-    MailDrop: "&7Courier: &fYour mail was dropped onto the ground."
-    Inventory: "&7Courier: &fYou had your hands full, the Postman put the mail in your inventory for you."
-    CannotDeliver: "&7Courier: &fA Postman has mail for you but was not allowed in this place."
+    Greeting: "&7Courier: &fUn Postier est arrive avec votre courrier!"
+    MailDrop: "&7Courier: &fVotre courrier a ete depose sur le sol."
+    Inventory: "&7Courier: &fVous aviez les mains pleines, le Postier a mis le courrier dans votre inventaire."
+    CannotDeliver: "&7Courier: &fLe Postier a du courrier pour vous mais il ne peut pas vous le remettre a cet endroit."
     ExtraDeliveries: "&7Courier: &fThe Postman will make extra deliveries"
     NoUnreadMail: "&7Courier: &fYou have no unread mail"
   Letter:
     ShowDate: true
-    Drop: "&7Courier: &fYour inventory is full, the letter was dropped onto the ground."
-    Inventory: "&7Courier: &fYou had your hands full, the letter can be found in your inventory."
+    Drop: "&7Courier: &fVotre inventaire est plein, le courrier a ete depose par terre."
+    Inventory: "&7Courier: &fVous aviez les mains pleines, votre courrier se trouve dans votre inventaire."
     NoText: "&7Courier: &fError, no text to add to letter!"
     SkippedText: "&7Courier: &fParts of the entered text cannot be displayed and was skipped"
     CreateFailed: "&7Courier: &fCould not create the letter! Notify your admin!"

@@ -1,0 +1,55 @@
+# Config file version is used internally to detect non backward compatible breaks
+# All times are in seconds, distances in blocks
+# Strings can use &0..&f color coding
+# Courier has been tested with Postman.Type 'Enderman' and 'Villager', but will accept all Creature-types
+# Route.WalkToPlayer is not used for Monster-Postmen (they would attack), only "friendly mobs".
+#   - Set to false if Villager-Postmen keep pushing you into lava ;)
+Courier:
+  UseFees: false
+  Version: 1.1.0
+  Fee:
+    Send: 10
+    InfoFee: "&7Courier: &fPortot är %s"
+    InfoNoFee: "&7Courier: &fDet kostar inget att skicka brev här"
+  Route:
+    InitialWait: 10
+    NextRoute: 60
+    WalkToPlayer: true
+  Privacy:
+    SealedEnvelope: true
+  Postman:
+    Type: 'Enderman'
+    QuickDespawn: 3
+    Despawn: 20
+    SpawnDistance: 10
+    BreakSpawnProtection: true
+    Greeting: "&7Courier: &fEn brevbärare har dykt upp med brev till dig!"
+    MailDrop: "&7Courier: &fDitt brev hamnade på marken."
+    Inventory: "&7Courier: &fDu hade fullt upp, brevbäraren lade ditt brev i din packning."
+    CannotDeliver: "&7Courier: &fEn brevbärare har post till dig men får inte vara här."
+    ExtraDeliveries: "&7Courier: &fBrevbäraren kommer att gå en extra runda."
+    NoUnreadMail: "&7Courier: &fDu har inga olästa brev."
+  Letter:
+    ShowDate: true
+    Drop: "&7Courier: &fDin packning är full, ditt brev hamnade på marken."
+    Inventory: "&7Courier: &fDu hade fullt upp, brevet har lagts i din packning."
+    NoText: "&7Courier: &fProblem, det fanns inget text att lägga till brevet!"
+    SkippedText: "&7Courier: &fDelar av texten kan inte visas och hoppades över."
+    CreateFailed: "&7Courier: &fKunde inte skapa brevet! Säg till serveransvarig!"
+    NoMoreUIDs: "&7Courier: &fSlut på brev-ID! Säg till serveransvarig!"
+  Post:
+    NoCredit: "&7Courier: &fDu har tyvärr inte tillräckligt med krediter för att täcka portot (%s)"
+    NoRecipient: "&7Courier: &fProblem, du glömde skriva vem brevet ska skickas till!"
+    DidYouMean: "&7Courier: &fHittade ingen %1$s. Menade du möjligen %2$s?"           # 1$ = input, 2$ = match
+    DidYouMeanList: "&7Courier: &fHittade ingen %s. Menade du möjligen någon av dessa spelare?"
+    DidYouMeanList2: "&7Courier:&f %s"
+    NoSuchPlayer: "&7Courier: &fDet finns ingen spelare vid namn %s på den här servern!"
+    LetterSent: "&7Courier: &fBrev till %s skickat!"
+    LetterSentFee: "&7Courier: &fBrev till %1$s skickat! %2$s i portoavgift har betalts."    # 1$ = recipient, 2$ = fee
+    FundProblem: "&7Courier: &fDet var något problem med att betala porto. Säg till serveransvarig."
+    NoLetter: "&7Courier: &fDu måste hålla brevet du vill skicka i händerna! Se /courier"
+  Info:
+    Line1: "&f/letter meddelande: &7Skapar ett brev eller lägger till text till ett existerande"
+    Line2: "&f/post spelarnamn: &7Postar det brev du håller i till spelarnamn"
+    Line3: "&f/courier fees: &7Visar portoavgifter, om det finns några sådana"
+    Line4: "&f/courier unread: &7Ber brevbäraren om att bära ut dina oläsa brev igen"
