@@ -27,8 +27,6 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.CreatureType;
 import org.bukkit.entity.Player;
-import org.bukkit.event.Event;
-import org.bukkit.event.Event.Priority;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.map.MapRenderer;
 import org.bukkit.map.MapView;
@@ -77,10 +75,7 @@ public class Courier extends JavaPlugin {
     private static Vault vault = null;
     private static Economy economy = null;
     
-    private final CourierEntityListener entityListener = new CourierEntityListener(this);
-    private final CourierPlayerListener playerListener = new CourierPlayerListener(this);
-//    private final CourierServerListener serverListener = new CourierServerListener(this);
-    private final CourierDeliveryListener deliveryListener = new CourierDeliveryListener(this);
+    private final CourierEventListener eventListener = new CourierEventListener(this);
     private final CourierCommands courierCommands = new CourierCommands(this);
     private final CourierDB courierdb = new CourierDB(this);
     private CourierConfig config;
@@ -379,28 +374,9 @@ public class Courier extends JavaPlugin {
 
         if(!abort) {
             // Register our events
-            PluginManager pm = getServer().getPluginManager();
-            // Highest since we might need to override spawn deniers
-            pm.registerEvent(Event.Type.CREATURE_SPAWN, entityListener, Priority.Highest, this);
-            // I register as High on some events since I know I only modify for Postmen I've spawned
-            pm.registerEvent(Event.Type.ENTITY_DAMAGE, entityListener, Priority.High, this);
-            if(config.getType() == CreatureType.ENDERMAN) {
-                // todo: in new event system, if possible, extend to all Monsters
-                pm.registerEvent(Event.Type.ENTITY_TARGET, entityListener, Priority.High, this);
-                pm.registerEvent(Event.Type.ENDERMAN_PICKUP, entityListener, Priority.High, this);
-                pm.registerEvent(Event.Type.ENDERMAN_PLACE, entityListener, Priority.High, this);
-            }
-            pm.registerEvent(Event.Type.PLAYER_QUIT, playerListener, Priority.Monitor, this);
-            pm.registerEvent(Event.Type.PLAYER_JOIN, playerListener, Priority.Monitor, this);
-            pm.registerEvent(Event.Type.PLAYER_INTERACT, playerListener, Priority.High, this);
-            pm.registerEvent(Event.Type.PLAYER_INTERACT_ENTITY, playerListener, Priority.Monitor, this);
-//            pm.registerEvent(Event.Type.PLAYER_ANIMATION, playerListener, Priority.Normal, this);
-            pm.registerEvent(Event.Type.PLAYER_ITEM_HELD, playerListener, Priority.Monitor, this);
-            pm.registerEvent(Event.Type.PLAYER_PICKUP_ITEM, playerListener, Priority.Monitor, this);
-        //        pm.registerEvent(Event.Type.MAP_INITIALIZE, serverListener, Priority.Normal, this);
-        //        pm.registerEvent(Event.Type.SERVER_COMMAND, courierCommands, Priority.Normal, this);
-            pm.registerEvent(Event.Type.CUSTOM_EVENT, deliveryListener, Priority.Normal, this);
+            getServer().getPluginManager().registerEvents(eventListener, this);
 
+            // and our commands
             getCommand(CMD_POSTMAN).setExecutor(courierCommands);
             getCommand(CMD_COURIER).setExecutor(courierCommands);
             getCommand(CMD_POST).setExecutor(courierCommands);

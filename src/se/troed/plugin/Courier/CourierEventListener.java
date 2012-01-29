@@ -3,8 +3,13 @@ package se.troed.plugin.Courier;
 import org.bukkit.Material;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Enderman;
+import org.bukkit.entity.Monster;
 import org.bukkit.entity.Villager;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
+import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.entity.*;
 import org.bukkit.event.player.*;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.map.MapView;
@@ -13,13 +18,31 @@ import org.bukkit.material.MaterialData;
 import java.util.HashMap;
 import java.util.logging.Level;
 
-class CourierPlayerListener extends PlayerListener {
+class CourierEventListener implements Listener {
     private final Courier plugin;
 
-    public CourierPlayerListener(Courier instance) {
+    public CourierEventListener(Courier instance) {
         plugin = instance;
     }
 
+    @EventHandler(priority = EventPriority.NORMAL)
+    void onCourierDeliveryEvent(CourierDeliveryEvent e) {
+        if(e.getPlayer()!=null && e.getId()!=-1) {
+            if(e.getEventName().equals(CourierDeliveryEvent.COURIER_DELIVERED)) {
+                plugin.getCConfig().clog(Level.FINE, "Delivered letter to " + e.getPlayer().getName() + " with id " + e.getId());
+                plugin.getCourierdb().setDelivered(e.getPlayer().getName(), e.getId());
+            } else if(e.getEventName().equals(CourierDeliveryEvent.COURIER_READ)) {
+                plugin.getCConfig().clog(Level.FINE, e.getPlayer().getName() + " has read the letter with id " + e.getId());
+                plugin.getCourierdb().setRead(e.getPlayer().getName(), e.getId());
+            } else {
+                // dude, what?
+                plugin.getCConfig().clog(Level.WARNING, "Unknown Courier event " + e.getEventName() + " received!");
+            }
+
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGH)
     public void onPlayerInteract(PlayerInteractEvent e) {
         if(e.getMaterial() == Material.MAP && e.getItem().containsEnchantment(Enchantment.DURABILITY)) {
             Letter letter = plugin.getLetter(e.getItem());
@@ -46,6 +69,7 @@ class CourierPlayerListener extends PlayerListener {
         }
     }*/
 
+    @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerInteractEntity(PlayerInteractEntityEvent e) {
         Postman postman = plugin.getPostman(e.getRightClicked().getUniqueId());
         if(!e.isCancelled() && !e.getRightClicked().isDead() && postman != null && !postman.scheduledForQuickRemoval()) {
@@ -123,7 +147,8 @@ class CourierPlayerListener extends PlayerListener {
         plugin.getCourierdb().storeDate(id, map.getCenterZ());
         return letterItem;
     }
-    
+
+    @EventHandler(priority = EventPriority.MONITOR)
     public void onItemHeldChange(PlayerItemHeldEvent e) {
         if(e.getPlayer().getInventory().getItem(e.getNewSlot()).getType() == Material.MAP) {
             // legacy Courier support
@@ -148,7 +173,8 @@ class CourierPlayerListener extends PlayerListener {
             }
         }
     }
-    
+
+    @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerPickupItem(PlayerPickupItemEvent e) {
         if(!e.isCancelled() && e.getItem().getItemStack().getType() == Material.MAP) {
             // legacy Courier support
@@ -182,6 +208,7 @@ class CourierPlayerListener extends PlayerListener {
 
     // onPlayerDropItem for recycling? or something more active? (furnace? :D)
 
+    @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerQuit(PlayerQuitEvent event) {
         if(plugin.getServer().getOnlinePlayers().length <= 1) { // ==
             // last player left
@@ -190,6 +217,7 @@ class CourierPlayerListener extends PlayerListener {
         plugin.getCConfig().clog(Level.FINE, event.getPlayer().getDisplayName() + " has left the building");
     }
 
+    @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerJoin(PlayerJoinEvent event) {
         if(plugin.getServer().getOnlinePlayers().length == 1) {
             // first player joined
@@ -197,5 +225,76 @@ class CourierPlayerListener extends PlayerListener {
             plugin.startDeliveries();
         }
         plugin.getCConfig().clog(Level.FINE, event.getPlayer().getDisplayName() + " has joined");
+    }
+
+    // if it's a Monster, don't target - it'll attack the player
+    // (at least true for Enderman, but maybe not PigZombie?)
+    @EventHandler(priority = EventPriority.HIGH)
+    public void onEntityTarget(EntityTargetEvent e) {
+        if(!e.isCancelled() && plugin.getPostman(e.getEntity().getUniqueId()) != null) {
+            if(e.getEntity() instanceof Monster) {
+                plugin.getCConfig().clog(Level.FINE, "Cancel angry postman");
+                e.setCancelled(true);
+            }
+        }
+    }
+
+    // don't allow players to attack postmen
+    @EventHandler(priority = EventPriority.HIGH)
+    public void onEntityDamage(EntityDamageEvent e) {
+        // don't care about cause, if it's a postman then drop mail and bail
+        if(!e.isCancelled() && plugin.getPostman(e.getEntity().getUniqueId()) != null) {
+            plugin.getCConfig().clog(Level.FINE, "Postman taking damage");
+            Postman postman = plugin.getPostman(e.getEntity().getUniqueId());
+            if(!e.getEntity().isDead() && !postman.scheduledForQuickRemoval()) {
+                postman.drop();
+                postman.quickDespawn();
+                plugin.getCConfig().clog(Level.FINE, "Drop and despawn");
+            } // else already removed
+            e.setCancelled(true);
+        }
+    }
+
+    // enderpostmen aren't block thieves
+    @EventHandler(priority = EventPriority.HIGH)
+    public void onEndermanPickup(EndermanPickupEvent e) {
+        if(!e.isCancelled() && plugin.getPostman(e.getEntity().getUniqueId()) != null) {
+            plugin.getCConfig().clog(Level.FINE, "Prevented postman thief");
+            e.setCancelled(true);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGH)
+    public void onEndermanPlace(EndermanPlaceEvent e) {
+        if(!e.isCancelled() && plugin.getPostman(e.getEntity().getUniqueId()) != null) {
+            plugin.getCConfig().clog(Level.FINE, "Prevented postman maildrop");
+            e.setCancelled(true);
+       }
+    }
+
+    // Highest since we might need to override spawn deniers
+    // in theory we could add another listener at Monitor priority for announce() ..
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onCreatureSpawn(CreatureSpawnEvent e) {
+        if(e.getCreatureType() == plugin.getCConfig().getType()) {
+            // we end up here before we've had a chance to log and store our Postman uuids!
+            // this means we cannot reliably override spawn deniers with perfect identification.
+            // We match on Location instead but it's not pretty. Might be the only solution though.
+            Postman postman = plugin.getAndRemoveSpawner(e.getLocation());
+            if(postman != null) {
+                plugin.getCConfig().clog(Level.FINE, "onCreatureSpawn is a Postman");
+                if(e.isCancelled()) {
+                    if(plugin.getCConfig().getBreakSpawnProtection()) {
+                        plugin.getCConfig().clog(Level.FINE, "onCreatureSpawn Postman override");
+                        e.setCancelled(false);
+                        postman.announce(e.getLocation());
+                    } else {
+                        postman.cannotDeliver();
+                    }
+                } else {
+                    postman.announce(e.getLocation());
+                }
+            }
+        }
     }
 }

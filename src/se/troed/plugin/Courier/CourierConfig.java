@@ -23,6 +23,7 @@ public class CourierConfig {
     private static final String POSTMAN_DESPAWN = "Courier.Postman.Despawn";
     private static final String ROUTE_INITIALWAIT = "Courier.Route.InitialWait";
     private static final String ROUTE_NEXTROUTE = "Courier.Route.NextRoute";
+    private static final String ROUTE_WALKTOPLAYER = "Courier.Route.WalkToPlayer";
     private static final String POSTMAN_TYPE = "Courier.Postman.Type";
     private static final String POSTMAN_SPAWNDISTANCE = "Courier.Postman.SpawnDistance";
     private static final String POSTMAN_BREAKSPAWNPROTECTION = "Courier.Postman.BreakSpawnProtection";
@@ -45,6 +46,7 @@ public class CourierConfig {
     private final boolean breakSpawnProtection;
     private final boolean sealedEnvelope;
     private final boolean showDate;
+    private final boolean walkToPlayer;
     private CreatureType type = null;
     private String greeting = null;
     private String maildrop = null;
@@ -113,6 +115,8 @@ public class CourierConfig {
         clog(Level.FINE, ROUTE_INITIALWAIT + ": " + initialWait);
         nextRoute = config.getInt(ROUTE_NEXTROUTE);
         clog(Level.FINE, ROUTE_NEXTROUTE + ": " + nextRoute);
+        walkToPlayer = config.getBoolean(ROUTE_WALKTOPLAYER, true); // added in 1.1.0
+        clog(Level.FINE, ROUTE_WALKTOPLAYER + ": " + walkToPlayer);
 
         String stype = config.getString(POSTMAN_TYPE, "Enderman"); // added in 1.1.0
         type = CreatureType.fromName(stype);
@@ -163,7 +167,11 @@ public class CourierConfig {
     public int getNextRoute() {
         return nextRoute;
     }
-    
+
+    public boolean getWalkToPlayer() {
+        return walkToPlayer;
+    }
+
     public CreatureType getType() {
         return type;
     }

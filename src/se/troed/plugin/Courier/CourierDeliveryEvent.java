@@ -3,8 +3,10 @@ package se.troed.plugin.Courier;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.Event;
+import org.bukkit.event.HandlerList;
 
 class CourierDeliveryEvent extends Event implements Cancellable {
+    private static final HandlerList handlers = new HandlerList();
     public static final String COURIER_DELIVERED = "COURIER_DELIVERED";
     public static final String COURIER_READ = "COURIER_READ";
     private boolean cancelled;
@@ -15,6 +17,14 @@ class CourierDeliveryEvent extends Event implements Cancellable {
         super(event);
         player = p;
         this.id = id;
+    }
+
+    public HandlerList getHandlers() {
+        return handlers;
+    }
+
+    public static HandlerList getHandlerList() {
+        return handlers;
     }
 
     public boolean isCancelled() {

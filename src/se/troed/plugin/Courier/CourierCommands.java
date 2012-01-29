@@ -319,7 +319,7 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                         (int)(System.currentTimeMillis() / 1000L))) { // oh noes unix y2k issues!!!11
     
                     // no letter == we create and put in hands, or in inventory, or drop to ground
-                    // see CourierPlayerListener for similar code when Postman delivers letters
+                    // see CourierEventListener for similar code when Postman delivers letters
                     if(letter == null) {
                         ItemStack letterItem = new ItemStack(Material.MAP, 1, plugin.getCourierdb().getCourierMapId());
                         letterItem.addUnsafeEnchantment(Enchantment.DURABILITY, id);
