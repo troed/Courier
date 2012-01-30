@@ -31,7 +31,7 @@ public class Letter {
     private List<String> message;
     private final String header;
     private final int date;
-    private final String displayDate;
+    private String displayDate;
     private int displayDatePos;
     // note, this is JUST to avoid event spamming. Actual read status is saved in CourierDB
     private boolean read;
@@ -55,7 +55,7 @@ public class Letter {
             try {
                 valid = MinecraftFont.Font.isValid(month);
             } catch (Exception e) {
-                plugin.getCConfig().clog(Level.SEVERE, "Caught exception in MinecraftFont.Font.isValid()");
+                plugin.getCConfig().clog(Level.SEVERE, "Caught exception in MinecraftFont.Font.isValid(month)");
                 valid = false;
             }
             if(!valid) {
@@ -66,8 +66,9 @@ public class Letter {
             try {
                 displayDatePos = 112 - MinecraftFont.Font.getWidth(displayDate); // getWidth() must be so off
             } catch (Exception e) {
-                plugin.getCConfig().clog(Level.SEVERE, "Caught exception in MinecraftFont.Font.getWidth()");
-                displayDatePos = 64; // whatever
+                plugin.getCConfig().clog(Level.SEVERE, "Caught exception in MinecraftFont.Font.getWidth(displayDate)");
+                displayDate = null;
+                displayDatePos = 0; // whatever
             }
         } else {
             displayDate = null;
