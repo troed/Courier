@@ -150,10 +150,24 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                 player.sendMessage(plugin.getCConfig().getPostNoRecipient());
             // /post player1 player2 player3 etc in the future?
             } else {
+                String receiver = args[0];
+                if(plugin.getCConfig().getSealedEnvelope()) {
+                    // verify envelope security, we're only allowed to post Letters to the intended recipient
+                    if(player.getName().equalsIgnoreCase(letter.getReceiver())) {
+                       // it's our own Letter - ok 
+                    } else if(receiver.equalsIgnoreCase(letter.getReceiver())) {
+                        // we're trying to send it to the intended receiver - ok
+                    } else {
+                        // not ok, trying to send a letter meant for one player to another
+                        // silent substitution to correct receiver - Postmen can read envelopes you know ;)
+                        receiver = letter.getReceiver();
+                        plugin.getCConfig().clog(Level.FINE, player.getName() + " tried to send a Letter meant for " + letter.getReceiver() + " to " + args[0]);
+                    }
+                }
                 OfflinePlayer[] offPlayers = plugin.getServer().getOfflinePlayers();
                 OfflinePlayer p = null;
                 for(OfflinePlayer o : offPlayers) {
-                    if(o.getName().equalsIgnoreCase(args[0])) {
+                    if(o.getName().equalsIgnoreCase(receiver)) {
                         p = o;
                         plugin.getCConfig().clog(Level.FINE, "Found " + p.getName() + " in OfflinePlayers");
                         break;
@@ -163,7 +177,7 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                     // See https://bukkit.atlassian.net/browse/BUKKIT-404 by GICodeWarrior
                     // https://github.com/troed/Courier/issues/2
                     // We could end up here if this is to a player who's on the server for the first time
-                    p = plugin.getServer().getPlayerExact(args[0]);
+                    p = plugin.getServer().getPlayerExact(receiver);
                     if(p != null) {
                         plugin.getCConfig().clog(Level.FINE, "Found " + p.getName() + " in getPlayerExact");
                     }
@@ -171,11 +185,11 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                 if(p == null) {
                     // still not found, try lazy matching and display suggestions
                     // (searches online players only)
-                    List<Player> players = plugin.getServer().matchPlayer(args[0]);
+                    List<Player> players = plugin.getServer().matchPlayer(receiver);
                     if(players != null && players.size() == 1) {
                         // we got one exact match
                         // p = players.get(0); // don't, could be embarrassing if wrong
-                        player.sendMessage(plugin.getCConfig().getPostDidYouMean(args[0], players.get(0).getName()));
+                        player.sendMessage(plugin.getCConfig().getPostDidYouMean(receiver, players.get(0).getName()));
                     } else if (players != null && players.size() > 1 && player.hasPermission(Courier.PM_LIST)) {
                         // more than one possible match found
                         StringBuilder suggestList = new StringBuilder();
@@ -190,11 +204,11 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                             }
                         }
                         // players listing who's online. If so, that could be a permission also valid for /courier list
-                        player.sendMessage(plugin.getCConfig().getPostDidYouMeanList(args[0]));
+                        player.sendMessage(plugin.getCConfig().getPostDidYouMeanList(receiver));
                         player.sendMessage(plugin.getCConfig().getPostDidYouMeanList2(suggestList.toString()));
                     } else {
                         // time to give up
-                        player.sendMessage(plugin.getCConfig().getPostNoSuchPlayer(args[0]));
+                        player.sendMessage(plugin.getCConfig().getPostNoSuchPlayer(receiver));
                     }
                 }
                 if(p != null) {
@@ -215,7 +229,6 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                         player.sendMessage(plugin.getCConfig().getPostLetterSent(p.getName()));
                         send = true;
                     }
-
                     if(send) {
                         // sign over this letter to recipient
                         if(plugin.getCourierdb().sendMessage(letter.getId(), p.getName(), player.getName())) {
@@ -268,10 +281,14 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
             } else {
                 id = letter.getId();
             }
+            boolean securityBlocked = false;
             if(id != -1) {
                 boolean useCached = true;
                 StringBuilder message = new StringBuilder();
-                if(letter != null) {
+                if(letter != null && !player.getName().equalsIgnoreCase(letter.getReceiver()) && plugin.getCConfig().getSealedEnvelope()) {
+                    // oh my, we're not allowed to read this letter, just do nothing from here on
+                    securityBlocked = true;
+                } else if(letter != null) {
                     // new stuff appended to the old
                     // fetch from db, letter.getMessage contains newline formatted text
                     message.append(plugin.getCourierdb().getMessage(letter.getReceiver(), id));
@@ -282,87 +299,92 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                         useCached = false;
                     }
                 }
-                // hey I added &nl a newline -> &nl      -> &nl
-                // hey I added\n a newline   -> added\n  -> added \n
-                // hey I added \na newline   -> \na      -> \n a
-                // hey I added\na newline    -> added\na -> added \n a
-                Pattern newlines = Pattern.compile("(\\s*\\\\n\\s*|\\s*&nl\\s*)");
-                boolean invalid = false;
-                try {
-                    for (String arg : args) {
-                        // http://dev.bukkit.org/server-mods/courier/tickets/34-illegal-argument-exception-in-map-font/
-                        if(!MinecraftFont.Font.isValid(arg)) {
-                            invalid = true;
-                            continue;
+                if(!securityBlocked) {
+                    // hey I added &nl a newline -> &nl      -> &nl
+                    // hey I added\n a newline   -> added\n  -> added \n
+                    // hey I added \na newline   -> \na      -> \n a
+                    // hey I added\na newline    -> added\na -> added \n a
+                    Pattern newlines = Pattern.compile("(\\s*\\\\n\\s*|\\s*&nl\\s*)");
+                    boolean invalid = false;
+                    try {
+                        for (String arg : args) {
+                            // http://dev.bukkit.org/server-mods/courier/tickets/34-illegal-argument-exception-in-map-font/
+                            if(!MinecraftFont.Font.isValid(arg)) {
+                                invalid = true;
+                                continue;
+                            }
+                            // %loc -> [X,Y,Z] and such
+                            // if this grows, break it out and make it configurable
+                            if (arg.equalsIgnoreCase("%loc") || arg.equalsIgnoreCase("%pos")) {
+                                Location loc = player.getLocation();
+                                message.append("[" + loc.getBlockX() + "," + loc.getBlockY() + "," + loc.getBlockZ() + "]");
+                            } else {
+                                message.append(newlines.matcher(arg).replaceAll(" $1 ").trim()); // tokenize
+                            }
+                            message.append(" ");
                         }
-                        // %loc -> [X,Y,Z] and such
-                        // if this grows, break it out and make it configurable
-                        if (arg.equalsIgnoreCase("%loc") || arg.equalsIgnoreCase("%pos")) {
-                            Location loc = player.getLocation();
-                            message.append("[" + loc.getBlockX() + "," + loc.getBlockY() + "," + loc.getBlockZ() + "]");
-                        } else {
-                            message.append(newlines.matcher(arg).replaceAll(" $1 ").trim()); // tokenize
-                        }
-                        message.append(" ");
+                    } catch (Exception e) {
+                        plugin.getCConfig().clog(Level.SEVERE, "Caught Exception in MinecraftFont.isValid()");
+                        invalid = true;
                     }
-                } catch (Exception e) {
-                    plugin.getCConfig().clog(Level.SEVERE, "Caught Exception in MinecraftFont.isValid()");
-                    invalid = true;
-                }
-
-                if(invalid) {
-                    player.sendMessage(plugin.getCConfig().getLetterSkippedText());
-                }
-
-                if (plugin.getCourierdb().storeMessage(id,
-                        player.getName(),
-                        message.toString(), // .trim() but then /letter on /letter needs added space anyway
-                        (int)(System.currentTimeMillis() / 1000L))) { // oh noes unix y2k issues!!!11
     
-                    // no letter == we create and put in hands, or in inventory, or drop to ground
-                    // see CourierEventListener for similar code when Postman delivers letters
-                    if(letter == null) {
-                        ItemStack letterItem = new ItemStack(Material.MAP, 1, plugin.getCourierdb().getCourierMapId());
-                        letterItem.addUnsafeEnchantment(Enchantment.DURABILITY, id);
-                        if(item != null && item.getAmount() > 0) {
-                            plugin.getCConfig().clog(Level.FINE, "Player hands not empty");
-                            HashMap<Integer, ItemStack> items = player.getInventory().addItem(letterItem);
-                            if(items.isEmpty()) {
-                                plugin.getCConfig().clog(Level.FINE, "Letter added to inventory");
-                                String inventory = plugin.getCConfig().getLetterInventory();
-                                if(inventory != null && !inventory.isEmpty()) {
-                                    player.sendMessage(inventory);
+                    if(invalid) {
+                        player.sendMessage(plugin.getCConfig().getLetterSkippedText());
+                    }
+    
+                    if (plugin.getCourierdb().storeMessage(id,
+                            player.getName(),
+                            message.toString(), // .trim() but then /letter on /letter needs added space anyway
+                            (int)(System.currentTimeMillis() / 1000L))) { // oh noes unix y2k issues!!!11
+        
+                        // no letter == we create and put in hands, or in inventory, or drop to ground
+                        // see CourierEventListener for similar code when Postman delivers letters
+                        if(letter == null) {
+                            ItemStack letterItem = new ItemStack(Material.MAP, 1, plugin.getCourierdb().getCourierMapId());
+                            letterItem.addUnsafeEnchantment(Enchantment.DURABILITY, id);
+                            if(item != null && item.getAmount() > 0) {
+                                plugin.getCConfig().clog(Level.FINE, "Player hands not empty");
+                                HashMap<Integer, ItemStack> items = player.getInventory().addItem(letterItem);
+                                if(items.isEmpty()) {
+                                    plugin.getCConfig().clog(Level.FINE, "Letter added to inventory");
+                                    String inventory = plugin.getCConfig().getLetterInventory();
+                                    if(inventory != null && !inventory.isEmpty()) {
+                                        player.sendMessage(inventory);
+                                    }
+                                } else {
+                                    plugin.getCConfig().clog(Level.FINE, "Inventory full, letter dropped");
+                                    String drop = plugin.getCConfig().getLetterDrop();
+                                    if(drop != null && !drop.isEmpty()) {
+                                        player.sendMessage(drop);
+                                    }
+                                    player.getWorld().dropItemNaturally(player.getLocation(), letterItem);
                                 }
                             } else {
-                                plugin.getCConfig().clog(Level.FINE, "Inventory full, letter dropped");
-                                String drop = plugin.getCConfig().getLetterDrop();
-                                if(drop != null && !drop.isEmpty()) {
-                                    player.sendMessage(drop);
-                                }
-                                player.getWorld().dropItemNaturally(player.getLocation(), letterItem);
+                                plugin.getCConfig().clog(Level.FINE, "Letter delivered into player's hands");
+                                player.setItemInHand(letterItem); // REALLY replaces what's there
+        
+                                // quick render
+                                player.sendMap(plugin.getServer().getMap(plugin.getCourierdb().getCourierMapId()));
                             }
                         } else {
-                            plugin.getCConfig().clog(Level.FINE, "Letter delivered into player's hands");
-                            player.setItemInHand(letterItem); // REALLY replaces what's there
-    
-                            // quick render
-                            player.sendMap(plugin.getServer().getMap(plugin.getCourierdb().getCourierMapId()));
+                            if(useCached) {
+                                // set Message directly, we know no other info changed and want to keep current page info
+                                letter.setMessage(message.toString());
+                            } else {
+                                // existing Letter now has outdated info, will automatically be recreated from db
+                                plugin.removeLetter(id);
+                                plugin.getLetterRenderer().forceClear();
+                            } 
                         }
                     } else {
-                        if(useCached) {
-                            // set Message directly, we know no other info changed and want to keep current page info
-                            letter.setMessage(message.toString());
-                        } else {
-                            // existing Letter now has outdated info, will automatically be recreated from db
-                            plugin.removeLetter(id);
-                            plugin.getLetterRenderer().forceClear();
-                        } 
+                        player.sendMessage(plugin.getCConfig().getLetterCreateFailed());
+                        plugin.getCConfig().clog(Level.SEVERE, "Could not store letter in database!");
                     }
+                    ret = true;
                 } else {
-                    player.sendMessage(plugin.getCConfig().getLetterCreateFailed());
-                    plugin.getCConfig().clog(Level.SEVERE, "Could not store letter in database!");
+                    // we were security blocked
+                    ret = true;
                 }
-                ret = true;
             } else {
                 player.sendMessage(plugin.getCConfig().getLetterNoMoreUIDs());
                 plugin.getCConfig().clog(Level.SEVERE, "Out of unique message IDs!");
