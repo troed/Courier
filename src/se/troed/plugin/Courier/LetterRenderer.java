@@ -49,15 +49,8 @@ public class LetterRenderer extends MapRenderer {
                 }
                 clear = false;
             }
-            boolean show = false;
-            if(letter != null) {
-                // binary or
-                show = letter.getReceiver().equalsIgnoreCase(letter.getSender()) |  // Letters are public
-                       !plugin.getCConfig().getSealedEnvelope() |                   // Config override
-                       player.getName().equalsIgnoreCase(letter.getReceiver());     // We're the receiver
-            }
             // todo: idea for pvp war servers: "your mail has fallen into enemy hands". "they've read it!")
-            if(letter != null && show) {
+            if(letter != null && letter.isAllowedToSee(player.getName())) {
                 int drawPos = HEADER_POS;
 //                if(!letter.getReceiver().equalsIgnoreCase(letter.getSender())) {
                 if(letter.getHeader() != null) {
