@@ -7,6 +7,7 @@
 Courier:
   UseFees: false
   Version: 1.1.0
+  UpdateInterval: 18000         # Checks for new versions every 5h. A value of 0 disables.
   Fee:
     Send: 10
     InfoFee: "&7Courier: &fThe postage is %s"

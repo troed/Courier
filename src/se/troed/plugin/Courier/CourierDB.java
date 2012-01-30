@@ -49,13 +49,23 @@ public class CourierDB {
 
     // reading the whole message db into memory, is that a real problem?
     // returns true if there already was a db
-    public boolean load() {
+    public boolean load() throws IOException {
         boolean exist = false;
         File db = new File(plugin.getDataFolder(), FILENAME);
         if(db.exists()) {
             exist = true;
         }
-        mdb = YamlConfiguration.loadConfiguration(db);
+/*        mdb = YamlConfiguration.loadConfiguration(db);
+        ffs this fails silently, "returns a blank config"*/
+        mdb = new YamlConfiguration();
+        try {
+            mdb.load(db);
+        } catch (Exception e) {
+            mdb = null;
+            e.printStackTrace();
+            throw new IOException("Could not read Courier database!");
+        }
+
         return exist;
     }
 

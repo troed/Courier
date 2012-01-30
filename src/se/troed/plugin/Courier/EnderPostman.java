@@ -7,7 +7,7 @@ import org.bukkit.entity.Enderman;
 import org.bukkit.entity.Player;
 import org.bukkit.material.MaterialData;
 
-public class EnderPostman extends CreaturePostman {
+public class EnderPostman extends Postman {
 
     EnderPostman(Courier plug, Player p, int id, CreatureType t) {
         super(plug, p, id, t);

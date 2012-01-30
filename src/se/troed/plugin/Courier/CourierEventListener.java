@@ -2,6 +2,7 @@ package se.troed.plugin.Courier;
 
 import org.bukkit.Material;
 import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.Creature;
 import org.bukkit.entity.Enderman;
 import org.bukkit.entity.Monster;
 import org.bukkit.entity.Villager;
@@ -89,8 +90,8 @@ class CourierEventListener implements Listener {
                     }
                     if(e.getRightClicked() instanceof Enderman) {
                         ((Enderman)e.getRightClicked()).setCarriedMaterial(new MaterialData(Material.AIR));
-                    } else if(e.getRightClicked() instanceof Villager) {
-                        ((Villager) e.getRightClicked()).setTarget(null);
+                    } else {
+                        ((Creature) e.getRightClicked()).setTarget(null);
                     }
 
                     // delivered
@@ -110,8 +111,8 @@ class CourierEventListener implements Listener {
 
                 if(e.getRightClicked() instanceof Enderman) {
                     ((Enderman)e.getRightClicked()).setCarriedMaterial(new MaterialData(Material.AIR));
-                } else if(e.getRightClicked() instanceof Villager) {
-                    ((Villager) e.getRightClicked()).setTarget(null);
+                } else {
+                    ((Creature) e.getRightClicked()).setTarget(null);
                 }
 
                 // delivered
