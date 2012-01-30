@@ -261,91 +261,91 @@ public class CourierConfig {
 
     // translatable strings
     public String getInfoFee(String fee) {
-        return String.format(colorize(config.getString(FEE_INFOFEE, "")), fee); // 1.1.0
+        return String.format(colorize(config.getString(FEE_INFOFEE)), fee); // 1.1.0
     }
 
     public String getInfoNoFee() {
-        return colorize(config.getString(FEE_INFONOFEE, "")); // 1.1.0
+        return colorize(config.getString(FEE_INFONOFEE)); // 1.1.0
     }
 
     public String getPostmanExtraDeliveries() {
-        return colorize(config.getString(POSTMAN_EXTRADELIVERIES, "")); // 1.1.0
+        return colorize(config.getString(POSTMAN_EXTRADELIVERIES)); // 1.1.0
     }
 
     public String getPostmanNoUnreadMail() {
-        return colorize(config.getString(POSTMAN_NOUNREADMAIL, "")); // 1.1.0
+        return colorize(config.getString(POSTMAN_NOUNREADMAIL)); // 1.1.0
     }
 
     public String getPostNoCredit(String fee) {
-        return String.format(colorize(config.getString(POST_NOCREDIT, "")), fee); // 1.1.0
+        return String.format(colorize(config.getString(POST_NOCREDIT)), fee); // 1.1.0
     }
 
     public String getPostNoRecipient() {
-        return colorize(config.getString(POST_NORECIPIENT, "")); // 1.1.0
+        return colorize(config.getString(POST_NORECIPIENT)); // 1.1.0
     }
 
     public String getPostDidYouMean(String input, String match) {
-        return String.format(colorize(config.getString(POST_DIDYOUMEAN, "")), input, match); // 1.1.0
+        return String.format(colorize(config.getString(POST_DIDYOUMEAN)), input, match); // 1.1.0
     }
 
     public String getPostDidYouMeanList(String input) {
-        return String.format(colorize(config.getString(POST_DIDYOUMEANLIST, "")), input); // 1.1.0
+        return String.format(colorize(config.getString(POST_DIDYOUMEANLIST)), input); // 1.1.0
     }
 
     public String getPostDidYouMeanList2(String list) {
-        return String.format(colorize(config.getString(POST_DIDYOUMEANLIST2, "")), list); // 1.1.0
+        return String.format(colorize(config.getString(POST_DIDYOUMEANLIST2)), list); // 1.1.0
     }
 
     public String getPostNoSuchPlayer(String input) {
-        return String.format(colorize(config.getString(POST_NOSUCHPLAYER, "")), input); // 1.1.0
+        return String.format(colorize(config.getString(POST_NOSUCHPLAYER)), input); // 1.1.0
     }
 
     public String getPostLetterSent(String recipient) {
-        return String.format(colorize(config.getString(POST_LETTERSENT, "")), recipient); // 1.1.0
+        return String.format(colorize(config.getString(POST_LETTERSENT)), recipient); // 1.1.0
     }
 
     public String getPostLetterSentFee(String recipient, String fee) {
-        return String.format(colorize(config.getString(POST_LETTERSENTFEE, "")), recipient, fee); // 1.1.0
+        return String.format(colorize(config.getString(POST_LETTERSENTFEE)), recipient, fee); // 1.1.0
     }
 
     public String getPostFundProblem() {
-        return colorize(config.getString(POST_FUNDPROBLEM, "")); // 1.1.0
+        return colorize(config.getString(POST_FUNDPROBLEM)); // 1.1.0
     }
 
     public String getPostNoLetter() {
-        return colorize(config.getString(POST_NOLETTER, "")); // 1.1.0
+        return colorize(config.getString(POST_NOLETTER)); // 1.1.0
     }
 
     public String getLetterNoText() {
-        return colorize(config.getString(LETTER_NOTEXT, "")); // 1.1.0
+        return colorize(config.getString(LETTER_NOTEXT)); // 1.1.0
     }
 
     public String getLetterSkippedText() {
-        return colorize(config.getString(LETTER_SKIPPEDTEXT, "")); // 1.1.0
+        return colorize(config.getString(LETTER_SKIPPEDTEXT)); // 1.1.0
     }
 
     public String getLetterCreateFailed() {
-        return colorize(config.getString(LETTER_CREATEFAILED, "")); // 1.1.0
+        return colorize(config.getString(LETTER_CREATEFAILED)); // 1.1.0
     }
 
     public String getLetterNoMoreUIDs() {
-        return colorize(config.getString(LETTER_NOMOREUIDS, "")); // 1.1.0
+        return colorize(config.getString(LETTER_NOMOREUIDS)); // 1.1.0
     }
 
     public String getInfoLine1() {
-        return colorize(config.getString(INFO_LINE1, "")); // 1.1.0
+        return colorize(config.getString(INFO_LINE1)); // 1.1.0
     }
 
     public String getInfoLine2() {
-        return colorize(config.getString(INFO_LINE2, "")); // 1.1.0
+        return colorize(config.getString(INFO_LINE2)); // 1.1.0
     }
 
     public String getInfoLine3() {
-        return colorize(config.getString(INFO_LINE3, "")); // 1.1.0
+        return colorize(config.getString(INFO_LINE3)); // 1.1.0
     }
 
     public String getInfoLine4() {
-        return colorize(config.getString(INFO_LINE4, "")); // 1.1.0
+        return colorize(config.getString(INFO_LINE4)); // 1.1.0
     }
 
     @SuppressWarnings({"PointlessBooleanExpression", "ConstantConditions"})

@@ -399,12 +399,18 @@ public class Courier extends JavaPlugin {
             config.clog(Level.WARNING, "Unable to copy translations from .jar to plugin folder");
         }
 
-        boolean dbExist = courierdb.load();
-
         boolean abort = false;
 
+        boolean dbExist = false;
+        try {
+            dbExist = courierdb.load();
+        } catch (Exception e) {
+            config.clog(Level.SEVERE, "Fatal error when trying to read Courier database! Make a backup of messages.yml and contact plugin author.");
+            abort = true;
+        }
+
         // detect if we have a v0.9.x -> v1.0.0 upgrade needed
-        if(dbExist && courierdb.getDatabaseVersion() == -1) {
+        if(!abort && dbExist && courierdb.getDatabaseVersion() == -1) {
             // fixes http://dev.bukkit.org/server-mods/courier/tickets/32-player-never-gets-mail-uppercase-lowercase-username/
             config.clog(Level.WARNING, "Case sensitive database found, rewriting ...");
             try {
