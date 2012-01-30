@@ -102,6 +102,13 @@ public class Letter {
         return header;
     }
 
+    // boolean OR intentional
+    public boolean isAllowedToSee(String p) {
+        return receiver.equalsIgnoreCase(sender)        |    // Letters are public
+               !plugin.getCConfig().getSealedEnvelope() |    // Config override
+               p.equalsIgnoreCase(receiver);                 // Player is receiver
+    }
+
     // if we have more pages after format() than before, switch to the new page
     // hmm maybe should always switch to the _last_ page? extreme case
     public void setMessage(String m) {
