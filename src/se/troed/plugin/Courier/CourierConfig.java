@@ -19,6 +19,7 @@ public class CourierConfig {
     private static final String USEFEES = "Courier.UseFees";
     // any config file _older_ than this is invalid - compatibility break
     private static final String VERSIONBREAK = "0.9.0";
+    private static final String UPDATEINTERVAL = "Courier.UpdateInterval";
     private static final String FEE_SEND = "Courier.Fee.Send";
     private static final String FEE_INFOFEE = "Courier.Fee.InfoFee";
     private static final String FEE_INFONOFEE = "Courier.Fee.InfoNoFee";
@@ -60,6 +61,7 @@ public class CourierConfig {
     private static final String INFO_LINE4 = "Courier.Info.Line4";
 
     private final boolean useFees;
+    private final int updateInterval;
     private final double feeSend;
     private final int quickDespawnTime;
     private final int despawnTime;
@@ -78,14 +80,17 @@ public class CourierConfig {
     private String letterDrop = null;
     private String letterInventory = null;
     
+    private final String version;
+    
     public CourierConfig(Courier plug) {
 
         log = plug.getServer().getLogger();
 
         config = plug.getConfig();
         PluginDescriptionFile pdfFile = plug.getDescription();
-
-        // verify config compatibility
+        this.version = pdfFile.getVersion(); // actual plugin version
+        
+        // verify config compatibility with config file version (could be different from plugin)
         String version = config.getString(pdfFile.getName() + ".Version");
         if(version!=null) {
             int major = 0;
@@ -128,6 +133,8 @@ public class CourierConfig {
         
         useFees = config.getBoolean(USEFEES, false); // added in 0.9.5
         clog(Level.FINE, USEFEES + ": " + useFees);
+        updateInterval = config.getInt(UPDATEINTERVAL, 18000); // added in v1.1.0
+        clog(Level.FINE, UPDATEINTERVAL + ": " + updateInterval);
         feeSend = config.getDouble(FEE_SEND, 0); // added in 0.9.5
         clog(Level.FINE, FEE_SEND + ": " + feeSend);
         quickDespawnTime = config.getInt(POSTMAN_QUICK_DESPAWN);
@@ -169,6 +176,14 @@ public class CourierConfig {
         clog(Level.FINE, LETTER_INVENTORY + ": " + letterInventory);
         sealedEnvelope = config.getBoolean(PRIVACY_SEALED, true); // added in 0.9.11
         clog(Level.FINE, PRIVACY_SEALED + ": " + sealedEnvelope);
+    }
+    
+    public String getVersion() {
+        return version;
+    }
+    
+    public int getUpdateInterval() {
+        return updateInterval;
     }
 
     public boolean getUseFees() {

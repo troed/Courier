@@ -35,7 +35,13 @@ import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 
+import javax.xml.parsers.DocumentBuilderFactory;
+import java.net.URL;
 import java.util.*;
 import java.util.logging.Level;
 
@@ -71,6 +77,7 @@ public class Courier extends JavaPlugin {
     public static final int MAX_ID = Short.MAX_VALUE; // really, we don't do negative numbers well atm
     public static final int MIN_ID = 1; // since unenchanted items are level 0
     private static final int DBVERSION = 1; // used since 1.0.0
+    private static final String RSS_URL = "http://dev.bukkit.org/server-mods/courier/files.rss";
 
     private static Vault vault = null;
     private static Economy economy = null;
@@ -81,6 +88,8 @@ public class Courier extends JavaPlugin {
     private CourierConfig config;
     private LetterRenderer letterRenderer = null;
 
+    private Runnable updateThread;
+    private int updateId = -1;
     private Runnable deliveryThread;
     private int deliveryId = -1;
     private final Map<UUID, Postman> postmen = new HashMap<UUID, Postman>();
@@ -252,7 +261,7 @@ public class Courier extends JavaPlugin {
     
     private void startDeliveryThread() {
         if(deliveryId >= 0) {
-            config.clog(Level.WARNING, "Multiple calls to startDelivery()!");
+            config.clog(Level.WARNING, "Multiple calls to startDeliveryThread()!");
         }
         if(deliveryThread == null) {
             deliveryThread = new Runnable() {
@@ -266,13 +275,37 @@ public class Courier extends JavaPlugin {
             config.clog(Level.WARNING, "Delivery task scheduling failed");
         }
     }
-    
-/*    private void stopDeliveryThread() {
-        if(deliveryId != -1) {
-            getServer().getScheduler().cancelTask(deliveryId);
-            deliveryId = -1;
+
+    private void startUpdateThread() {
+        if(updateId >= 0) {
+            config.clog(Level.WARNING, "Multiple calls to startUpdateThread()!");
         }
-    }*/
+        if(updateThread == null) {
+            updateThread = new Runnable() {
+                public void run() {
+                    String version = config.getVersion();
+                    String checkVersion = updateCheck(version);
+                    config.clog(Level.FINE, "version: " + version + " vs updateCheck: " + checkVersion);
+                    if(!checkVersion.endsWith(version)) {
+                        config.clog(Level.WARNING, "There's a new version of Courier available: " + checkVersion + " (you have v" + version + ")");
+                        config.clog(Level.WARNING, "Please visit the Courier home: http://dev.bukkit.org/server-mods/courier/");
+                    }
+                }
+            };
+        }
+        // 400 = 20 seconds from start, then a period according to config (default every 5h)
+        updateId = getServer().getScheduler().scheduleAsyncRepeatingTask(this, updateThread, 400, getCConfig().getUpdateInterval()*20);
+        if(updateId < 0) {
+            config.clog(Level.WARNING, "UpdateCheck task scheduling failed");
+        }
+    }
+
+    private void stopUpdateThread() {
+        if(updateId != -1) {
+            getServer().getScheduler().cancelTask(updateId);
+            updateId = -1;
+        }
+    }
 
     private void deliverMail() {
         // find first online player with undelivered mail
@@ -348,6 +381,7 @@ public class Courier extends JavaPlugin {
     public void onDisable() {
         pauseDeliveries();
         spawners.clear();
+        stopUpdateThread();
         config.clog(Level.INFO, this.getDescription().getName() + " is now disabled.");
     }
 
@@ -475,6 +509,9 @@ public class Courier extends JavaPlugin {
         if(!abort) {
             PluginDescriptionFile pdfFile = this.getDescription();
             config.clog(Level.INFO, pdfFile.getName() + " version v" + pdfFile.getVersion() + " is enabled!");
+
+            // launch our background thread checking for Courier updates
+            startUpdateThread();
         } else {
             setEnabled(false);
         }
@@ -498,5 +535,29 @@ public class Courier extends JavaPlugin {
         }
 
         return (economy != null);
+    }
+
+    // Thanks to Sleaker & vault for the hint and code on how to use BukkitDev RSS feed for this
+    // http://dev.bukkit.org/profiles/Sleaker/
+    public String updateCheck(String currentVersion) {
+        try {
+            URL url = new URL(RSS_URL);
+            Document doc = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(url.openConnection().getInputStream());
+            doc.getDocumentElement().normalize();
+            NodeList nodes = doc.getElementsByTagName("item");
+            Node firstNode = nodes.item(0);
+            if (firstNode.getNodeType() == 1) {
+                Element firstElement = (Element)firstNode;
+                NodeList firstElementTagName = firstElement.getElementsByTagName("title");
+                Element firstNameElement = (Element) firstElementTagName.item(0);
+                NodeList firstNodes = firstNameElement.getChildNodes();
+                return firstNodes.item(0).getNodeValue();
+            }
+        }
+        catch (Exception e) {
+            config.clog(Level.WARNING, "Caught an exception in updateCheck()");
+            return currentVersion;
+        }
+        return currentVersion;
     }
 }
