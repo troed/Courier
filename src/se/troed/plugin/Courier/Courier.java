@@ -277,6 +277,9 @@ public class Courier extends JavaPlugin {
     }
 
     private void startUpdateThread() {
+        if(getCConfig().getUpdateInterval() == 0) { // == disabled
+            return;
+        }
         if(updateId >= 0) {
             config.clog(Level.WARNING, "Multiple calls to startUpdateThread()!");
         }
