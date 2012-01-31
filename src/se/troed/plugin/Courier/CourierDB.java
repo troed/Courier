@@ -3,6 +3,7 @@ package se.troed.plugin.Courier;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.*;
 
@@ -50,23 +51,19 @@ public class CourierDB {
     // reading the whole message db into memory, is that a real problem?
     // returns true if there already was a db
     public boolean load() throws IOException {
-        boolean exist = false;
         File db = new File(plugin.getDataFolder(), FILENAME);
-        if(db.exists()) {
-            exist = true;
-        }
-/*        mdb = YamlConfiguration.loadConfiguration(db);
-        ffs this fails silently, "returns a blank config"*/
         mdb = new YamlConfiguration();
-        try {
-            mdb.load(db);
-        } catch (Exception e) {
-            mdb = null;
-            e.printStackTrace();
-            throw new IOException("Could not read Courier database!");
+        if(db.exists()) {
+            try {
+                mdb.load(db);
+            } catch (Exception e) {
+                mdb = null;
+                e.printStackTrace();
+                throw new IOException("Could not read Courier database!");
+            }
+            return true;
         }
-
-        return exist;
+        return false;
     }
 
     // only saving when plugin quits might lose a lot of messages
