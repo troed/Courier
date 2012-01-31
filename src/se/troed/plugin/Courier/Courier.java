@@ -369,7 +369,10 @@ public class Courier extends JavaPlugin {
     }
     
     public void pauseDeliveries() {
-        getServer().getScheduler().cancelTasks(this);
+        if(deliveryId != -1) {
+            getServer().getScheduler().cancelTask(deliveryId);
+            deliveryId = -1;
+        }
         for (Map.Entry<UUID, Postman> uuidPostmanEntry : postmen.entrySet()) {
             Postman postman = (Postman) ((Map.Entry) uuidPostmanEntry).getValue();
             if (postman != null) {
@@ -377,7 +380,6 @@ public class Courier extends JavaPlugin {
             }
         }
         courierdb.save(null);
-        deliveryId = -1;
         config.clog(Level.FINE, "Deliveries are now paused");
     }
     
@@ -385,6 +387,7 @@ public class Courier extends JavaPlugin {
         pauseDeliveries();
         spawners.clear();
         stopUpdateThread();
+        getServer().getScheduler().cancelTasks(this); // failsafe
         config.clog(Level.INFO, this.getDescription().getName() + " is now disabled.");
     }
 
