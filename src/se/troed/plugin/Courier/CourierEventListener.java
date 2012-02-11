@@ -5,7 +5,6 @@ import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Creature;
 import org.bukkit.entity.Enderman;
 import org.bukkit.entity.Monster;
-import org.bukkit.entity.Villager;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -60,15 +59,6 @@ class CourierEventListener implements Listener {
             }
         }
     }
-    
-/*    public void onPlayerAnimation(PlayerAnimationEvent e) {
-        plugin.getCConfig().clog(Level.FINE, e.getPlayer().getDisplayName() + " animating");
-        ItemStack item = e.getPlayer().getItemInHand();
-        if(item.getType() == Material.MAP && item.containsEnchantment(Enchantment.DURABILITY)) {
-            plugin.getCConfig().clog(Level.FINE, e.getPlayer().getDisplayName() + " animating letter");
-            e.setCancelled(true);
-        }
-    }*/
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerInteractEntity(PlayerInteractEntityEvent e) {
@@ -256,21 +246,20 @@ class CourierEventListener implements Listener {
         }
     }
 
-    // enderpostmen aren't block thieves
     @EventHandler(priority = EventPriority.HIGH)
-    public void onEndermanPickup(EndermanPickupEvent e) {
+    public void onEntityChangeBlock(EntityChangeBlockEvent e) {
         if(!e.isCancelled() && plugin.getPostman(e.getEntity().getUniqueId()) != null) {
-            plugin.getCConfig().clog(Level.FINE, "Prevented postman thief");
+            plugin.getCConfig().clog(Level.FINE, "Prevented postman blockchange");
             e.setCancelled(true);
         }
     }
 
     @EventHandler(priority = EventPriority.HIGH)
-    public void onEndermanPlace(EndermanPlaceEvent e) {
+    public void onEntityTeleport(EntityTeleportEvent e) {
         if(!e.isCancelled() && plugin.getPostman(e.getEntity().getUniqueId()) != null) {
-            plugin.getCConfig().clog(Level.FINE, "Prevented postman maildrop");
+            plugin.getCConfig().clog(Level.FINE, "Prevented postman teleport");
             e.setCancelled(true);
-       }
+        }
     }
 
     // Highest since we might need to override spawn deniers
