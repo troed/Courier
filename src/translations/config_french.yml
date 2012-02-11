@@ -7,11 +7,11 @@
 Courier:
   UseFees: false
   Version: 1.1.0
-  UpdateInterval: 18000         # Checks for new versions every 5h. A value of 0 disables.
+  UpdateInterval: 18000
   Fee:
     Send: 10
-    InfoFee: "&7Courier: &fThe postage is %s"
-    InfoNoFee: "&7Courier: &fThere's no cost for sending mail on this server"
+    InfoFee: '&5Service postal: &fL''envoi vous coûtera %s'
+    InfoNoFee: '&5Service postal: &fEnvoyer une lettre est gratuit !'
   Route:
     InitialWait: 10
     NextRoute: 60
@@ -24,33 +24,44 @@ Courier:
     Despawn: 20
     SpawnDistance: 10
     BreakSpawnProtection: true
-    Greeting: "&7Courier: &fUn Postier est arrive avec votre courrier!"
-    MailDrop: "&7Courier: &fVotre courrier a ete depose sur le sol."
-    Inventory: "&7Courier: &fVous aviez les mains pleines, le Postier a mis le courrier dans votre inventaire."
-    CannotDeliver: "&7Courier: &fLe Postier a du courrier pour vous mais il ne peut pas vous le remettre a cet endroit."
-    ExtraDeliveries: "&7Courier: &fThe Postman will make extra deliveries"
-    NoUnreadMail: "&7Courier: &fYou have no unread mail"
+    Greeting: '&5Service postal: &fUn facteur est arrivé avec votre courrier !'
+    MailDrop: '&5Service postal: &fVotre lettre a été jetée au sol.'
+    Inventory: '&5Service postal: &fVos mains étant occupées, le courrier a été placé
+      dans votre inventaire.'
+    CannotDeliver: '&5Service postal: &fUn facteur est arrivé mais vous n''avez plus
+      de place.'
+    ExtraDeliveries: '&5Service postal: &fLe facteur va bientôt passer chez vous.'
+    NoUnreadMail: '&5Service postal: &fVous n''avez pas de lettres en attente.'
   Letter:
     ShowDate: true
-    Drop: "&7Courier: &fVotre inventaire est plein, le courrier a ete depose par terre."
-    Inventory: "&7Courier: &fVous aviez les mains pleines, votre courrier se trouve dans votre inventaire."
-    NoText: "&7Courier: &fError, no text to add to letter!"
-    SkippedText: "&7Courier: &fParts of the entered text cannot be displayed and was skipped"
-    CreateFailed: "&7Courier: &fCould not create the letter! Notify your admin!"
-    NoMoreUIDs: "&7Courier: &fOut of unique message IDs! Notify your admin!"
+    Drop: '&5Service postal: &fVotre lettre a été jetée au sol.'
+    Inventory: '&5Service postal: &fVos mains étant occupées, le courrier a été placé
+      dans votre inventaire.'
+    NoText: '&5Service postal: &fAucun texte ajouté à la lettre.'
+    SkippedText: '&5Service postal: &fCertains caractères ne pouvant être affichés
+      ont été omis.'
+    CreateFailed: '&5Service postal: &fImpossible de créer la lettre ! Prévenez un
+      admin.'
+    NoMoreUIDs: '&5Service postal: &fSystème à court d''IDs uniques ! Prévenez un
+      admin.'
   Post:
-    NoCredit: "&7Courier: &fSorry, you don't have enough credit to cover postage (%s)"
-    NoRecipient: "&7Courier: &fError, no recipient to post your letter to!"
-    DidYouMean: "&7Courier: &fCouldn't find %1$s. Did you mean %2$s?"           # 1$ = input, 2$ = match
-    DidYouMeanList: "&7Courier: &fCouldn't find %s. Did you mean anyone of these players?"
-    DidYouMeanList2: "&7Courier:&f %s"
-    NoSuchPlayer: "&7Courier: &fThere's no player on this server with the name %s"
-    LetterSent: "&7Courier: &fLetter to %s sent!"
-    LetterSentFee: "&7Courier: &fLetter to %1$s sent! Postage fee of %2$s paid"    # 1$ = recipient, 2$ = fee
-    FundProblem: "&7Courier: &fThere was a problem withdrawing funds for postage. Please tell your admin."
-    NoLetter: "&7Courier: &fYou must be holding the letter you want to post! See /courier"
+    NoCredit: '&5Service postal: &fVous n''avez pas assez d''argent pour envoyer une
+      lettre (%s)'
+    NoRecipient: '&5Service postal: &fAucun récipient trouvé pour poster votre lettre.'
+    DidYouMean: '&5Service postal: &fImpossible de trouver %1$s. Vouliez-vous dire
+      %2$s ?'
+    DidYouMeanList: '&5Service postal: &fImpossible de trouver %s. Voulez-vous dire:'
+    DidYouMeanList2: '%s'
+    NoSuchPlayer: '&5Service postal: &fImpossible de trouver un joueur au nom de %s'
+    LetterSent: '&5Service postal: &fLettre envoyée à %s !'
+    LetterSentFee: '&5Service postal: &fLettre envoyée à %s ! Taxe de %2$s payée.'
+    FundProblem: '&5Service postal: &fProblème lors du paiement de la taxe d''envoi,
+      prévenez votre admin.'
+    NoLetter: '&5Service postal: &fVous devez tenir en main la lettre que vous souhaitez
+      envoyer.'
   Info:
-    Line1: "&f/letter message: &7Creates a Letter or adds text to an existing one"
-    Line2: "&f/post playername: &7Posts the Letter you're holding to playername"
-    Line3: "&f/courier fees: &7Lists cost, if any, for Posting a Letter"
-    Line4: "&f/courier unread: &7Request re-delivery of any unread mail"
+    Line1: '&f/letter message: &7Crée une lettre ou ajoute du texte à celle que vous
+      tenez'
+    Line2: '&f/post playername: &7Poste la lettre au joueur spécifié (même hors-ligne)'
+    Line3: '&f/courier fees: &7Indique le prix de l''envoi d''une lettre'
+    Line4: '&f/courier unread: &7Vérifie si vous avez des lettres non reçues'
