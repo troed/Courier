@@ -144,8 +144,8 @@ public class CourierDB {
         if(mdb != null) {
             File db = new File(plugin.getDataFolder(), filename != null ? filename : FILENAME);
             try {
-                saveUTFConfig(db, mdb);
-//                mdb.save(db);
+//                saveUTFConfig(db, mdb);
+                mdb.save(db);
                 ret = true;
             } catch (IOException e) {
                 e.printStackTrace();
@@ -155,6 +155,7 @@ public class CourierDB {
     }
 
     // even if we're run under a JVM with non-utf8 default encoding, force it
+    // at least that was the idea, but on Mac it's still read back using MacRoman. No automatic switching to UTF-8
     void saveUTFConfig(File file, YamlConfiguration yaml) throws IOException {
         if(yaml != null) {
             Charset cs;
