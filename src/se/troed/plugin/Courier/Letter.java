@@ -196,13 +196,16 @@ public class Letter {
                     i++;
                     break; // inner loop break, will cause a newline
                 }
-                // seems to NPE in MapFont.java:52 if we include the color codes ("§12;" etc) - most likely a bug
-                // doesn't seem to be possible to generate those characters from the in-game console though
+                // getWidth() seems to NPE in MapFont.java:55 on '§'
+                // Unicode Character 'SECTION SIGN' (U+00A7)
+                // isValid() passes over '\u00a7' and '\n' - but getWidth() doesn't
+                // https://bukkit.atlassian.net/browse/BUKKIT-685
                 try {
                     width = MinecraftFont.Font.getWidth(words.get(i)); // NPE warning!
                 } catch (Exception e) {
                     i++; // obviously needs skipping
                     plugin.getCConfig().clog(Level.SEVERE, "Caught Exception in MinecraftFont.Font.getWidth()");
+                    break;
                 }
                 if(width > CANVAS_WIDTH) {
                     // always splits words in half, if they're still too long it wraps around and splits again ..
@@ -216,13 +219,11 @@ public class Letter {
                     } catch (Exception e) {
                         plugin.getCConfig().clog(Level.SEVERE, "Caught Exception in MinecraftFont.Font.getWidth()");
                     }
-//                    System.out.println("Split " + orig + " into " + s1 + " and " + s2);
                 }
                 if((x+width) <= CANVAS_WIDTH) {
                     buffer.append(words.get(i));
                     buffer.append(" ");
                     x+=width;
-//                    System.out.println("Appended " + words.get(i));
                     i++;
                 }
             }
@@ -237,7 +238,6 @@ public class Letter {
                     page++;
                 }
             }
-//            System.out.println("newline");
         }
         if(pages.size() == page) {
             pages.add(buffer.toString());
