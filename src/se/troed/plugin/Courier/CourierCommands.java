@@ -8,6 +8,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.*;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.map.MapView;
 import org.bukkit.map.MinecraftFont;
 
 import java.util.HashMap;
@@ -30,8 +31,6 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
         if (p != null) {
             if(c.equals(Courier.CMD_POSTMAN) && p.hasPermission(Courier.PM_POSTMAN)) {
                 a = true;
-            } else if(c.equals(Courier.CMD_COURIER) && p.hasPermission(Courier.PM_INFO)) {
-                a = true;
             } else if(c.equals(Courier.CMD_POST) && p.hasPermission(Courier.PM_SEND)) {
                 a = true;
             } else if(c.equals(Courier.CMD_LETTER) && p.hasPermission(Courier.PM_WRITE)) {
@@ -49,16 +48,16 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
     }
 
     /*
-    postman:
-        description: Spawns a postman
-        aliases: [mailman, postie]
-        permission: courier.postman
-        usage: /postman
+    courier:
+        description: Displays help information
+        permission: courier.info
+        usage: /courier
     */
-    boolean commandInformation(Player player, String[] args) {
+    boolean commandCourier(Player player, String[] args) {
         boolean retVal = false;
         if (args != null && args.length > 0) {
-            if (args[0].equalsIgnoreCase("fees")) {
+            final String command = args[0];
+            if (command.equalsIgnoreCase("fees") && player.hasPermission(Courier.PM_INFO)) {
                 if(plugin.getEconomy() != null) {
                     double fee = plugin.getCConfig().getFeeSend();
                     player.sendMessage(plugin.getCConfig().getInfoFee(plugin.getEconomy().format(fee)));
@@ -66,14 +65,43 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                     player.sendMessage(plugin.getCConfig().getInfoNoFee());
                 }
                 retVal = true;
-            } else if(args[0].equalsIgnoreCase("unread")) {
-                if(plugin.getCourierdb().deliverUnreadMessages(player.getName())) {
+            } else if(command.equalsIgnoreCase("unread")) {
+                if(plugin.getDb().deliverUnreadMessages(player.getName())) {
                     player.sendMessage(plugin.getCConfig().getPostmanExtraDeliveries());
                 } else {
                     player.sendMessage(plugin.getCConfig().getPostmanNoUnreadMail());
                 }
                 retVal = true;
+            } else if(command.equalsIgnoreCase("delete")) {
+                if(args.length > 1 && player.hasPermission(Courier.PM_ADMIN)) {
+                    final String name = args[1];
+                    if(plugin.getDb().deleteMessages(name)) {
+                        player.sendMessage("All messages for " + name + " deleted");
+                    } else {
+                        player.sendMessage("No messages for " + name + " found");
+                    }
+                } else if(args.length <= 1) {
+                    // delete the message being held in hand
+                    ItemStack item = player.getItemInHand();
+                    Letter letter = null;
+                    if(item != null && item.getType() == Material.MAP) {
+                        letter = plugin.getLetter(item);
+                    }
+                    if(letter != null) {
+                        if(plugin.getDb().deleteMessage((short)letter.getId())) {
+                            // letter was in db, now gone
+                        }
+                        plugin.removeLetter(letter.getId());
+                        plugin.getLetterRenderer().forceClear();
+                        player.setItemInHand(null);
+                        player.sendMessage("Letter deleted.");
+                    } else {
+                        player.sendMessage("You're not holding a letter that you can delete!");
+                    }
+                }
+                retVal = true;
             }
+
             // todo: implement /courier list
         } else {
             player.sendMessage(plugin.getCConfig().getInfoLine1());
@@ -88,13 +116,12 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
     /*
     postman:
         description: Spawns a postman
-        aliases: [mailman, postie]
         permission: courier.postman
         usage: /postman
      */
     boolean commandPostman(Player player) {
-        if(plugin.getCourierdb().undeliveredMail(player.getName())) {
-            int undeliveredMessageId = plugin.getCourierdb().undeliveredMessageId(player.getName());
+        if(plugin.getDb().undeliveredMail(player.getName())) {
+            int undeliveredMessageId = plugin.getDb().undeliveredMessageId(player.getName());
             if(undeliveredMessageId != -1) {
                 // this is really a command meant for testing, no need for translation
                 player.sendMessage("You've got mail waiting for delivery!");
@@ -103,8 +130,8 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                 // how can that be? if it's my code I don't see where ...
 
                 plugin.getCConfig().clog(Level.FINE, "MessageId: " + undeliveredMessageId);
-                String from = plugin.getCourierdb().getSender(player.getName(), undeliveredMessageId);
-                String message = plugin.getCourierdb().getMessage(player.getName(), undeliveredMessageId);
+                String from = plugin.getDb().getSender(undeliveredMessageId);
+                String message = plugin.getDb().getMessage(undeliveredMessageId);
                 plugin.getCConfig().clog(Level.FINE, "Sender: " + from + " Message: " + message);
                 if(from != null && message != null) {
                     Location spawnLoc = plugin.findSpawnLocation(player);
@@ -129,7 +156,7 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
     /*
     post:
         description: Sends the letter currently held in hand to someone
-        aliases: [mail, send]
+        aliases: [mail]
         permission: courier.send
         usage: /post playername
     */
@@ -225,7 +252,7 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                     }
                     if(send) {
                         // sign over this letter to recipient
-                        if(plugin.getCourierdb().sendMessage(letter.getId(), p.getName(), player.getName())) {
+                        if(plugin.getDb().sendMessage(letter.getId(), p.getName(), player.getName())) {
                             // existing Letter now has outdated info, will automatically be recreated from db
                             plugin.removeLetter(letter.getId());
                             plugin.getLetterRenderer().forceClear();
@@ -250,7 +277,7 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
     /*
     letter:
         description: Creates a letter
-        aliases: [note, write]
+        aliases: [note]
         permission: courier.write
         usage: /letter message        # Can be repeated to add additional text to existing held letter
      */
@@ -263,15 +290,26 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
         } else {
             ItemStack item = player.getItemInHand();
             Letter letter = null;
+            boolean crafted = false;
             if(item != null && item.getType() == Material.MAP) {
-                letter = plugin.getLetter(item);
+                MapView map = plugin.getServer().getMap(item.getDurability());
+                if(map.getId() == plugin.getCourierdb().getCourierMapId()) {
+                    // this is a current Courier Letter
+                    letter = plugin.getLetter(item);
+                    if(letter == null) {
+                        // this is apparently a crafted and pristine Letter, can safely be replaced properly later
+                        // unfortunately we're currently unable to craft Maps where we've decided the mapid, we'll never end up here.
+                        crafted = true;
+                        plugin.getCConfig().clog(Level.FINE, "Found crafted letter");
+                    }
+                }
             }
             int id;
             if(letter == null) {
                 // player had no Courier Letter in hand, create a new one
                 // todo: this is a good place to add crafted Letter requirement (or other Item based cost)
                 // see: http://dev.bukkit.org/server-mods/courier/tickets/16-postage-charges/
-                id = plugin.getCourierdb().generateUID();
+                id = plugin.getDb().generateUID();
             } else {
                 id = letter.getId();
             }
@@ -285,7 +323,7 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                 } else if(letter != null) {
                     // new stuff appended to the old
                     // fetch from db, letter.getMessage contains newline formatted text
-                    message.append(plugin.getCourierdb().getMessage(letter.getReceiver(), id));
+                    message.append(plugin.getDb().getMessage(id));
                     if(!player.getName().equalsIgnoreCase(letter.getSender())) {
                         // we're adding to existing text from someone else, add newlines
                         // extra credits: detect if we were going to be on a new line anyway, then only append one
@@ -325,8 +363,8 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                     if(invalid) {
                         player.sendMessage(plugin.getCConfig().getLetterSkippedText());
                     }
-    
-                    if (plugin.getCourierdb().storeMessage(id,
+
+                    if (plugin.getDb().storeMessage(id,
                             player.getName(),
                             message.toString(), // .trim() but then /letter on /letter needs added space anyway
                             (int)(System.currentTimeMillis() / 1000L))) { // oh noes unix y2k issues!!!11
@@ -336,7 +374,7 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                         if(letter == null) {
                             ItemStack letterItem = new ItemStack(Material.MAP, 1, plugin.getCourierdb().getCourierMapId());
                             letterItem.addUnsafeEnchantment(Enchantment.DURABILITY, id);
-                            if(item != null && item.getAmount() > 0) {
+                            if(!crafted && (item != null && item.getAmount() > 0)) {
                                 plugin.getCConfig().clog(Level.FINE, "Player hands not empty");
                                 HashMap<Integer, ItemStack> items = player.getInventory().addItem(letterItem);
                                 if(items.isEmpty()) {
@@ -354,6 +392,7 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                                     player.getWorld().dropItemNaturally(player.getLocation(), letterItem);
                                 }
                             } else {
+                                // we end up here on empty hands or if we know player is holding a crafted Letter
                                 plugin.getCConfig().clog(Level.FINE, "Letter delivered into player's hands");
                                 player.setItemInHand(letterItem); // REALLY replaces what's there
         
@@ -400,9 +439,9 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
         // player can from now on be null!
 
         String cmd = command.getName().toLowerCase();
-        if(cmd.equals(Courier.CMD_COURIER) && allowed(player, cmd)) {
+        if(cmd.equals(Courier.CMD_COURIER)) {
             // not allowed to be run from the console, uses player
-            ret = commandInformation(player, args);
+            ret = commandCourier(player, args);
         } else if((cmd.equals(Courier.CMD_LETTER)) && allowed(player, cmd)) {
             // not allowed to be run from the console, uses player
             ret = commandLetter(player, args);

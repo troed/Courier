@@ -1,6 +1,6 @@
 name: Courier
 main: se.troed.plugin.Courier.Courier
-version: 1.1.0
+version: 1.2.0
 author: defxor
 description: Item based Player to Player realistically rendered mail
 website: http://dev.bukkit.org/server-mods/courier/
@@ -40,6 +40,9 @@ permissions:
   courier.info:
     description: General Courier commands
     default: true
+  courier.admin:
+    description: Database management
+    default: op
   courier.theonepercent:
     description: No postage fees apply even if UseFees is set to true
     default: false

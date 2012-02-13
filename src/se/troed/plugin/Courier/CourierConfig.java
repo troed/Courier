@@ -10,7 +10,7 @@ import java.util.logging.Logger;
 
 
 public class CourierConfig {
-    private static final boolean debug = true;
+    public static final boolean debug = true;
 
     private final Logger log;
     private final Configuration config;

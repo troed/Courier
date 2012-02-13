@@ -30,10 +30,10 @@ class CourierEventListener implements Listener {
         if(e.getPlayer()!=null && e.getId()!=-1) {
             if(e.getEventName().equals(CourierDeliveryEvent.COURIER_DELIVERED)) {
                 plugin.getCConfig().clog(Level.FINE, "Delivered letter to " + e.getPlayer().getName() + " with id " + e.getId());
-                plugin.getCourierdb().setDelivered(e.getPlayer().getName(), e.getId());
+                plugin.getDb().setDelivered(e.getPlayer().getName(), e.getId());
             } else if(e.getEventName().equals(CourierDeliveryEvent.COURIER_READ)) {
                 plugin.getCConfig().clog(Level.FINE, e.getPlayer().getName() + " has read the letter with id " + e.getId());
-                plugin.getCourierdb().setRead(e.getPlayer().getName(), e.getId());
+                plugin.getDb().setRead(e.getId());
             } else {
                 // dude, what?
                 plugin.getCConfig().clog(Level.WARNING, "Unknown Courier event " + e.getEventName() + " received!");
@@ -47,8 +47,8 @@ class CourierEventListener implements Listener {
         if(e.getMaterial() == Material.MAP && e.getItem().containsEnchantment(Enchantment.DURABILITY)) {
             Letter letter = plugin.getLetter(e.getItem());
             if(letter != null) {
-                plugin.getCConfig().clog(Level.FINE, e.getPlayer().getDisplayName() + " navigating letter");
                 Action act = e.getAction();
+                plugin.getCConfig().clog(Level.FINE, e.getPlayer().getDisplayName() + " navigating letter with action: " + act.name());
                 if(act == Action.LEFT_CLICK_BLOCK || act == Action.LEFT_CLICK_AIR) {
                     letter.backPage();
                     e.setCancelled(true);
@@ -119,13 +119,13 @@ class CourierEventListener implements Listener {
         if(id == 0) {
             // special case. MapID 0 was a valid Courier Letter, Enchantment Level 0 is not!
             // (actually I was probably wrong about that, but let's go with it anyway)
-            int newId = plugin.getCourierdb().generateUID();
+            int newId = plugin.getDb().generateUID();
             if(newId == -1) {
                 plugin.getCConfig().clog(Level.SEVERE, "Out of unique message IDs! Notify your admin!");
                 return null;
             }
             plugin.getCConfig().clog(Level.FINE, "Converting legacy Courier Letter 0 to " + newId);
-            plugin.getCourierdb().changeId(id, newId);
+            plugin.getDb().changeId(id, newId);
             id = newId;
         } else {
             plugin.getCConfig().clog(Level.FINE, "Converting legacy Courier Letter id " + id);
@@ -135,7 +135,7 @@ class CourierEventListener implements Listener {
         // I can trust this id to stay the same thanks to how we handle it in CourierDB
         letterItem.addUnsafeEnchantment(Enchantment.DURABILITY, id);
         // store the date in the db
-        plugin.getCourierdb().storeDate(id, map.getCenterZ());
+        plugin.getDb().storeDate(id, map.getCenterZ());
         return letterItem;
     }
 

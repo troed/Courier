@@ -37,13 +37,16 @@ public class Letter {
     private boolean read;
     private int currentPage = 0;
 
-    public Letter(Courier plug, String s, String r, String m, int id, boolean rd, int date) {
+    public Letter(Courier plug, int id) {
         plugin = plug;
-        sender = s;
-        receiver = r;
+        // not happy. would much rather prefer if all database handling was in CourierDatabase
+        CourierDatabase db = plug.getDb();
+        Message message = db.getDatabase().find(Message.class, id);
+        sender = message.getSender();
+        receiver = message.getReceiver().getName();
         this.id = id;
-        read = rd;
-        this.date = date;
+        read = message.isRead();
+        this.date = message.getMdate();
         // http://dev.bukkit.org/server-mods/courier/tickets/35-make-show-date-configurable/
         if(date > 0 && plugin.getCConfig().getShowDate()) {
             Calendar calendar = Calendar.getInstance();
@@ -74,8 +77,8 @@ public class Letter {
             displayDate = null;
             displayDatePos = 0;
         }
-        if(!r.equalsIgnoreCase(s)) { // r == s is an unposted Letter (same sender as receiver)
-            if(s.length() < 13) { // a nice version would do an actual check vs width, but [see issue with width]
+        if(!receiver.equalsIgnoreCase(sender)) { // r == s is an unposted Letter (same sender as receiver)
+            if(sender.length() < 13) { // a nice version would do an actual check vs width, but [see issue with width]
                 header = HEADER_COLOR + "Letter from " + HEADER_FROM_COLOR + sender + HEADER_COLOR + ":";
             } else {
                 header = HEADER_COLOR + "From " + HEADER_FROM_COLOR + sender + HEADER_COLOR + ":";
@@ -84,7 +87,7 @@ public class Letter {
             header = null; // tested by LetterRenderer
         }
         // must be done after header, we use that knowledge for height calculation
-        setMessage(m);
+        setMessage(message.getMessage());
     }
 
     public int getId() {

@@ -18,9 +18,11 @@ package se.troed.plugin.Courier;
  *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+import com.avaje.ebean.EbeanServer;
 import net.milkbowl.vault.Vault;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.block.Biome;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
@@ -28,11 +30,11 @@ import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.CreatureType;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.ShapelessRecipe;
 import org.bukkit.map.MapRenderer;
 import org.bukkit.map.MapView;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginDescriptionFile;
-import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.w3c.dom.Document;
@@ -40,6 +42,7 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
+import javax.persistence.PersistenceException;
 import javax.xml.parsers.DocumentBuilderFactory;
 import java.net.URL;
 import java.util.*;
@@ -71,17 +74,20 @@ public class Courier extends JavaPlugin {
     public static final String PM_WRITE = "courier.write";
     public static final String PM_LIST = "courier.list";
     public static final String PM_INFO = "courier.info";
+    public static final String PM_ADMIN = "courier.admin";
     public static final String PM_THEONEPERCENT = "courier.theonepercent";
 
     public static final int MAGIC_NUMBER = Integer.MAX_VALUE - 395743; // used to id our map
     public static final int MAX_ID = Short.MAX_VALUE; // really, we don't do negative numbers well atm
     public static final int MIN_ID = 1; // since unenchanted items are level 0
-    private static final int DBVERSION = 1; // used since 1.0.0
+    private static final int DBVERSION_YAML = 1; // used between 1.0.0 and 1.2.0
+    private static final int DBVERSION_SQLITE = 2; // used from 1.2.0
     private static final String RSS_URL = "http://dev.bukkit.org/server-mods/courier/files.rss";
 
     private static Vault vault = null;
     private static Economy economy = null;
-    
+    private static CourierDatabase db;
+
     private final CourierEventListener eventListener = new CourierEventListener(this);
     private final CourierCommands courierCommands = new CourierCommands(this);
     private final CourierDB courierdb = new CourierDB(this);
@@ -137,24 +143,19 @@ public class Courier extends JavaPlugin {
         if(letterItem == null || !letterItem.containsEnchantment(Enchantment.DURABILITY)) {
             return null;
         }
-        Letter letter = letters.get(letterItem.getEnchantmentLevel(Enchantment.DURABILITY));
+        int id = letterItem.getEnchantmentLevel(Enchantment.DURABILITY);
+        Letter letter = letters.get(id);
         if(letter == null) {
             // server has lost the ItemStack<->Letter associations, re-populate
-//            // we also end up here for unenchanted maps - with id 0
-            int id = letterItem.getEnchantmentLevel(Enchantment.DURABILITY);
-//            if(id != 0) {
-                String to = getCourierdb().getPlayer(id);
-                if(to != null) {
-                    String from = getCourierdb().getSender(to, id);
-                    String message = getCourierdb().getMessage(to, id);
-                    letter = new Letter(this, from, to, message, id, getCourierdb().getRead(to, id), getCourierdb().getDate(to, id));
-                    addLetter(id, letter);
-                    getCConfig().clog(Level.FINE, "Letter " + id + " recreated from db for " + to);
-                } else {
-                    // we've found an item pointing to a Courier letter that does not exist anylonger
-                    // ripe for re-use!
-                    getCConfig().clog(Level.FINE, "BAD: " + id + " not found in messages database");
-//                }
+            if(db.isValid(id)) {
+                letter = new Letter(this, id);
+                addLetter(id, letter);
+                getCConfig().clog(Level.FINE, "Letter " + id + " recreated from db for " + db.getPlayer(id));
+            } else {
+                // we've found an item pointing to a Courier letter that does not exist in the db anylonger
+                // ripe for re-use!
+                // todo: visual effect and then removing the item?
+                getCConfig().clog(Level.FINE, "BAD: " + id + " not found in messages database");
             }
         }
         return letter;
@@ -224,6 +225,10 @@ public class Courier extends JavaPlugin {
 
     public CourierDB getCourierdb() {
         return courierdb;
+    }
+
+    public CourierDatabase getDb() {
+        return db;
     }
 
     private void despawnPostman(UUID uuid) {
@@ -315,9 +320,9 @@ public class Courier extends JavaPlugin {
         // spawn new thread to deliver the mail
         Player[] players = getServer().getOnlinePlayers();
         for (Player player : players) {
-            if (courierdb.undeliveredMail(player.getName())) {
+            if (db.undeliveredMail(player.getName())) {
                 // if already delivery out for this player do something
-                int undeliveredMessageId = getCourierdb().undeliveredMessageId(player.getName());
+                int undeliveredMessageId = db.undeliveredMessageId(player.getName());
                 config.clog(Level.FINE, "Undelivered messageid: " + undeliveredMessageId);
                 if (undeliveredMessageId != -1) {
                     Location spawnLoc = findSpawnLocation(player);
@@ -411,19 +416,77 @@ public class Courier extends JavaPlugin {
             config.clog(Level.SEVERE, "Fatal error when trying to read Courier database! Make a backup of messages.yml and contact plugin author.");
             abort = true;
         }
-
+/* Not needed since v1.2.0
         // detect if we have a v0.9.x -> v1.0.0 upgrade needed
         if(!abort && dbExist && courierdb.getDatabaseVersion() == -1) {
             // fixes http://dev.bukkit.org/server-mods/courier/tickets/32-player-never-gets-mail-uppercase-lowercase-username/
             config.clog(Level.WARNING, "Case sensitive database found, rewriting ...");
             try {
                 courierdb.keysToLower();
-                courierdb.setDatabaseVersion(Courier.DBVERSION);
+                courierdb.setDatabaseVersion(Courier.DBVERSION_YAML);
                 config.clog(Level.WARNING, "Case sensitive database found, rewriting ... done");
             } catch (Exception e) {
                 config.clog(Level.SEVERE, "Case sensitive database rewriting failed! Visit plugin support forum");
                 config.clog(Level.SEVERE, "Your old pre-1.0.0 Courier database has been backed up");
                 abort = true;
+            }
+        }*/
+
+        // todo: detect database corruption, rebuild'n'stuff
+        if(!abort) {
+            if(db == null) {
+                db = new CourierDatabase(this);
+            }
+            if(courierdb.getDatabaseVersion() <= Courier.DBVERSION_YAML) { // <= covers 0.9.x -> 1.0.0 upgrade as well
+                // upgrade from Yaml to SQLite
+                config.clog(Level.INFO, "Yaml database found, converting ...");
+                boolean converting = false;
+                try {
+                    db.initializeDatabase(
+                            "org.sqlite.JDBC",
+                            "jdbc:sqlite:" + getDataFolder() + "/messages.db",
+                            "courier",
+                            "pass",
+                            "SERIALIZABLE",
+                            CourierConfig.debug, // logging
+                            true // rebuild
+                    );
+                    converting = true;
+                    courierdb.yamlToSql(db);
+                    courierdb.setDatabaseVersion(Courier.DBVERSION_SQLITE);
+                    config.clog(Level.INFO, "Yaml database successfully converted to SQLite");
+                } catch (Exception e) {
+                    config.clog(Level.SEVERE, "Unable to create SQLite database! Visit plugin support forum. Error follows:");
+                    if(CourierConfig.debug) {
+                        e.printStackTrace();
+                    } else {
+                        config.clog(Level.SEVERE, e.toString());
+                    }
+                    if(converting) {
+                        config.clog(Level.SEVERE, "Your old pre-1.2.0 Courier database has been backed up");
+                    }
+                    abort = true;
+                }
+            } else {
+                try {
+                    db.initializeDatabase(
+                            "org.sqlite.JDBC",
+                            "jdbc:sqlite:" + getDataFolder() + "/messages.db",
+                            "courier",
+                            "pass",
+                            "SERIALIZABLE",
+                            CourierConfig.debug, // logging
+                            false // don't rebuild
+                    );
+                } catch (PersistenceException e) {
+                    config.clog(Level.SEVERE, "Unable to access SQLite database! Visit plugin support forum. Error follows:");
+                    if(CourierConfig.debug) {
+                        e.printStackTrace();
+                    } else {
+                        config.clog(Level.SEVERE, e.toString());
+                    }
+                    abort = true;
+                }
             }
         }
 
@@ -518,6 +581,18 @@ public class Courier extends JavaPlugin {
             }
         }
 
+        // todo: temp
+        // CRAP. This only works if shift-clicking!!! Else players get new normal maps with mapid++ ...
+        // New idea, craft special paper? :/ No visible difference though ..
+        // Probably needs en enhancement report on Bukkit to disregard mapid++ if mapid is supplied
+        // Done: https://bukkit.atlassian.net/browse/BUKKIT-696
+/*        ItemStack item = new ItemStack(Material.MAP, 1, getCourierdb().getCourierMapId());
+        ShapelessRecipe recipe = new ShapelessRecipe(item);
+        recipe.addIngredient(Material.PAPER);
+        recipe.addIngredient(Material.COAL);
+        getServer().addRecipe(recipe);*/
+        //
+
         if(!abort) {
             PluginDescriptionFile pdfFile = this.getDescription();
             config.clog(Level.INFO, pdfFile.getName() + " version v" + pdfFile.getVersion() + " is enabled!");
@@ -571,5 +646,10 @@ public class Courier extends JavaPlugin {
             return currentVersion;
         }
         return currentVersion;
+    }
+
+    @Override
+    public EbeanServer getDatabase() {
+        return db.getDatabase();
     }
 }
