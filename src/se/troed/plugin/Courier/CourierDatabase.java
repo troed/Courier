@@ -15,11 +15,21 @@ import java.util.logging.Level;
  * message table
  *  id pk
  *  receiver fk
+ *  (parcel)
  *  sender
  *  message
  *  date
  *  delivered
  *  read
+ *  (protected) - only admins can delete, not part of age cleanup?
+ *
+ *
+ * or maybe parcels can just point out messages, no point in reciprocality?
+ * (
+ * parcel table
+ *   id pk
+ *   message - onetoone mapping with message table
+ * )
  */
 
 /**
@@ -336,6 +346,17 @@ public class CourierDatabase extends MyDatabase {
         }
         return true;
     }
+
+    // todo: not deleting unread/undelivered? implement "protected" messages?
+    public int recycleMessages(int utime) {
+        int count = 0;
+        List<Message> messages = getDatabase().find(Message.class)
+                .where().lt(("mdate"), utime)
+                .findList();
+        count = messages.size();
+        plugin.getCConfig().clog(Level.FINE, "Number of Letters for recycling: " + count);
+        return count;
+    }
     
     // does this id exist in the database
     public boolean isValid(int id) {
@@ -460,18 +481,18 @@ public class CourierDatabase extends MyDatabase {
     // returns the first available id, or -1 when we're fatally out of them (or db error .. hmm)
     // expected to be called seldom (at letter creation) and is allowed to be slow
     // obvious caching/persisting of TreeSet possible
-    // todo: must be able to get id-list? or use database id increment instead of this?
-    // legacy prevents us from using .nextId(Message.class) ..
-    // when we can do delete(letter) immediately reusing the same id might be a privacy problem
+    // immediately reusing the same id might be a privacy problem
+    // or use database id increment instead of this?
+    // no, legacy (and fuzziness) prevents us from using .nextId(Message.class) ..
     public int generateUID() {
         TreeSet<Integer> sortedSet = new TreeSet<Integer>();
 
         Iterator messageit = getDatabase().find(Message.class).findIds().iterator();
         while(messageit.hasNext()) {
             final Integer i = (Integer)messageit.next();
-            plugin.getCConfig().clog(Level.FINE, "Id: " + i); // todo: remove for release
             sortedSet.add(i);
         }
+        plugin.getCConfig().clog(Level.FINE, "Id: " + sortedSet.toString()); // todo: remove for release
 
 /*        List<Message> messages = getDatabase().find(Message.class).findList();
         if (messages != null && !messages.isEmpty()) {
@@ -481,6 +502,7 @@ public class CourierDatabase extends MyDatabase {
         }*/
 
         // make sure we don't enter negative number territory
+        // todo: introduce "fuzziness" making nextId less predictable
         for(int i=Courier.MIN_ID; i<Courier.MAX_ID; i++) {
             if(sortedSet.add(i)) {
                 // i wasn't in the set
@@ -488,5 +510,12 @@ public class CourierDatabase extends MyDatabase {
             }
         }
         return -1;
+    }
+
+    // returns the total number of Letters (rows) in the database
+    public int totalLetters() {
+        int count = getDatabase().find(Message.class).findList().size();
+        plugin.getCConfig().clog(Level.FINE, "Number of Letters in database: " + count);
+        return count;
     }
 }

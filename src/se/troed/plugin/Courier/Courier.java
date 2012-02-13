@@ -45,6 +45,7 @@ import org.w3c.dom.NodeList;
 import javax.persistence.PersistenceException;
 import javax.xml.parsers.DocumentBuilderFactory;
 import java.net.URL;
+import java.text.MessageFormat;
 import java.util.*;
 import java.util.logging.Level;
 
@@ -102,6 +103,9 @@ public class Courier extends JavaPlugin {
     private final Map<Integer, Letter> letters = new HashMap<Integer, Letter>();
     // used temporarily in breaking spawn protections as well as making sure we only announce when spawned
     private final Map<Location, Postman> spawners = new HashMap<Location, Postman>();
+    // should this be persisted between restarts? can it grow uncontrollably?
+    // also, which other ways items can be picked up are there besides onPlayerPickupItem?
+    private final Map<UUID, Letter> drops = new HashMap<UUID, Letter>();
     
     // postmen should never live long, will always despawn
     public void addPostman(Postman p) {
@@ -112,6 +116,21 @@ public class Courier extends JavaPlugin {
     // returns null if it's not one of ours
     public Postman getPostman(UUID uuid) {
         return postmen.get(uuid);
+    }
+    
+    public void addDrop(UUID uuid, Letter l) {
+        // if this just keeps on growing we could detect and warn the admin that something is blocking
+        // even our detection of Postman spawn events. Regular cleanup thread?
+        drops.put(uuid, l);
+        getCConfig().clog(Level.FINE, drops.size() + " drops in queue");
+    }
+    
+    public Letter getAndRemoveDrop(UUID uuid) {
+        Letter letter = drops.get(uuid);
+        if(letter != null) {
+            drops.remove(uuid);
+        }
+        return letter;
     }
     
     public void addSpawner(Location l, Postman p) {
@@ -137,7 +156,7 @@ public class Courier extends JavaPlugin {
         letters.put(id, l);
     }
 
-    // finds the Letter associated with a specific id
+    // finds the Letter associated with a specific item
     // recreates structure from db after each restart as needed
     public Letter getLetter(ItemStack letterItem) {
         if(letterItem == null || !letterItem.containsEnchantment(Enchantment.DURABILITY)) {
@@ -177,6 +196,7 @@ public class Courier extends JavaPlugin {
      *
      * Also: Should be extended to check at least a few blocks to the sides and not JUST direct line of sight
      *
+     * Move this method to Postman
      */
     @SuppressWarnings("JavaDoc")
     Location findSpawnLocation(Player p) {
@@ -594,6 +614,10 @@ public class Courier extends JavaPlugin {
         //
 
         if(!abort) {
+            // display how much of the available Letter storage Courier is currently using
+            Integer usage = getDb().totalLetters() / (Courier.MAX_ID - Courier.MIN_ID);
+            config.clog(Level.INFO, "Courier currently uses " + MessageFormat.format("{0,number,#.##%}", usage) + " of the total Letter storage");
+
             PluginDescriptionFile pdfFile = this.getDescription();
             config.clog(Level.INFO, pdfFile.getName() + " version v" + pdfFile.getVersion() + " is enabled!");
 

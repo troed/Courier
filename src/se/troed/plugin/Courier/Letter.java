@@ -27,7 +27,6 @@ public class Letter {
     @SuppressWarnings("FieldCanBeLocal")
     private final String sender;
     private final int id;
-//    private final String message;
     private List<String> message;
     private final String header;
     private final int date;

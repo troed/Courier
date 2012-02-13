@@ -246,7 +246,7 @@ public class CourierDB {
     
     // this method is called when we detect a database version with case sensitive keys
     // it simply lowercases all Player name keys
-    public void keysToLower() {
+/*    public void keysToLower() {
         if(mdb == null) {
             return;
         }
@@ -299,5 +299,5 @@ public class CourierDB {
             }
         }
         this.save(null);
-    }
+    }*/
 }

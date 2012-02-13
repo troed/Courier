@@ -13,7 +13,7 @@ commands:
   courier:
     description: Displays help information
     permission: courier.info
-    usage: /courier
+    usage: /courier [subcommand]
   post:
     description: Sends the letter currently held in hand to someone
     aliases: [mail]

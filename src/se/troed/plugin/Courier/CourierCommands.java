@@ -10,7 +10,12 @@ import org.bukkit.entity.*;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.map.MapView;
 import org.bukkit.map.MinecraftFont;
+import org.bukkit.util.Vector;
 
+import java.text.DateFormat;
+import java.text.MessageFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.logging.Level;
@@ -21,6 +26,16 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
 
     public CourierCommands(Courier instance) {
         plugin = instance;
+    }
+
+    // take 2
+    private boolean allowed2(Player p, String perm) {
+        if(p == null) {
+            // console has admin permissions
+            return true;
+        } else {
+            return p.hasPermission(perm);
+        }
     }
     
     // Player is null for console
@@ -53,61 +68,96 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
         permission: courier.info
         usage: /courier
     */
-    boolean commandCourier(Player player, String[] args) {
+    boolean commandCourier(CommandSender sender, String[] args) {
+        Player player = null;
+        if(sender instanceof Player) {
+            player = (Player) sender;
+        }
         boolean retVal = false;
         if (args != null && args.length > 0) {
             final String command = args[0];
-            if (command.equalsIgnoreCase("fees") && player.hasPermission(Courier.PM_INFO)) {
+            if (command.equalsIgnoreCase("fees") && allowed2(player, Courier.PM_INFO)) {
                 if(plugin.getEconomy() != null) {
                     double fee = plugin.getCConfig().getFeeSend();
-                    player.sendMessage(plugin.getCConfig().getInfoFee(plugin.getEconomy().format(fee)));
+                    sender.sendMessage(plugin.getCConfig().getInfoFee(plugin.getEconomy().format(fee)));
                 } else {
-                    player.sendMessage(plugin.getCConfig().getInfoNoFee());
+                    sender.sendMessage(plugin.getCConfig().getInfoNoFee());
                 }
                 retVal = true;
-            } else if(command.equalsIgnoreCase("unread")) {
+            } else if(command.equalsIgnoreCase("unread") && player!=null) {
+                // uses player
                 if(plugin.getDb().deliverUnreadMessages(player.getName())) {
                     player.sendMessage(plugin.getCConfig().getPostmanExtraDeliveries());
                 } else {
                     player.sendMessage(plugin.getCConfig().getPostmanNoUnreadMail());
                 }
                 retVal = true;
-            } else if(command.equalsIgnoreCase("delete")) {
-                if(args.length > 1 && player.hasPermission(Courier.PM_ADMIN)) {
-                    final String name = args[1];
-                    if(plugin.getDb().deleteMessages(name)) {
-                        player.sendMessage("All messages for " + name + " deleted");
+            } else if(command.equalsIgnoreCase("storage") && allowed2(player, Courier.PM_ADMIN)) {
+                Integer usage = plugin.getDb().totalLetters() / (Courier.MAX_ID - Courier.MIN_ID);
+                sender.sendMessage("Courier currently uses " + MessageFormat.format("{0,number,#.##%}", usage) + " of the total Letter storage");
+                retVal = true;
+            } else if(args.length > 1 && command.equalsIgnoreCase("deleteuser") && allowed2(player, Courier.PM_ADMIN)) {
+                final String name = args[1];
+                if(plugin.getDb().deleteMessages(name)) {
+                    sender.sendMessage("All messages for " + name + " deleted");
+                } else {
+                    sender.sendMessage("No messages for " + name + " found");
+                }
+            } else if(args.length > 1 && command.equalsIgnoreCase("recycle") && allowed2(player, Courier.PM_ADMIN)) {
+                // todo: should I do this or should recycle take no argument and instead recycle X% (configurable)?
+                // if so, why shouldn't it be automatic?
+                final String age = args[1];
+                DateFormat df = DateFormat.getDateInstance();
+                Date date = null;
+                try {
+                    date = df.parse(age);
+                } catch (Exception e) {
+                    sender.sendMessage("\"" + age + "\" was not properly formatted. Examples: 6d = 6 days. 2m = 2 months. 1y = 1 year");
+                }
+                if(date != null) {
+                    int count = plugin.getDb().recycleMessages((int)date.getTime());
+                    if(count > 0) {
+                        sender.sendMessage(count + " messages older than " + age + " deleted");
                     } else {
-                        player.sendMessage("No messages for " + name + " found");
+                        sender.sendMessage("No messages were old enough to be recycled");
                     }
-                } else if(args.length <= 1) {
-                    // delete the message being held in hand
-                    ItemStack item = player.getItemInHand();
-                    Letter letter = null;
-                    if(item != null && item.getType() == Material.MAP) {
-                        letter = plugin.getLetter(item);
-                    }
-                    if(letter != null) {
+                }
+            } else if(command.equalsIgnoreCase("delete") && player!=null) {
+                // uses player
+                // delete the message being held in hand
+                ItemStack item = player.getItemInHand();
+                Letter letter = null;
+                if(item != null && item.getType() == Material.MAP) {
+                    letter = plugin.getLetter(item);
+                }
+                if(letter != null) {
+                    plugin.removeLetter(letter.getId());
+                    plugin.getLetterRenderer().forceClear();
+                    player.setItemInHand(null);
+                    if(letter.isAllowedToSee(player.getName())) {
+                        // only _really_ delete those Letters we "own"
                         if(plugin.getDb().deleteMessage((short)letter.getId())) {
                             // letter was in db, now gone
                         }
-                        plugin.removeLetter(letter.getId());
-                        plugin.getLetterRenderer().forceClear();
-                        player.setItemInHand(null);
-                        player.sendMessage("Letter deleted.");
-                    } else {
-                        player.sendMessage("You're not holding a letter that you can delete!");
                     }
+ /*                   Item drop = player.getWorld().dropItemNaturally(player.getLocation(), item);
+                    drop.setFireTicks(drop.getMaxFireTicks());
+                    drop.setPickupDelay(60);
+                    drop.setVelocity(drop.getVelocity().multiply(1.5));*/
+                    player.sendMessage("Letter deleted.");
+                } else {
+                    player.sendMessage("You're not holding a letter that you can delete!");
                 }
+            
                 retVal = true;
             }
 
             // todo: implement /courier list
         } else {
-            player.sendMessage(plugin.getCConfig().getInfoLine1());
-            player.sendMessage(plugin.getCConfig().getInfoLine2());
-            player.sendMessage(plugin.getCConfig().getInfoLine3());
-            player.sendMessage(plugin.getCConfig().getInfoLine4());
+            sender.sendMessage(plugin.getCConfig().getInfoLine1());
+            sender.sendMessage(plugin.getCConfig().getInfoLine2());
+            sender.sendMessage(plugin.getCConfig().getInfoLine3());
+            sender.sendMessage(plugin.getCConfig().getInfoLine4());
             retVal = true;
         }
         return retVal;
@@ -440,8 +490,8 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
 
         String cmd = command.getName().toLowerCase();
         if(cmd.equals(Courier.CMD_COURIER)) {
-            // not allowed to be run from the console, uses player
-            ret = commandCourier(player, args);
+            // makes its own console checks
+            ret = commandCourier(sender, args);
         } else if((cmd.equals(Courier.CMD_LETTER)) && allowed(player, cmd)) {
             // not allowed to be run from the console, uses player
             ret = commandLetter(player, args);

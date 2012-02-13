@@ -2,9 +2,7 @@ package se.troed.plugin.Courier;
 
 import org.bukkit.Material;
 import org.bukkit.enchantments.Enchantment;
-import org.bukkit.entity.Creature;
-import org.bukkit.entity.Enderman;
-import org.bukkit.entity.Monster;
+import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -57,6 +55,27 @@ class CourierEventListener implements Listener {
                     e.setCancelled(true);
                 }
             }
+        }
+    }
+
+    @EventHandler(priority = EventPriority.NORMAL)
+    public void onPlayerDropItemEvent(PlayerDropItemEvent e) {
+        Letter letter = plugin.getLetter(e.getItemDrop().getItemStack());
+        // todo: are we covering all cases where evil player X drops letters to player Y and causes them to be removed here?
+        if(letter != null && letter.isAllowedToSee(e.getPlayer().getName())) {
+            plugin.addDrop(e.getItemDrop().getUniqueId(), letter);
+            plugin.getCConfig().clog(Level.FINE, e.getPlayer().getDisplayName() + " dropped Letter " + letter.getId());
+        }
+    }
+
+    @EventHandler(priority = EventPriority.NORMAL)
+    public void onItemDespawnEvent(ItemDespawnEvent e) {
+        Letter letter = plugin.getAndRemoveDrop(e.getEntity().getUniqueId());
+        if(letter != null) {
+            plugin.removeLetter(letter.getId());
+            plugin.getLetterRenderer().forceClear();
+            plugin.getDb().deleteMessage((short)letter.getId());
+            plugin.getCConfig().clog(Level.FINE, "Dropped Letter " + letter.getId() + " despawned, was removed from database");
         }
     }
 
@@ -179,8 +198,12 @@ class CourierEventListener implements Listener {
                 }
             }
             // legacy end
-            plugin.getCConfig().clog(Level.FINE, "Letter id " + e.getItem().getItemStack().getEnchantmentLevel(Enchantment.DURABILITY));
-            Letter letter = plugin.getLetter(e.getItem().getItemStack());
+            Letter letter = plugin.getAndRemoveDrop(e.getItem().getUniqueId());
+            if(letter != null) {
+                // if someone picked up a drop we were tracking, remove it from here
+                plugin.getCConfig().clog(Level.FINE, "Letter id " + letter.getId() + " was dropped and picked up again");
+            }
+            letter = plugin.getLetter(e.getItem().getItemStack());
             if(letter != null) {
                 plugin.getCConfig().clog(Level.FINE, "Letter " + letter.getId() + " picked up.");
 
@@ -196,8 +219,6 @@ class CourierEventListener implements Listener {
             }
         }        
     }
-
-    // onPlayerDropItem for recycling? or something more active? (furnace? :D)
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerQuit(PlayerQuitEvent event) {
