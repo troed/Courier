@@ -6,7 +6,7 @@
 #   - Set to false if Villager-Postmen keep pushing you into lava ;)
 Courier:
   UseFees: false
-  Version: 1.1.0
+  Version: 1.1.1
   UpdateInterval: 18000
   Fee:
     Send: 10
