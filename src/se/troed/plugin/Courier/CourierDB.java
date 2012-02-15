@@ -200,7 +200,8 @@ public class CourierDB {
 
         Set<String> players = mdb.getKeys(false);
         for (String r : players) {
-            if(r.equalsIgnoreCase("courierclaimedmap") || r.equalsIgnoreCase("courierdatabaseversion")) {
+            // skip our two protected words, and I've seen "null" (empty yaml blocks) appear as well
+            if(r.equalsIgnoreCase("courierclaimedmap") || r.equalsIgnoreCase("courierdatabaseversion") || r.equalsIgnoreCase("null")) {
                 continue;
             }
             Receiver receiver = new Receiver();
@@ -243,61 +244,4 @@ public class CourierDB {
         }
         this.save(null);
     }
-    
-    // this method is called when we detect a database version with case sensitive keys
-    // it simply lowercases all Player name keys
-/*    public void keysToLower() {
-        if(mdb == null) {
-            return;
-        }
-
-        // just for safety, back up db first, and don't allow the backup to be overwritten if it exists
-        // (if this method throws exceptions most admins will just likely try a few times .. )
-        String backup = FILENAME + ".100.backup";
-        File db = new File(plugin.getDataFolder(), backup);
-        if(!db.exists()) {
-            this.save(backup);
-        }
-        
-        Set<String> players = mdb.getKeys(false);
-        for (String r : players) {
-            String rlower = r.toLowerCase();
-
-            if(!r.equals(rlower)) {
-                // this receiver needs full rewriting
-                boolean newmail = mdb.getBoolean(r + ".newmail");
-                List<Integer> messageids = mdb.getIntegerList(r + ".messageids");
-                if(messageids == null) { // safety, should not happen in this case
-                    messageids = new ArrayList<Integer>();
-                }
-                List<Integer> newMessageids = mdb.getIntegerList(rlower + ".messageids");
-                if(newMessageids == null) { // most likely, but who knows?
-                    newMessageids = new ArrayList<Integer>();
-                }
-                for(Integer id : messageids) {
-                    // fetch a message
-                    String s = mdb.getString(r + "." + String.valueOf(id) + ".sender");
-                    String m = mdb.getString(r + "." + String.valueOf(id) + ".message");
-                    int date = mdb.getInt(r + "." + String.valueOf(id) + ".date");
-                    boolean delivered = mdb.getBoolean(r + "." + String.valueOf(id) + ".delivered");
-                    boolean read = mdb.getBoolean(r + "." + String.valueOf(id) + ".read");
-                    
-                    mdb.set(rlower + "." + String.valueOf(id) + ".sender", s);
-                    mdb.set(rlower + "." + String.valueOf(id) + ".message", m);
-                    mdb.set(rlower + "." + String.valueOf(id) + ".date", date);
-                    mdb.set(rlower + "." + String.valueOf(id) + ".delivered", delivered);
-                    mdb.set(rlower + "." + String.valueOf(id) + ".read", read);
-
-                    newMessageids.add(id);
-
-                    mdb.set(r + "." + String.valueOf(id), null); // delete old message
-                }
-                mdb.set(rlower + ".messageids", newMessageids);
-                mdb.set(rlower + ".newmail", newmail);
-
-                mdb.set(r, null); // delete the old entry
-            }
-        }
-        this.save(null);
-    }*/
 }

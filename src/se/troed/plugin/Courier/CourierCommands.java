@@ -10,11 +10,9 @@ import org.bukkit.entity.*;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.map.MapView;
 import org.bukkit.map.MinecraftFont;
-import org.bukkit.util.Vector;
 
 import java.text.DateFormat;
 import java.text.MessageFormat;
-import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -27,16 +25,6 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
     public CourierCommands(Courier instance) {
         plugin = instance;
     }
-
-    // take 2
-    private boolean allowed2(Player p, String perm) {
-        if(p == null) {
-            // console has admin permissions
-            return true;
-        } else {
-            return p.hasPermission(perm);
-        }
-    }
     
     // Player is null for console
     // This method didn't turn out that well. Should send a message to sender, when console,
@@ -44,11 +32,11 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
     private boolean allowed(Player p, String c) {
         boolean a = false;
         if (p != null) {
-            if(c.equals(Courier.CMD_POSTMAN) && p.hasPermission(Courier.PM_POSTMAN)) {
+            if(c.equals(Courier.CMD_POSTMAN) && Courier.hasPermission(p, Courier.PM_POSTMAN)) {
                 a = true;
-            } else if(c.equals(Courier.CMD_POST) && p.hasPermission(Courier.PM_SEND)) {
+            } else if(c.equals(Courier.CMD_POST) && Courier.hasPermission(p, Courier.PM_SEND)) {
                 a = true;
-            } else if(c.equals(Courier.CMD_LETTER) && p.hasPermission(Courier.PM_WRITE)) {
+            } else if(c.equals(Courier.CMD_LETTER) && Courier.hasPermission(p, Courier.PM_WRITE)) {
                 a = true;
             } if(c.equals(Courier.CMD_COURIER)) {
                 a = true;
@@ -76,34 +64,34 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
         boolean retVal = false;
         if (args != null && args.length > 0) {
             final String command = args[0];
-            if (command.equalsIgnoreCase("fees") && allowed2(player, Courier.PM_INFO)) {
+            if (command.equalsIgnoreCase("fees") && Courier.hasPermission(player, Courier.PM_INFO)) {
                 if(plugin.getEconomy() != null) {
                     double fee = plugin.getCConfig().getFeeSend();
-                    sender.sendMessage(plugin.getCConfig().getInfoFee(plugin.getEconomy().format(fee)));
+                    Courier.display(sender, plugin.getCConfig().getInfoFee(plugin.getEconomy().format(fee)));
                 } else {
-                    sender.sendMessage(plugin.getCConfig().getInfoNoFee());
+                    Courier.display(sender, plugin.getCConfig().getInfoNoFee());
                 }
                 retVal = true;
             } else if(command.equalsIgnoreCase("unread") && player!=null) {
                 // uses player
                 if(plugin.getDb().deliverUnreadMessages(player.getName())) {
-                    player.sendMessage(plugin.getCConfig().getPostmanExtraDeliveries());
+                    Courier.display(player, plugin.getCConfig().getPostmanExtraDeliveries());
                 } else {
-                    player.sendMessage(plugin.getCConfig().getPostmanNoUnreadMail());
+                    Courier.display(player, plugin.getCConfig().getPostmanNoUnreadMail());
                 }
                 retVal = true;
-            } else if(command.equalsIgnoreCase("storage") && allowed2(player, Courier.PM_ADMIN)) {
+            } else if(command.equalsIgnoreCase("storage") && Courier.hasPermission(player, Courier.PM_ADMIN)) {
                 Integer usage = plugin.getDb().totalLetters() / (Courier.MAX_ID - Courier.MIN_ID);
-                sender.sendMessage("Courier currently uses " + MessageFormat.format("{0,number,#.##%}", usage) + " of the total Letter storage");
+                Courier.display(sender, "Courier currently uses " + MessageFormat.format("{0,number,#.##%}", usage) + " of the total Letter storage");
                 retVal = true;
-            } else if(args.length > 1 && command.equalsIgnoreCase("deleteuser") && allowed2(player, Courier.PM_ADMIN)) {
+            } else if(args.length > 1 && command.equalsIgnoreCase("deleteuser") && Courier.hasPermission(player, Courier.PM_ADMIN)) {
                 final String name = args[1];
                 if(plugin.getDb().deleteMessages(name)) {
-                    sender.sendMessage("All messages for " + name + " deleted");
+                    Courier.display(sender, "All messages for " + name + " deleted");
                 } else {
-                    sender.sendMessage("No messages for " + name + " found");
+                    Courier.display(sender, "No messages for " + name + " found");
                 }
-            } else if(args.length > 1 && command.equalsIgnoreCase("recycle") && allowed2(player, Courier.PM_ADMIN)) {
+            } else if(args.length > 1 && command.equalsIgnoreCase("recycle") && Courier.hasPermission(player, Courier.PM_ADMIN)) {
                 // todo: should I do this or should recycle take no argument and instead recycle X% (configurable)?
                 // if so, why shouldn't it be automatic?
                 final String age = args[1];
@@ -112,14 +100,14 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                 try {
                     date = df.parse(age);
                 } catch (Exception e) {
-                    sender.sendMessage("\"" + age + "\" was not properly formatted. Examples: 6d = 6 days. 2m = 2 months. 1y = 1 year");
+                    Courier.display(sender, "\"" + age + "\" was not properly formatted. Examples: 6d = 6 days. 2m = 2 months. 1y = 1 year");
                 }
                 if(date != null) {
                     int count = plugin.getDb().recycleMessages((int)date.getTime());
                     if(count > 0) {
-                        sender.sendMessage(count + " messages older than " + age + " deleted");
+                        Courier.display(sender, count + " messages older than " + age + " deleted");
                     } else {
-                        sender.sendMessage("No messages were old enough to be recycled");
+                        Courier.display(sender, "No messages were old enough to be recycled");
                     }
                 }
             } else if(command.equalsIgnoreCase("delete") && player!=null) {
@@ -128,10 +116,10 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                 ItemStack item = player.getItemInHand();
                 Letter letter = null;
                 if(item != null && item.getType() == Material.MAP) {
-                    letter = plugin.getLetter(item);
+                    letter = plugin.getTracker().getLetter(item);
                 }
                 if(letter != null) {
-                    plugin.removeLetter(letter.getId());
+                    plugin.getTracker().removeLetter(letter.getId());
                     plugin.getLetterRenderer().forceClear();
                     player.setItemInHand(null);
                     if(letter.isAllowedToSee(player.getName())) {
@@ -144,9 +132,9 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                     drop.setFireTicks(drop.getMaxFireTicks());
                     drop.setPickupDelay(60);
                     drop.setVelocity(drop.getVelocity().multiply(1.5));*/
-                    player.sendMessage("Letter deleted.");
+                    Courier.display(player, "Letter deleted.");
                 } else {
-                    player.sendMessage("You're not holding a letter that you can delete!");
+                    Courier.display(player, "You're not holding a letter that you can delete!");
                 }
             
                 retVal = true;
@@ -154,10 +142,10 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
 
             // todo: implement /courier list
         } else {
-            sender.sendMessage(plugin.getCConfig().getInfoLine1());
-            sender.sendMessage(plugin.getCConfig().getInfoLine2());
-            sender.sendMessage(plugin.getCConfig().getInfoLine3());
-            sender.sendMessage(plugin.getCConfig().getInfoLine4());
+            Courier.display(sender, plugin.getCConfig().getInfoLine1());
+            Courier.display(sender, plugin.getCConfig().getInfoLine2());
+            Courier.display(sender, plugin.getCConfig().getInfoLine3());
+            Courier.display(sender, plugin.getCConfig().getInfoLine4());
             retVal = true;
         }
         return retVal;
@@ -174,7 +162,7 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
             int undeliveredMessageId = plugin.getDb().undeliveredMessageId(player.getName());
             if(undeliveredMessageId != -1) {
                 // this is really a command meant for testing, no need for translation
-                player.sendMessage("You've got mail waiting for delivery!");
+                Courier.display(player, "You've got mail waiting for delivery!");
 
                 // Is it the FIRST map viewed on server start that gets the wrong id when rendering?
                 // how can that be? if it's my code I don't see where ...
@@ -188,9 +176,9 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                     if(spawnLoc != null) {
 //                        Postman postman = new CreaturePostman(plugin, player, undeliveredMessageId);
                         Postman postman = Postman.create(plugin, player, undeliveredMessageId);
-                        plugin.addSpawner(spawnLoc, postman);
+                        plugin.getTracker().addSpawner(spawnLoc, postman);
                         postman.spawn(spawnLoc);
-                        plugin.addPostman(postman);
+                        plugin.getTracker().addPostman(postman);
                     }
 
                 } else {
@@ -215,16 +203,16 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
         ItemStack item = player.getItemInHand();
         Letter letter = null;
         if(item != null && item.getType() == Material.MAP) {
-            letter = plugin.getLetter(item);
+            letter = plugin.getTracker().getLetter(item);
         }
         if(letter != null) {
             if(plugin.getEconomy() != null &&
                     plugin.getEconomy().getBalance(player.getName()) < plugin.getCConfig().getFeeSend() &&
-                    !player.hasPermission(Courier.PM_THEONEPERCENT)) {
-                player.sendMessage(plugin.getCConfig().getPostNoCredit(plugin.getEconomy().format(plugin.getCConfig().getFeeSend())));
+                    !Courier.hasPermission(player, Courier.PM_THEONEPERCENT)) {
+                Courier.display(player, plugin.getCConfig().getPostNoCredit(plugin.getEconomy().format(plugin.getCConfig().getFeeSend())));
                 ret = true;
             } else if(args == null || args.length < 1) {
-                player.sendMessage(plugin.getCConfig().getPostNoRecipient());
+                Courier.display(player, plugin.getCConfig().getPostNoRecipient());
             // /post player1 player2 player3 etc in the future?
             } else {
                 String receiver = args[0];
@@ -260,8 +248,8 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                     if(players != null && players.size() == 1) {
                         // we got one exact match
                         // p = players.get(0); // don't, could be embarrassing if wrong
-                        player.sendMessage(plugin.getCConfig().getPostDidYouMean(receiver, players.get(0).getName()));
-                    } else if (players != null && players.size() > 1 && player.hasPermission(Courier.PM_LIST)) {
+                        Courier.display(player, plugin.getCConfig().getPostDidYouMean(receiver, players.get(0).getName()));
+                    } else if (players != null && players.size() > 1 && Courier.hasPermission(player, Courier.PM_LIST)) {
                         // more than one possible match found
                         StringBuilder suggestList = new StringBuilder();
                         int width = 0;
@@ -275,36 +263,36 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                             }
                         }
                         // players listing who's online. If so, that could be a permission also valid for /courier list
-                        player.sendMessage(plugin.getCConfig().getPostDidYouMeanList(receiver));
-                        player.sendMessage(plugin.getCConfig().getPostDidYouMeanList2(suggestList.toString()));
+                        Courier.display(player, plugin.getCConfig().getPostDidYouMeanList(receiver));
+                        Courier.display(player, plugin.getCConfig().getPostDidYouMeanList2(suggestList.toString()));
                     } else {
                         // time to give up
-                        player.sendMessage(plugin.getCConfig().getPostNoSuchPlayer(receiver));
+                        Courier.display(player, plugin.getCConfig().getPostNoSuchPlayer(receiver));
                     }
                 }
                 if(p != null) {
                     boolean send = false;
 
-                    if(plugin.getEconomy() != null && !player.hasPermission(Courier.PM_THEONEPERCENT)) {
+                    if(plugin.getEconomy() != null && !Courier.hasPermission(player, Courier.PM_THEONEPERCENT)) {
                         // withdraw postage fee
                         double fee = plugin.getCConfig().getFeeSend();
                         EconomyResponse er = plugin.getEconomy().withdrawPlayer(player.getName(), fee);
                         if(er.transactionSuccess()) {
-                            player.sendMessage(plugin.getCConfig().getPostLetterSentFee(p.getName(), plugin.getEconomy().format(fee)));
+                            Courier.display(player, plugin.getCConfig().getPostLetterSentFee(p.getName(), plugin.getEconomy().format(fee)));
                             send = true;
                         } else {
-                            player.sendMessage(plugin.getCConfig().getPostFundProblem());
+                            Courier.display(player, plugin.getCConfig().getPostFundProblem());
                             plugin.getCConfig().clog(Level.WARNING, "Could not withdraw postage fee from " + p.getName());
                         }
                     } else {
-                        player.sendMessage(plugin.getCConfig().getPostLetterSent(p.getName()));
+                        Courier.display(player, plugin.getCConfig().getPostLetterSent(p.getName()));
                         send = true;
                     }
                     if(send) {
                         // sign over this letter to recipient
                         if(plugin.getDb().sendMessage(letter.getId(), p.getName(), player.getName())) {
                             // existing Letter now has outdated info, will automatically be recreated from db
-                            plugin.removeLetter(letter.getId());
+                            plugin.getTracker().removeLetter(letter.getId());
                             plugin.getLetterRenderer().forceClear();
 
                             // remove item from hands, which kills the ItemStack association. It's now "gone"
@@ -319,7 +307,7 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                 ret = true;
             }
         } else {
-            player.sendMessage(plugin.getCConfig().getPostNoLetter());
+            Courier.display(player, plugin.getCConfig().getPostNoLetter());
         }
         return ret;
     }
@@ -336,7 +324,7 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
         // letter message - builds upon message in hand. We must be sender, I think.
         boolean ret = false;
         if(args == null || args.length < 1) {
-            player.sendMessage(plugin.getCConfig().getLetterNoText());
+            Courier.display(player, plugin.getCConfig().getLetterNoText());
         } else {
             ItemStack item = player.getItemInHand();
             Letter letter = null;
@@ -345,7 +333,7 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                 MapView map = plugin.getServer().getMap(item.getDurability());
                 if(map.getId() == plugin.getCourierdb().getCourierMapId()) {
                     // this is a current Courier Letter
-                    letter = plugin.getLetter(item);
+                    letter = plugin.getTracker().getLetter(item);
                     if(letter == null) {
                         // this is apparently a crafted and pristine Letter, can safely be replaced properly later
                         // unfortunately we're currently unable to craft Maps where we've decided the mapid, we'll never end up here.
@@ -411,7 +399,7 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                     }
     
                     if(invalid) {
-                        player.sendMessage(plugin.getCConfig().getLetterSkippedText());
+                        Courier.display(player, plugin.getCConfig().getLetterSkippedText());
                     }
 
                     if (plugin.getDb().storeMessage(id,
@@ -429,16 +417,10 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                                 HashMap<Integer, ItemStack> items = player.getInventory().addItem(letterItem);
                                 if(items.isEmpty()) {
                                     plugin.getCConfig().clog(Level.FINE, "Letter added to inventory");
-                                    String inventory = plugin.getCConfig().getLetterInventory();
-                                    if(inventory != null && !inventory.isEmpty()) {
-                                        player.sendMessage(inventory);
-                                    }
+                                    Courier.display(player, plugin.getCConfig().getLetterInventory());
                                 } else {
                                     plugin.getCConfig().clog(Level.FINE, "Inventory full, letter dropped");
-                                    String drop = plugin.getCConfig().getLetterDrop();
-                                    if(drop != null && !drop.isEmpty()) {
-                                        player.sendMessage(drop);
-                                    }
+                                    Courier.display(player, plugin.getCConfig().getLetterDrop());
                                     player.getWorld().dropItemNaturally(player.getLocation(), letterItem);
                                 }
                             } else {
@@ -455,12 +437,12 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                                 letter.setMessage(message.toString());
                             } else {
                                 // existing Letter now has outdated info, will automatically be recreated from db
-                                plugin.removeLetter(id);
+                                plugin.getTracker().removeLetter(id);
                                 plugin.getLetterRenderer().forceClear();
                             } 
                         }
                     } else {
-                        player.sendMessage(plugin.getCConfig().getLetterCreateFailed());
+                        Courier.display(player, plugin.getCConfig().getLetterCreateFailed());
                         plugin.getCConfig().clog(Level.SEVERE, "Could not store letter in database!");
                     }
                     ret = true;
@@ -469,7 +451,7 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                     ret = true;
                 }
             } else {
-                player.sendMessage(plugin.getCConfig().getLetterNoMoreUIDs());
+                Courier.display(player, plugin.getCConfig().getLetterNoMoreUIDs());
                 plugin.getCConfig().clog(Level.SEVERE, "Out of unique message IDs!");
                 ret = true;
             }

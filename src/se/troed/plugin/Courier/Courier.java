@@ -21,18 +21,21 @@ package se.troed.plugin.Courier;
 import com.avaje.ebean.EbeanServer;
 import net.milkbowl.vault.Vault;
 import net.milkbowl.vault.economy.Economy;
+import net.milkbowl.vault.permission.Permission;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Biome;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
-import org.bukkit.enchantments.Enchantment;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.CreatureType;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.FurnaceRecipe;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.ShapelessRecipe;
 import org.bukkit.map.MapRenderer;
 import org.bukkit.map.MapView;
+import org.bukkit.material.MaterialData;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.plugin.RegisteredServiceProvider;
@@ -84,101 +87,24 @@ public class Courier extends JavaPlugin {
     private static final int DBVERSION_YAML = 1; // used between 1.0.0 and 1.2.0
     private static final int DBVERSION_SQLITE = 2; // used from 1.2.0
     private static final String RSS_URL = "http://dev.bukkit.org/server-mods/courier/files.rss";
+    private static boolean noPermissionPlugin = false;
 
     private static Vault vault = null;
     private static Economy economy = null;
-    private static CourierDatabase db;
+    private static Permission permission = null;
+    private static CourierDatabase db = null;
 
+    private final Tracker tracker = new Tracker(this); // must be done before CourierEventListener
     private final CourierEventListener eventListener = new CourierEventListener(this);
     private final CourierCommands courierCommands = new CourierCommands(this);
     private final CourierDB courierdb = new CourierDB(this);
     private CourierConfig config;
     private LetterRenderer letterRenderer = null;
-
+    
     private Runnable updateThread;
     private int updateId = -1;
     private Runnable deliveryThread;
     private int deliveryId = -1;
-    private final Map<UUID, Postman> postmen = new HashMap<UUID, Postman>();
-    private final Map<Integer, Letter> letters = new HashMap<Integer, Letter>();
-    // used temporarily in breaking spawn protections as well as making sure we only announce when spawned
-    private final Map<Location, Postman> spawners = new HashMap<Location, Postman>();
-    // should this be persisted between restarts? can it grow uncontrollably?
-    // also, which other ways items can be picked up are there besides onPlayerPickupItem?
-    private final Map<UUID, Letter> drops = new HashMap<UUID, Letter>();
-    
-    // postmen should never live long, will always despawn
-    public void addPostman(Postman p) {
-        postmen.put(p.getUUID(), p);
-        schedulePostmanDespawn(p.getUUID(), getCConfig().getDespawnTime());
-    }
-
-    // returns null if it's not one of ours
-    public Postman getPostman(UUID uuid) {
-        return postmen.get(uuid);
-    }
-    
-    public void addDrop(UUID uuid, Letter l) {
-        // if this just keeps on growing we could detect and warn the admin that something is blocking
-        // even our detection of Postman spawn events. Regular cleanup thread?
-        drops.put(uuid, l);
-        getCConfig().clog(Level.FINE, drops.size() + " drops in queue");
-    }
-    
-    public Letter getAndRemoveDrop(UUID uuid) {
-        Letter letter = drops.get(uuid);
-        if(letter != null) {
-            drops.remove(uuid);
-        }
-        return letter;
-    }
-    
-    public void addSpawner(Location l, Postman p) {
-        // if this just keeps on growing we could detect and warn the admin that something is blocking
-        // even our detection of Postman spawn events. Regular cleanup thread?
-        spawners.put(l, p);
-        getCConfig().clog(Level.FINE, spawners.size() + " spawners in queue");
-    }
-    
-    public Postman getAndRemoveSpawner(Location l) {
-        Postman p = spawners.get(l);
-        if(p != null) {
-            spawners.remove(l);
-        }
-        return p;
-    }
-
-    public void removeLetter(int id) {
-        letters.remove(id);
-    }
-    
-    private void addLetter(int id, Letter l) {
-        letters.put(id, l);
-    }
-
-    // finds the Letter associated with a specific item
-    // recreates structure from db after each restart as needed
-    public Letter getLetter(ItemStack letterItem) {
-        if(letterItem == null || !letterItem.containsEnchantment(Enchantment.DURABILITY)) {
-            return null;
-        }
-        int id = letterItem.getEnchantmentLevel(Enchantment.DURABILITY);
-        Letter letter = letters.get(id);
-        if(letter == null) {
-            // server has lost the ItemStack<->Letter associations, re-populate
-            if(db.isValid(id)) {
-                letter = new Letter(this, id);
-                addLetter(id, letter);
-                getCConfig().clog(Level.FINE, "Letter " + id + " recreated from db for " + db.getPlayer(id));
-            } else {
-                // we've found an item pointing to a Courier letter that does not exist in the db anylonger
-                // ripe for re-use!
-                // todo: visual effect and then removing the item?
-                getCConfig().clog(Level.FINE, "BAD: " + id + " not found in messages database");
-            }
-        }
-        return letter;
-    }
 
     public LetterRenderer getLetterRenderer() {
         return letterRenderer;
@@ -186,6 +112,18 @@ public class Courier extends JavaPlugin {
     
     public Economy getEconomy() {
         return economy;
+    }
+
+    public Tracker getTracker() {
+        return tracker;
+    }
+
+    public CourierDB getCourierdb() {
+        return courierdb;
+    }
+
+    public CourierDatabase getDb() {
+        return db;
     }
 
     /**
@@ -243,47 +181,6 @@ public class Courier extends JavaPlugin {
         return sLoc;
     }
 
-    public CourierDB getCourierdb() {
-        return courierdb;
-    }
-
-    public CourierDatabase getDb() {
-        return db;
-    }
-
-    private void despawnPostman(UUID uuid) {
-        config.clog(Level.FINE, "Despawning postman " + uuid);
-        Postman postman = postmen.get(uuid);
-        if(postman != null) {
-            postman.remove();
-            postmen.remove(uuid);
-        } // else, shouldn't happen
-    }
-
-    public void schedulePostmanDespawn(final UUID uuid, int time) {
-        // if there's an existing (long) timeout on a postman and a quick comes in, cancel the first and start the new
-        // I don't know if it's long ... but I could add that info to Postman
-        Runnable runnable = postmen.get(uuid).getRunnable();
-        if(runnable != null) {
-            config.clog(Level.FINE, "Cancel existing despawn on Postman " + uuid);
-            getServer().getScheduler().cancelTask(postmen.get(uuid).getTaskId());    
-        }
-        runnable = new Runnable() {
-            public void run() {
-                despawnPostman(uuid);
-            }
-        };
-        postmen.get(uuid).setRunnable(runnable);
-        // in ticks. one tick = 50ms
-        config.clog(Level.FINE, "Scheduled " + time + " second despawn for Postman " + uuid);
-        int taskId = getServer().getScheduler().scheduleSyncDelayedTask(this, runnable, time*20);
-        if(taskId >= 0) {
-            postmen.get(uuid).setTaskId(taskId);
-        } else {
-            config.clog(Level.WARNING, "Despawning task scheduling failed");
-        }
-    }
-    
     private void startDeliveryThread() {
         if(deliveryId >= 0) {
             config.clog(Level.WARNING, "Multiple calls to startDeliveryThread()!");
@@ -374,12 +271,12 @@ public class Courier extends JavaPlugin {
                         // separate instantiation from spawning, save spawnLoc in instantiation
                         // and create a new method to lookup unspawned locations. Use loc matching
                         // in onCreatureSpawn as mob-denier override variable.
-                        this.addSpawner(spawnLoc, postman);
+                        tracker.addSpawner(spawnLoc, postman);
                         postman.spawn(spawnLoc);
                         // since we COULD be wrong when using location, re-check later if it indeed
                         // was a Postman we allowed through and despawn if not? Extra credit surely.
                         // Let's see if it's ever needed first
-                        this.addPostman(postman);
+                        tracker.addPostman(postman);
                     }
                 } else {
                     config.clog(Level.SEVERE, "undeliveredMail and undeliveredMessageId not in sync: " + undeliveredMessageId);
@@ -398,19 +295,14 @@ public class Courier extends JavaPlugin {
             getServer().getScheduler().cancelTask(deliveryId);
             deliveryId = -1;
         }
-        for (Map.Entry<UUID, Postman> uuidPostmanEntry : postmen.entrySet()) {
-            Postman postman = (Postman) ((Map.Entry) uuidPostmanEntry).getValue();
-            if (postman != null) {
-                postman.remove();
-            }
-        }
+        tracker.clearPostmen();
         courierdb.save(null);
         config.clog(Level.FINE, "Deliveries are now paused");
     }
     
     public void onDisable() {
         pauseDeliveries();
-        spawners.clear();
+        tracker.clearSpawners();
         stopUpdateThread();
         getServer().getScheduler().cancelTasks(this); // failsafe
         config.clog(Level.INFO, this.getDescription().getName() + " is now disabled.");
@@ -423,6 +315,7 @@ public class Courier extends JavaPlugin {
             this.saveResource("translations/readme.txt", true);
             this.saveResource("translations/config_french.yml", true);
             this.saveResource("translations/config_swedish.yml", true);
+            this.saveResource("translations/config_dutch.yml", true);
         } catch (Exception e) {
             config.clog(Level.WARNING, "Unable to copy translations from .jar to plugin folder");
         }
@@ -436,28 +329,14 @@ public class Courier extends JavaPlugin {
             config.clog(Level.SEVERE, "Fatal error when trying to read Courier database! Make a backup of messages.yml and contact plugin author.");
             abort = true;
         }
-/* Not needed since v1.2.0
-        // detect if we have a v0.9.x -> v1.0.0 upgrade needed
-        if(!abort && dbExist && courierdb.getDatabaseVersion() == -1) {
-            // fixes http://dev.bukkit.org/server-mods/courier/tickets/32-player-never-gets-mail-uppercase-lowercase-username/
-            config.clog(Level.WARNING, "Case sensitive database found, rewriting ...");
-            try {
-                courierdb.keysToLower();
-                courierdb.setDatabaseVersion(Courier.DBVERSION_YAML);
-                config.clog(Level.WARNING, "Case sensitive database found, rewriting ... done");
-            } catch (Exception e) {
-                config.clog(Level.SEVERE, "Case sensitive database rewriting failed! Visit plugin support forum");
-                config.clog(Level.SEVERE, "Your old pre-1.0.0 Courier database has been backed up");
-                abort = true;
-            }
-        }*/
 
         // todo: detect database corruption, rebuild'n'stuff
+        // todo: this is critical now with our test server running a beta table scheme
         if(!abort) {
             if(db == null) {
                 db = new CourierDatabase(this);
             }
-            if(courierdb.getDatabaseVersion() <= Courier.DBVERSION_YAML) { // <= covers 0.9.x -> 1.0.0 upgrade as well
+            if(dbExist && courierdb.getDatabaseVersion() <= Courier.DBVERSION_YAML) {
                 // upgrade from Yaml to SQLite
                 config.clog(Level.INFO, "Yaml database found, converting ...");
                 boolean converting = false;
@@ -498,6 +377,9 @@ public class Courier extends JavaPlugin {
                             CourierConfig.debug, // logging
                             false // don't rebuild
                     );
+                    if(courierdb.getDatabaseVersion() == -1) { // first install
+                        courierdb.setDatabaseVersion(Courier.DBVERSION_SQLITE);
+                    }
                 } catch (PersistenceException e) {
                     config.clog(Level.SEVERE, "Unable to access SQLite database! Visit plugin support forum. Error follows:");
                     if(CourierConfig.debug) {
@@ -531,6 +413,7 @@ public class Courier extends JavaPlugin {
                 getCConfig().clog(Level.SEVERE, "The Courier claimed map id " + mapId + " wasn't found in the world folder! Reclaiming.");
                 getCConfig().clog(Level.SEVERE, "If deleting the world (or maps) wasn't intended you should look into why this happened.");
                 mapId = -1;
+                // todo: if this happens, why don't I match on magic X instead of id on pickup/itemheld etc?
             }
             if(mapId == -1) {
                 // we don't have an allocated map stored, see if there is one we've forgotten about
@@ -581,12 +464,24 @@ public class Courier extends JavaPlugin {
             startDeliveries();
         }
 
-        // if config says we should use economy, require vault + economy support
-        if(!abort && config.getUseFees()) {
+        if(!abort) {
             Plugin x = getServer().getPluginManager().getPlugin("Vault");
             if(x != null && x instanceof Vault) {
                 vault = (Vault) x;
-
+                if(config.getNoPermissionPlugin()) {
+                    // admin does not want to use permissions
+                    noPermissionPlugin = true;
+                    config.clog(Level.INFO, "No Permissions plugin. Non-OP allowed courier.send, courier.write, courier.info & courier.list");
+                } else if(setupPermissions()) {
+                    // if Vault is installed, use it
+                    config.clog(Level.INFO, "Courier has linked to " + permission.getName() + " through Vault");
+                }
+            }
+        }
+        
+        // if config says we should use economy, require vault + economy support
+        if(!abort && config.getUseFees()) {
+            if(vault != null) {
                 if(setupEconomy()) {
                     config.clog(Level.INFO, "Courier has linked to " + economy.getName() + " through Vault");
                 } else {
@@ -612,6 +507,17 @@ public class Courier extends JavaPlugin {
         recipe.addIngredient(Material.COAL);
         getServer().addRecipe(recipe);*/
         //
+
+        // todo: configurable?
+        // Make burning of Letters possible
+        // oops, not allowed to have Material.AIR as the result .. (NPE) .. working around this in the event listener
+        // https://bukkit.atlassian.net/browse/BUKKIT-745
+
+        // duplicates on reload: https://bukkit.atlassian.net/browse/BUKKIT-738
+        if(!abort) {
+            FurnaceRecipe rec = new FurnaceRecipe(new ItemStack(Material.AIR), Material.MAP);
+            getServer().addRecipe(rec);
+        }
 
         if(!abort) {
             // display how much of the available Letter storage Courier is currently using
@@ -639,6 +545,14 @@ public class Courier extends JavaPlugin {
         return config;
     }
 
+    // avoid empty lines being output if we silence messages in the config
+    static void display(CommandSender s, String m) {
+        if((m == null) || m.isEmpty()) {
+            return;
+        }
+        s.sendMessage(m);
+    }
+
     private Boolean setupEconomy() {
         RegisteredServiceProvider<Economy> economyProvider = getServer().getServicesManager().getRegistration(net.milkbowl.vault.economy.Economy.class);
         if (economyProvider != null) {
@@ -648,6 +562,36 @@ public class Courier extends JavaPlugin {
         return (economy != null);
     }
 
+    private Boolean setupPermissions() {
+        RegisteredServiceProvider<Permission> permissionProvider = getServer().getServicesManager().getRegistration(net.milkbowl.vault.permission.Permission.class);
+        if (permissionProvider != null) {
+            permission = permissionProvider.getProvider();
+        }
+        return (permission != null);
+    }
+
+    // console, no-permissions, Permissions-through-Vault and finally SuperPerms
+    static public Boolean hasPermission(Player p, String perm) {
+        if(p == null) {
+            // console has admin permissions
+            return true;
+        } else if(noPermissionPlugin) {
+            if(p.isOp()) {
+                return true;
+            } else if(perm.equalsIgnoreCase(Courier.PM_LIST)  ||
+                      perm.equalsIgnoreCase(Courier.PM_WRITE) ||
+                      perm.equalsIgnoreCase(Courier.PM_INFO)  ||
+                      perm.equalsIgnoreCase(Courier.PM_SEND)) {
+                return true;
+            }
+            return false;
+        } else if(permission != null && permission.isEnabled()) {
+            return permission.has(p, perm);
+        } else {
+            return p.hasPermission(perm);
+        }
+    }
+    
     // Thanks to Sleaker & vault for the hint and code on how to use BukkitDev RSS feed for this
     // http://dev.bukkit.org/profiles/Sleaker/
     public String updateCheck(String currentVersion) {

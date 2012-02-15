@@ -1,7 +1,6 @@
 package se.troed.plugin.Courier;
 
 import org.bukkit.map.*;
-import org.bukkit.plugin.Plugin;
 
 import java.util.*;
 import java.util.logging.Level;

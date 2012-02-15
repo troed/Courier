@@ -4,7 +4,6 @@ import org.bukkit.configuration.Configuration;
 import org.bukkit.entity.CreatureType;
 import org.bukkit.plugin.PluginDescriptionFile;
 
-
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -20,6 +19,7 @@ public class CourierConfig {
     // any config file _older_ than this is invalid - compatibility break
     private static final String VERSIONBREAK = "0.9.0";
     private static final String UPDATEINTERVAL = "Courier.UpdateInterval";
+    private static final String NOPERMISSIONPLUGIN = "Courier.NoPermissionPlugin";
     private static final String FEE_SEND = "Courier.Fee.Send";
     private static final String FEE_INFOFEE = "Courier.Fee.InfoFee";
     private static final String FEE_INFONOFEE = "Courier.Fee.InfoNoFee";
@@ -60,6 +60,7 @@ public class CourierConfig {
     private static final String INFO_LINE3 = "Courier.Info.Line3";
     private static final String INFO_LINE4 = "Courier.Info.Line4";
 
+    private final boolean noPermissionPlugin;
     private final boolean useFees;
     private final int updateInterval;
     private final double feeSend;
@@ -130,7 +131,9 @@ public class CourierConfig {
                 clog(Level.SEVERE, "Config file version too old - unexpected behaviour might occur!");
             }
         }
-        
+
+        noPermissionPlugin = config.getBoolean(NOPERMISSIONPLUGIN, false); // added in v1.2.0
+        clog(Level.FINE, NOPERMISSIONPLUGIN + ": " + noPermissionPlugin);
         useFees = config.getBoolean(USEFEES, false); // added in 0.9.5
         clog(Level.FINE, USEFEES + ": " + useFees);
         updateInterval = config.getInt(UPDATEINTERVAL, 18000); // added in v1.1.0
@@ -160,22 +163,17 @@ public class CourierConfig {
         clog(Level.FINE, POSTMAN_SPAWNDISTANCE + ": " + spawnDistance);
         breakSpawnProtection = config.getBoolean(POSTMAN_BREAKSPAWNPROTECTION, true); // added in 0.9.6
         clog(Level.FINE, POSTMAN_BREAKSPAWNPROTECTION + ": " + breakSpawnProtection);
-        greeting = colorize(config.getString(POSTMAN_GREETING, "")); // added in 0.9.1
-        clog(Level.FINE, POSTMAN_GREETING + ": " + greeting);
-        maildrop = colorize(config.getString(POSTMAN_MAILDROP, "")); // added in 0.9.1
-        clog(Level.FINE, POSTMAN_MAILDROP + ": " + maildrop);
-        inventory = colorize(config.getString(POSTMAN_INVENTORY, "")); // added in 0.9.5
-        clog(Level.FINE, POSTMAN_INVENTORY + ": " + inventory);
-        cannotDeliver = colorize(config.getString(POSTMAN_CANNOTDELIVER, "")); // added in 0.9.6
-        clog(Level.FINE, POSTMAN_CANNOTDELIVER + ": " + cannotDeliver);
         showDate = config.getBoolean(LETTER_SHOWDATE, true); // added in 1.1.0
         clog(Level.FINE, LETTER_SHOWDATE + ": " + showDate);
-        letterDrop = colorize(config.getString(LETTER_DROP, "")); // added in 0.9.10
-        clog(Level.FINE, LETTER_DROP + ": " + letterDrop);
-        letterInventory = colorize(config.getString(LETTER_INVENTORY, "")); // added in 0.9.10
-        clog(Level.FINE, LETTER_INVENTORY + ": " + letterInventory);
         sealedEnvelope = config.getBoolean(PRIVACY_SEALED, true); // added in 0.9.11
         clog(Level.FINE, PRIVACY_SEALED + ": " + sealedEnvelope);
+
+        greeting = colorize(config.getString(POSTMAN_GREETING, "")); // added in 0.9.1
+        maildrop = colorize(config.getString(POSTMAN_MAILDROP, "")); // added in 0.9.1
+        inventory = colorize(config.getString(POSTMAN_INVENTORY, "")); // added in 0.9.5
+        cannotDeliver = colorize(config.getString(POSTMAN_CANNOTDELIVER, "")); // added in 0.9.6
+        letterDrop = colorize(config.getString(LETTER_DROP, "")); // added in 0.9.10
+        letterInventory = colorize(config.getString(LETTER_INVENTORY, "")); // added in 0.9.10
     }
     
     public String getVersion() {
@@ -184,6 +182,10 @@ public class CourierConfig {
     
     public int getUpdateInterval() {
         return updateInterval;
+    }
+
+    public boolean getNoPermissionPlugin() {
+        return noPermissionPlugin;
     }
 
     public boolean getUseFees() {

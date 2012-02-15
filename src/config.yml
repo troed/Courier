@@ -8,6 +8,7 @@ Courier:
   UseFees: false
   Version: 1.2.0
   UpdateInterval: 18000         # Checks for new versions every 5h. A value of 0 disables.
+  NoPermissionPlugin: false
   Fee:
     Send: 10
     InfoFee: "&7Courier: &fThe postage is %s"
@@ -50,7 +51,7 @@ Courier:
     FundProblem: "&7Courier: &fThere was a problem withdrawing funds for postage. Please tell your admin."
     NoLetter: "&7Courier: &fYou must be holding the letter you want to post! See /courier"
   Info:
-    Line1: "&f/letter message: &7Creates a Letter or adds text to an existing one"
-    Line2: "&f/post playername: &7Posts the Letter you're holding to playername"
+    Line1: "&f/letter [message]: &7Creates a Letter or adds text to an existing one"
+    Line2: "&f/post [playername]: &7Posts the Letter you're holding to playername"
     Line3: "&f/courier fees: &7Lists cost, if any, for Posting a Letter"
     Line4: "&f/courier unread: &7Request re-delivery of any unread mail"

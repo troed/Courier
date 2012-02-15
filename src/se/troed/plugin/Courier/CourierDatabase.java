@@ -23,12 +23,14 @@ import java.util.logging.Level;
  *  read
  *  (protected) - only admins can delete, not part of age cleanup?
  *
- *
- * or maybe parcels can just point out messages, no point in reciprocality?
+ * messages owning parcels via onetoone? if message deleted parcel is too. not the other way around.
+ * parcels can just point out messages, no point in reciprocality? recycle would need to do a !join with this table though
+ * Naming parcels after permissions gives .. what?
+ * http://dev.bukkit.org/server-mods/courier/tickets/26-fixed-messages-from-the-server/
  * (
  * parcel table
- *   id pk
- *   message - onetoone mapping with message table
+ *   id pk - or "String permission_name pk"?
+ *   message # 0 = new player parcel, 1 = something, 2 = something. How to make visible in code?
  * )
  */
 

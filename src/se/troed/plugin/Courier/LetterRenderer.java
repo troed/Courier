@@ -34,55 +34,51 @@ public class LetterRenderer extends MapRenderer {
     public void render(MapView map, MapCanvas canvas, Player player) {
 //        System.out.print("render(); ");
         // thanks to the above bug we end up here even if we're not holding a Map specifically
-        ItemStack item = player.getItemInHand();
-        if(item != null && item.getType() == Material.MAP) {
-            Letter letter = plugin.getLetter(item);
-            if(clear || (letter != null && lastId != letter.getId())) {
-                for(int j = 0; j < CANVAS_HEIGHT; j++) {
-                    for(int i = 0; i < CANVAS_WIDTH; i++) {
-                        //                    canvas.setPixel(i, j, clearImage[j*128+i]);
-                        canvas.setPixel(i, j, MapPalette.TRANSPARENT);
-                    }
+        Letter letter = plugin.getTracker().getLetter(player.getItemInHand());
+        if(clear || (letter != null && lastId != letter.getId())) {
+            for(int j = 0; j < CANVAS_HEIGHT; j++) {
+                for(int i = 0; i < CANVAS_WIDTH; i++) {
+                    //                    canvas.setPixel(i, j, clearImage[j*128+i]);
+                    canvas.setPixel(i, j, MapPalette.TRANSPARENT);
                 }
-                if(letter != null) {
-                    lastId = letter.getId();
-                }
-                clear = false;
             }
-            // todo: idea for pvp war servers: "your mail has fallen into enemy hands". "they've read it!")
-            if(letter != null && letter.isAllowedToSee(player.getName())) {
-                int drawPos = HEADER_POS;
-//                if(!letter.getReceiver().equalsIgnoreCase(letter.getSender())) {
-                if(letter.getHeader() != null) {
-                    canvas.drawText(0, MinecraftFont.Font.getHeight() * drawPos, MinecraftFont.Font, letter.getHeader());
-                    drawPos = BODY_POS;
-                }
-
-                canvas.drawText(letter.getLeftMarkerPos(), MinecraftFont.Font.getHeight(), MinecraftFont.Font, letter.getLeftMarker());
-                canvas.drawText(letter.getRightMarkerPos(), MinecraftFont.Font.getHeight(), MinecraftFont.Font, letter.getRightMarker());
-
-                canvas.drawText(0,
-                                MinecraftFont.Font.getHeight() * drawPos,
-                                MinecraftFont.Font, Letter.MESSAGE_COLOR + letter.getMessage());
-
-                if(letter.getDisplayDate() != null) {
-                    canvas.drawText(letter.getDisplayDatePos(),
-                                    0,
-                                    MinecraftFont.Font, Letter.DATE_COLOR + letter.getDisplayDate());
-                }
-
-                // this is the actual time we can be sure a letter has been read
-                // post an event to make sure we don't block the rendering pipeline
-                if(!letter.getRead()) {
-                    CourierDeliveryEvent event = new CourierDeliveryEvent(CourierDeliveryEvent.COURIER_READ, player, letter.getId());
-                    plugin.getServer().getPluginManager().callEvent(event);
-                    letter.setRead(true);
-                }
-            } else if(letter != null) {
-                String temp = Letter.HEADER_COLOR + "Sorry, only " + Letter.HEADER_FROM_COLOR +
-                              letter.getReceiver() + "\n" + Letter.HEADER_COLOR + "can read this letter";
-                canvas.drawText(0, MinecraftFont.Font.getHeight()*HEADER_POS, MinecraftFont.Font, temp);
+            if(letter != null) {
+                lastId = letter.getId();
             }
+            clear = false;
+        }
+
+        if(letter != null && letter.isAllowedToSee(player.getName())) {
+            int drawPos = HEADER_POS;
+            if(letter.getHeader() != null) {
+                canvas.drawText(0, MinecraftFont.Font.getHeight() * drawPos, MinecraftFont.Font, letter.getHeader());
+                drawPos = BODY_POS;
+            }
+
+            canvas.drawText(letter.getLeftMarkerPos(), MinecraftFont.Font.getHeight(), MinecraftFont.Font, letter.getLeftMarker());
+            canvas.drawText(letter.getRightMarkerPos(), MinecraftFont.Font.getHeight(), MinecraftFont.Font, letter.getRightMarker());
+
+            canvas.drawText(0,
+                            MinecraftFont.Font.getHeight() * drawPos,
+                            MinecraftFont.Font, Letter.MESSAGE_COLOR + letter.getMessage());
+
+            if(letter.getDisplayDate() != null) {
+                canvas.drawText(letter.getDisplayDatePos(),
+                                0,
+                                MinecraftFont.Font, Letter.DATE_COLOR + letter.getDisplayDate());
+            }
+
+            // this is the actual time we can be sure a letter has been read
+            // post an event to make sure we don't block the rendering pipeline
+            if(!letter.getRead()) {
+                CourierDeliveryEvent event = new CourierDeliveryEvent(CourierDeliveryEvent.COURIER_READ, player, letter.getId());
+                plugin.getServer().getPluginManager().callEvent(event);
+                letter.setRead(true);
+            }
+        } else if(letter != null) {
+            String temp = Letter.HEADER_COLOR + "Sorry, only " + Letter.HEADER_FROM_COLOR +
+                          letter.getReceiver() + "\n" + Letter.HEADER_COLOR + "can read this letter";
+            canvas.drawText(0, MinecraftFont.Font.getHeight()*HEADER_POS, MinecraftFont.Font, temp);
         }
     }
     

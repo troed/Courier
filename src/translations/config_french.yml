@@ -6,8 +6,9 @@
 #   - Set to false if Villager-Postmen keep pushing you into lava ;)
 Courier:
   UseFees: false
-  Version: 1.1.0
-  UpdateInterval: 18000
+  Version: 1.2.0
+  UpdateInterval: 18000         # Checks for new versions every 5h. A value of 0 disables.
+  NoPermissionPlugin: false
   Fee:
     Send: 10
     InfoFee: '&5Service postal: &fL''envoi vous coûtera %s'
@@ -60,8 +61,8 @@ Courier:
     NoLetter: '&5Service postal: &fVous devez tenir en main la lettre que vous souhaitez
       envoyer.'
   Info:
-    Line1: '&f/letter message: &7Crée une lettre ou ajoute du texte à celle que vous
+    Line1: '&f/letter [message]: &7Crée une lettre ou ajoute du texte à celle que vous
       tenez'
-    Line2: '&f/post playername: &7Poste la lettre au joueur spécifié (même hors-ligne)'
+    Line2: '&f/post [playername]: &7Poste la lettre au joueur spécifié (même hors-ligne)'
     Line3: '&f/courier fees: &7Indique le prix de l''envoi d''une lettre'
     Line4: '&f/courier unread: &7Vérifie si vous avez des lettres non reçues'

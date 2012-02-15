@@ -6,8 +6,9 @@
 #   - Set to false if Villager-Postmen keep pushing you into lava ;)
 Courier:
   UseFees: false
-  Version: 1.1.0
+  Version: 1.2.0
   UpdateInterval: 18000         # Checks for new versions every 5h. A value of 0 disables.
+  NoPermissionPlugin: false
   Fee:
     Send: 10
     InfoFee: "&7Courier: &fPortot är %s"
@@ -50,7 +51,7 @@ Courier:
     FundProblem: "&7Courier: &fDet var något problem med att betala porto. Säg till serveransvarig."
     NoLetter: "&7Courier: &fDu måste hålla brevet du vill skicka i händerna! Se /courier"
   Info:
-    Line1: "&f/letter meddelande: &7Skapar ett brev eller lägger till text till ett existerande"
-    Line2: "&f/post spelarnamn: &7Postar det brev du håller i till spelarnamn"
+    Line1: "&f/letter [meddelande]: &7Skapar ett brev eller lägger till text till ett existerande"
+    Line2: "&f/post [spelarnamn]: &7Postar det brev du håller i till spelarnamn"
     Line3: "&f/courier fees: &7Visar portoavgifter, om det finns några sådana"
     Line4: "&f/courier unread: &7Ber brevbäraren om att bära ut dina olästa brev igen"

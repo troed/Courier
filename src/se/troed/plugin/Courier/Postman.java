@@ -1,7 +1,6 @@
 package se.troed.plugin.Courier;
 
 import java.util.UUID;
-import java.util.logging.Level;
 
 import org.bukkit.Effect;
 import org.bukkit.Location;
@@ -79,27 +78,17 @@ public abstract class Postman {
     }
 
     public void cannotDeliver() {
-        String cannotDeliver = plugin.getCConfig().getCannotDeliver();
-        if(cannotDeliver != null && !cannotDeliver.isEmpty()) {
-            player.sendMessage(cannotDeliver);
-        }
+        Courier.display(player, plugin.getCConfig().getCannotDeliver());
     }
 
     public void announce(Location l) {
-        // todo: if in config, play effect
         player.playEffect(l, Effect.BOW_FIRE, 100);
-        String greeting = plugin.getCConfig().getGreeting();
-        if(greeting != null && !greeting.isEmpty()) {
-            player.sendMessage(greeting);
-        }
+        Courier.display(player, plugin.getCConfig().getGreeting());
     }
     
     public void drop() {
         postman.getWorld().dropItemNaturally(postman.getLocation(), letterItem);
-        String maildrop = plugin.getCConfig().getMailDrop();
-        if(maildrop != null && !maildrop.isEmpty()) {
-            player.sendMessage(maildrop);
-        }
+        Courier.display(player, plugin.getCConfig().getMailDrop());
     }
 
     public UUID getUUID() {
@@ -133,7 +122,7 @@ public abstract class Postman {
 
     // Called when either mail has been delivered or someone is attacking the postman
     public void quickDespawn() {
-        plugin.schedulePostmanDespawn(this.uuid, plugin.getCConfig().getQuickDespawnTime());
+        plugin.getTracker().schedulePostmanDespawn(this.uuid, plugin.getCConfig().getQuickDespawnTime());
         scheduledForQuickRemoval = true;
     }
 }
