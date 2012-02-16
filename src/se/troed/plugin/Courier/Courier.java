@@ -29,6 +29,7 @@ import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.CreatureType;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.FurnaceRecipe;
 import org.bukkit.inventory.ItemStack;
@@ -127,9 +128,9 @@ public class Courier extends JavaPlugin {
     }
 
     /**
-     * Picks a spot suitably in front of the player's eyes and checks to see if there's room 
+     * Picks a spot suitably in front of the player's eyes and checks to see if there's room
      * for a postman to spawn in line-of-sight
-     * 
+     *
      * Currently this can fail badly not checking whether we're on the same Y ..
      *
      * Also: Should be extended to check at least a few blocks to the sides and not JUST direct line of sight
@@ -140,7 +141,7 @@ public class Courier extends JavaPlugin {
     Location findSpawnLocation(Player p) {
         Location sLoc = null;
 
-        // o,o,o,o,o,o,x 
+        // o,o,o,o,o,o,x
         List<Block> blocks = p.getLineOfSight(null, getCConfig().getSpawnDistance());
         if(blocks != null && !blocks.isEmpty()) {
             Block block = blocks.get(blocks.size()-1); // get last block
@@ -172,7 +173,26 @@ public class Courier extends JavaPlugin {
                 }
             }
         }
-            
+
+        // make a feeble attempt at not betraying vanished players
+        // the box will likely need to be a lot bigger
+        // just loop through all online players instead? ~300 checks max
+        // but that would mean vanished players can never receive mail
+        if(sLoc != null) {
+            int length = getCConfig().getSpawnDistance();
+            List<Entity> entities = p.getNearbyEntities(length, 64, length);
+            for(Entity e : entities) {
+                if(e instanceof Player) {
+                    Player player = (Player) e;
+                    if(!player.canSee(p)) {
+                        sLoc = null; // it's enough that one Player nearby isn't supposed to see us
+                        break;
+                    }
+                }
+            }
+
+        }
+
         if(sLoc == null) {
             getCConfig().clog(Level.FINE, "Didn't find room to spawn Postman");
             // fail
