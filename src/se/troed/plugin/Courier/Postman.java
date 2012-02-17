@@ -17,7 +17,7 @@ import org.bukkit.inventory.ItemStack;
 public abstract class Postman {
 
     protected Creature postman;
-    protected CreatureType type;
+    protected final CreatureType type;
     protected final Courier plugin;
     protected final ItemStack letterItem;
     protected UUID uuid;

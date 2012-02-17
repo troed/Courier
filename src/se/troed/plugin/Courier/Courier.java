@@ -97,8 +97,8 @@ public class Courier extends JavaPlugin {
 
     private final Tracker tracker = new Tracker(this); // must be done before CourierEventListener
     private final CourierEventListener eventListener = new CourierEventListener(this);
-    private final CourierCommands courierCommands = new CourierCommands(this);
     private final CourierDB courierdb = new CourierDB(this);
+    private CourierCommands courierCommands = null;
     private CourierConfig config;
     private LetterRenderer letterRenderer = null;
     
@@ -330,6 +330,9 @@ public class Courier extends JavaPlugin {
 
     public void onEnable() {
         this.loadConfig();
+        if(courierCommands == null) {
+            courierCommands = new CourierCommands(this); // needs config to have been created
+        }
 
         try {
             this.saveResource("translations/readme.txt", true);

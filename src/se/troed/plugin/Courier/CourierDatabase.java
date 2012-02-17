@@ -22,6 +22,7 @@ import java.util.logging.Level;
  *  delivered
  *  read
  *  (protected) - only admins can delete, not part of age cleanup?
+ *  (multiple receivers) - excempt from /delete and drop/burning. sounds almost like (protected) doesn't it?
  *
  * messages owning parcels via onetoone? if message deleted parcel is too. not the other way around.
  * parcels can just point out messages, no point in reciprocality? recycle would need to do a !join with this table though
@@ -351,7 +352,7 @@ public class CourierDatabase extends MyDatabase {
 
     // todo: not deleting unread/undelivered? implement "protected" messages?
     public int recycleMessages(int utime) {
-        int count = 0;
+        int count;
         List<Message> messages = getDatabase().find(Message.class)
                 .where().lt(("mdate"), utime)
                 .findList();
@@ -480,13 +481,13 @@ public class CourierDatabase extends MyDatabase {
         return false;
     }
 
-    // returns the first available id, or -1 when we're fatally out of them (or db error .. hmm)
+    // returns the first available id, or throws an exception
     // expected to be called seldom (at letter creation) and is allowed to be slow
     // obvious caching/persisting of TreeSet possible
     // immediately reusing the same id might be a privacy problem
     // or use database id increment instead of this?
     // no, legacy (and fuzziness) prevents us from using .nextId(Message.class) ..
-    public int generateUID() {
+    public int generateUID() throws InternalError {
         TreeSet<Integer> sortedSet = new TreeSet<Integer>();
 
         Iterator messageit = getDatabase().find(Message.class).findIds().iterator();
@@ -496,13 +497,6 @@ public class CourierDatabase extends MyDatabase {
         }
         plugin.getCConfig().clog(Level.FINE, "Id: " + sortedSet.toString()); // todo: remove for release
 
-/*        List<Message> messages = getDatabase().find(Message.class).findList();
-        if (messages != null && !messages.isEmpty()) {
-            for(Message message : messages) {
-                sortedSet.add(message.getId());
-            }
-        }*/
-
         // make sure we don't enter negative number territory
         // todo: introduce "fuzziness" making nextId less predictable
         for(int i=Courier.MIN_ID; i<Courier.MAX_ID; i++) {
@@ -511,7 +505,7 @@ public class CourierDatabase extends MyDatabase {
                 return i;
             }
         }
-        return -1;
+        throw new InternalError("Could not allocate a unique letter ID!");
     }
 
     // returns the total number of Letters (rows) in the database

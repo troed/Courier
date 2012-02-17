@@ -17,7 +17,7 @@ import java.util.logging.Level;
  * Some of these could in a perfect world be persisted between restarts, but it's an edge case
  */
 public class Tracker {
-    Courier plugin;
+    private final Courier plugin;
 
     // tracks postmen from spawn to despawn
     private final Map<UUID, Postman> postmen = new HashMap<UUID, Postman>();

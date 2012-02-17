@@ -32,6 +32,9 @@ Courier:
     ExtraDeliveries: "&7Koerier: &fDe postbode zal nog een keer post rondbrengen."
     NoUnreadMail: "&7Koerier: &fJe hebt geen ongelezen post."
   Letter:
+    FreeLetter: true
+    # Multiple resources example: [CobbleStone, Paper, CobbleStone]
+    Resources: Paper
     ShowDate: true
     Drop: "&7Koerier: &fJe rugzak zat vol, de brief is op de grond gegooid."
     Inventory: "&7Koerier: &fJe had je handen vol, de postbode heeft de brief in je rugzak gestopt."
@@ -39,6 +42,9 @@ Courier:
     SkippedText: "&7Koerier: &fDelen van de ingevoerde tekst kunnen niet getoond worden en zijn overgeslagen!"
     CreateFailed: "&7Koerier: &fKon de brief niet maken! Stuur een bericht naar een Admin!"
     NoMoreUIDs: "&7Koerier: &fGeen unieke brief-IDs meer over! Stuur een bericht naar een Admin!"
+    InfoCost: "&7Courier: &fResources needed to create letters: %s."
+    InfoFree: "&7Courier: &fLetters don't require any resources to make."
+    LackingResources: "&7Courier: &fYou don't have the required resources to create a letter"
   Post:
     NoCredit: "&7Koerier: &fFout: Je hebt niet genoeg geld om de brief te versturen(%s)"
     NoRecipient: "&7Koerier: &fFout: Er is niemand om de brief naar te sturen!"

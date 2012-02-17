@@ -254,9 +254,7 @@ public class Letter {
             return 0;
         }
         int width = MinecraftFont.Font.getWidth(s);
-        plugin.getCConfig().clog(Level.INFO, String.valueOf(width));
         width += s.length(); // getWidth currently does not include the space between characters (1px) in its calculation
-        plugin.getCConfig().clog(Level.INFO, String.valueOf(width));
         return width;
     }
 }

@@ -34,6 +34,9 @@ Courier:
     ExtraDeliveries: '&5Service postal: &fLe facteur va bientôt passer chez vous.'
     NoUnreadMail: '&5Service postal: &fVous n''avez pas de lettres en attente.'
   Letter:
+    FreeLetter: true
+    # Multiple resources example: [CobbleStone, Paper, CobbleStone]
+    Resources: Paper
     ShowDate: true
     Drop: '&5Service postal: &fVotre lettre a été jetée au sol.'
     Inventory: '&5Service postal: &fVos mains étant occupées, le courrier a été placé
@@ -45,6 +48,9 @@ Courier:
       admin.'
     NoMoreUIDs: '&5Service postal: &fSystème à court d''IDs uniques ! Prévenez un
       admin.'
+    InfoCost: "&7Courier: &fResources needed to create letters: %s."
+    InfoFree: "&7Courier: &fLetters don't require any resources to make."
+    LackingResources: "&7Courier: &fYou don't have the required resources to create a letter"
   Post:
     NoCredit: '&5Service postal: &fVous n''avez pas assez d''argent pour envoyer une
       lettre (%s)'

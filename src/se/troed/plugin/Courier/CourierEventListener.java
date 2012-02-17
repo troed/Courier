@@ -78,6 +78,7 @@ class CourierEventListener implements Listener {
     }
 
     // Letters can be deleted by letting them despawn
+    // However, if the chunk is unloaded, will we ever get this event?
     @EventHandler(priority = EventPriority.MONITOR)
     public void onItemDespawnEvent(ItemDespawnEvent e) {
         if(e.isCancelled()) {
@@ -174,8 +175,10 @@ class CourierEventListener implements Listener {
         if(id == 0) {
             // special case. MapID 0 was a valid Courier Letter, Enchantment Level 0 is not!
             // (actually I was probably wrong about that, but let's go with it anyway)
-            int newId = plugin.getDb().generateUID();
-            if(newId == -1) {
+            int newId;
+            try {
+                newId = plugin.getDb().generateUID();
+            } catch (InternalError e) {
                 plugin.getCConfig().clog(Level.SEVERE, "Out of unique message IDs! Notify your admin!");
                 return null;
             }
