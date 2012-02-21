@@ -32,9 +32,10 @@ Courier:
     ExtraDeliveries: "&7Courier: &fBrevbäraren kommer att gå en extra runda."
     NoUnreadMail: "&7Courier: &fDu har inga olästa brev."
   Letter:
+    # FreeLetter set to true disables Resources and RequiresCrafting
     FreeLetter: true
     # Multiple resources example: [CobbleStone, Paper, CobbleStone]
-    Resources: Paper
+    Resources: [Coal, Paper]
     ShowDate: true
     Drop: "&7Courier: &fDin packning är full, ditt brev hamnade på marken."
     Inventory: "&7Courier: &fDu hade fullt upp, brevet har lagts i din packning."
@@ -44,7 +45,7 @@ Courier:
     NoMoreUIDs: "&7Courier: &fSlut på brev-ID! Säg till serveransvarig!"
     InfoCost: "&7Courier: &fResources needed to create letters: %s."
     InfoFree: "&7Courier: &fLetters don't require any resources to make."
-    LackingResources: "&7Courier: &fYou don't have the required resources to create a letter"
+    LackingResources: "&7Courier: &fYou don't have the required resources to create a letter. See /courier fees"
   Post:
     NoCredit: "&7Courier: &fDu har tyvärr inte tillräckligt med krediter för att täcka portot (%s)"
     NoRecipient: "&7Courier: &fProblem, du glömde skriva vem brevet ska skickas till!"

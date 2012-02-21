@@ -38,7 +38,7 @@ permissions:
     description: Allows players to use lazy name matching (suggestion list if more than one match)
     default: op
   courier.info:
-    description: General Courier commands
+    description: Info on fee structure
     default: true
   courier.admin:
     description: Database management

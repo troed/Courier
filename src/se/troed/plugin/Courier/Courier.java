@@ -519,11 +519,10 @@ public class Courier extends JavaPlugin {
             }
         }
 
-        // todo: temp
+        // todo: https://bukkit.atlassian.net/browse/BUKKIT-696
         // CRAP. This only works if shift-clicking!!! Else players get new normal maps with mapid++ ...
         // New idea, craft special paper? :/ No visible difference though ..
         // Probably needs en enhancement report on Bukkit to disregard mapid++ if mapid is supplied
-        // Done: https://bukkit.atlassian.net/browse/BUKKIT-696
 /*        ItemStack item = new ItemStack(Material.MAP, 1, getCourierdb().getCourierMapId());
         ShapelessRecipe recipe = new ShapelessRecipe(item);
         recipe.addIngredient(Material.PAPER);
@@ -531,11 +530,10 @@ public class Courier extends JavaPlugin {
         getServer().addRecipe(recipe);*/
         //
 
-        // todo: configurable?
+
         // Make burning of Letters possible
         // oops, not allowed to have Material.AIR as the result .. (NPE) .. working around this in the event listener
         // https://bukkit.atlassian.net/browse/BUKKIT-745
-
         // duplicates on reload: https://bukkit.atlassian.net/browse/BUKKIT-738
         if(!abort) {
             FurnaceRecipe rec = new FurnaceRecipe(new ItemStack(Material.AIR), Material.MAP);
@@ -581,7 +579,6 @@ public class Courier extends JavaPlugin {
         if (economyProvider != null) {
             economy = economyProvider.getProvider();
         }
-
         return (economy != null);
     }
 

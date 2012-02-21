@@ -1,9 +1,14 @@
 package se.troed.plugin.Courier;
 
-import org.bukkit.Material;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
 import org.bukkit.map.*;
+
+import javax.imageio.ImageIO;
+import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.logging.Level;
 
 public class LetterRenderer extends MapRenderer {
 
@@ -16,13 +21,26 @@ public class LetterRenderer extends MapRenderer {
     private final int CANVAS_WIDTH = 128;
     @SuppressWarnings("FieldCanBeLocal")
     private final int CANVAS_HEIGHT = 128;
-//    private final byte[] clearImage = new byte[128*128];  // nice letter background image todo
+    private final byte[] clearImage;// = new byte[128*128];  // todo: "shiny" background image for laminated letters
+    BufferedImage laminated = null;
     private int lastId = -1;
     private boolean clear = false;
 
     public LetterRenderer(Courier p) {
         super(true); // all our messages are contextual (i.e different for different players)
         plugin = p;
+        try {
+            InputStream is = plugin.getClass().getResourceAsStream("/laminated.png");
+            laminated = ImageIO.read(is);
+        } catch (IOException e) {
+            plugin.getCConfig().clog(Level.WARNING, "Unable to find laminated.png in .jar");
+            e.printStackTrace();
+        }
+        if(laminated != null) {
+            clearImage = MapPalette.imageToBytes(laminated);
+        } else {
+            clearImage = new byte[128*128];
+        }
     }
 
     // what? I'm getting _constant_ calls to this renderer method, 20tps, no matter if I'm holding a map or not!
@@ -38,10 +56,11 @@ public class LetterRenderer extends MapRenderer {
         if(clear || (letter != null && lastId != letter.getId())) {
             for(int j = 0; j < CANVAS_HEIGHT; j++) {
                 for(int i = 0; i < CANVAS_WIDTH; i++) {
-                    //                    canvas.setPixel(i, j, clearImage[j*128+i]);
+//                    canvas.setPixel(i, j, clearImage[j*128+i]);
                     canvas.setPixel(i, j, MapPalette.TRANSPARENT);
                 }
             }
+            canvas.drawImage(0, 0, laminated);
             if(letter != null) {
                 lastId = letter.getId();
             }

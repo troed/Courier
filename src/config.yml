@@ -32,10 +32,11 @@ Courier:
     ExtraDeliveries: "&7Courier: &fThe Postman will make extra deliveries"
     NoUnreadMail: "&7Courier: &fYou have no unread mail"
   Letter:
+    # FreeLetter set to true disables Resources and RequiresCrafting
     FreeLetter: true
+    # Multiple amount resources example: [CobbleStone, Paper, CobbleStone]
+    Resources: [Coal, Paper]
 #   RequiresCrafting: false
-    # Multiple resources example: [CobbleStone, Paper, CobbleStone]
-    Resources: Paper
     ShowDate: true
     Drop: "&7Courier: &fYour inventory is full, the letter was dropped onto the ground."
     Inventory: "&7Courier: &fYou had your hands full, the letter can be found in your inventory."
@@ -45,7 +46,7 @@ Courier:
     NoMoreUIDs: "&7Courier: &fOut of unique message IDs! Notify your admin!"
     InfoCost: "&7Courier: &fResources needed to create letters: %s."
     InfoFree: "&7Courier: &fLetters don't require any resources to make."
-    LackingResources: "&7Courier: &fYou don't have the required resources to create a letter"
+    LackingResources: "&7Courier: &fYou don't have the required resources to create a letter. See /courier fees"
   Post:
     NoCredit: "&7Courier: &fSorry, you don't have enough credit to cover postage (%s)"
     NoRecipient: "&7Courier: &fError, no recipient to post your letter to!"
@@ -60,5 +61,5 @@ Courier:
   Info:
     Line1: "&f/letter [message]: &7Creates a Letter or adds text to an existing one"
     Line2: "&f/post [playername]: &7Posts the Letter you're holding to playername"
-    Line3: "&f/courier fees: &7Lists cost, if any, for Posting or creating a Letter"
+    Line3: "&f/courier fees: &7Lists costs, if any, for Posting or creating Letters"
     Line4: "&f/courier unread: &7Request re-delivery of any unread mail"

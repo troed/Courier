@@ -148,6 +148,7 @@ class CourierCommands implements CommandExecutor {
 
             // todo: implement /courier list
         } else {
+            // todo: show [only/all] those the player has access to
             Courier.display(sender, config.getInfoLine1());
             Courier.display(sender, config.getInfoLine2());
             Courier.display(sender, config.getInfoLine3());
@@ -325,169 +326,141 @@ class CourierCommands implements CommandExecutor {
         permission: courier.write
         usage: /letter message        # Can be repeated to add additional text to existing held letter
      */
-    @SuppressWarnings("deprecation") // player.updateInventory()
     boolean commandLetter(Player player, String[] args) {
         // letter - no argument - chatmode?
-        // letter message - builds upon message in hand. We must be sender, I think.
+        if(args == null || args.length < 1) {
+            Courier.display(player, config.getLetterNoText());
+            return false;
+        }
+        // letter message - builds upon message in hand
         boolean ret = false;
         try {
-            if(args == null || args.length < 1) {
-                Courier.display(player, config.getLetterNoText());
+            ItemStack item = player.getItemInHand();
+            Letter letter = null;
+            boolean crafted = false;
+            if(item != null && item.getType() == Material.MAP) {
+                MapView map = plugin.getServer().getMap(item.getDurability());
+                if(map.getId() == plugin.getCourierdb().getCourierMapId()) {
+                    // this is a current Courier Letter
+                    letter = plugin.getTracker().getLetter(item);
+                    if(letter == null) {
+                        // this is apparently a crafted and pristine Letter, can safely be replaced properly later
+                        // unfortunately we're currently unable to craft Maps where we've decided the mapid, we'll never end up here.
+                        crafted = true;
+                        config.clog(Level.FINE, "Found crafted letter");
+                    }
+                }
+            }
+            int id = -1;
+            if(letter == null) {
+                // player had no Courier Letter in hand, create a new one
+                // see: http://dev.bukkit.org/server-mods/courier/tickets/16-postage-charges/
+                id = createLetterFromResources(player);
             } else {
-                ItemStack item = player.getItemInHand();
-                Letter letter = null;
-                boolean crafted = false;
-                if(item != null && item.getType() == Material.MAP) {
-                    MapView map = plugin.getServer().getMap(item.getDurability());
-                    if(map.getId() == plugin.getCourierdb().getCourierMapId()) {
-                        // this is a current Courier Letter
-                        letter = plugin.getTracker().getLetter(item);
-                        if(letter == null) {
-                            // this is apparently a crafted and pristine Letter, can safely be replaced properly later
-                            // unfortunately we're currently unable to craft Maps where we've decided the mapid, we'll never end up here.
-                            crafted = true;
-                            config.clog(Level.FINE, "Found crafted letter");
-                        }
+                id = letter.getId();
+            }
+            boolean securityBlocked = false;
+            if(id != -1) {
+                boolean useCached = true;
+                StringBuilder message = new StringBuilder();
+                if(letter != null && !letter.isAllowedToSee(player.getName())) {
+                    // oh my, we're not allowed to read this letter, just do nothing from here on
+                    securityBlocked = true;
+                } else if(letter != null) {
+                    // new stuff appended to the old
+                    // fetch from db, letter.getMessage contains newline formatted text
+                    message.append(plugin.getDb().getMessage(id));
+                    if(!player.getName().equalsIgnoreCase(letter.getSender())) {
+                        // we're adding to existing text from someone else, add newlines
+                        // extra credits: detect if we were going to be on a new line anyway, then only append one
+                        message.append("\\n \\n "); // replaced with actual newlines by Letter, later
+                        useCached = false;
                     }
                 }
-                int id = -1;
-                if(letter == null) {
-                    // player had no Courier Letter in hand, create a new one
-                    // see: http://dev.bukkit.org/server-mods/courier/tickets/16-postage-charges/
-                    if(!config.getFreeLetter()) {
-                        // letters aren't free on this server
-                        List<ItemStack> resources = config.getLetterResources();
-                        // verify player has the goods
-                        Inventory inv = player.getInventory();
-                        boolean lacking = false;
-                        for(ItemStack resource : resources) {
-                            config.clog(Level.FINE, "Requiring resource: " + resource.toString());
-                            // (ItemStack, amount) doesn't match, (Material, amount) does
-                            if(!inv.contains(resource.getType(), resource.getAmount())) {
-                                config.clog(Level.FINE, "Requiring resource: " + resource.toString() + " failed");
-                                lacking = true;
+                if(!securityBlocked) {
+                    // hey I added &nl a newline -> &nl      -> &nl
+                    // hey I added\n a newline   -> added\n  -> added \n
+                    // hey I added \na newline   -> \na      -> \n a
+                    // hey I added\na newline    -> added\na -> added \n a
+                    Pattern newlines = Pattern.compile("(\\s*\\\\n\\s*|\\s*&nl\\s*)");
+                    boolean invalid = false;
+                    try {
+                        for (String arg : args) {
+                            // http://dev.bukkit.org/server-mods/courier/tickets/34-illegal-argument-exception-in-map-font/
+                            if(!MinecraftFont.Font.isValid(arg)) {
+                                invalid = true;
+                                continue;
                             }
-                        }
-                        if(lacking) {
-                            Courier.display(player, config.getLetterLackingResources());
-                        } else {
-                            // subtract from inventory
-                            for(ItemStack resource : resources) {
-                                inv.removeItem(resource);
+                            // %loc -> [X,Y,Z] and such
+                            // if this grows, break it out and make it configurable
+                            if (arg.equalsIgnoreCase("%loc") || arg.equalsIgnoreCase("%pos")) {
+                                Location loc = player.getLocation();
+                                message.append("[" + loc.getBlockX() + "," + loc.getBlockY() + "," + loc.getBlockZ() + "]");
+                            } else {
+                                message.append(newlines.matcher(arg).replaceAll(" $1 ").trim()); // tokenize
                             }
-                            player.updateInventory(); // deprecated, but apparently the correct thing to do
-                            id = plugin.getDb().generateUID();
+                            message.append(" ");
                         }
-                    } else {
-                        // letters are free
-                        id = plugin.getDb().generateUID();
+                    } catch (Exception e) {
+                        config.clog(Level.SEVERE, "Caught Exception in MinecraftFont.isValid()");
+                        invalid = true;
                     }
-                } else {
-                    id = letter.getId();
-                }
-                boolean securityBlocked = false;
-                if(id != -1) {
-                    boolean useCached = true;
-                    StringBuilder message = new StringBuilder();
-                    if(letter != null && !letter.isAllowedToSee(player.getName())) {
-                        // oh my, we're not allowed to read this letter, just do nothing from here on
-                        securityBlocked = true;
-                    } else if(letter != null) {
-                        // new stuff appended to the old
-                        // fetch from db, letter.getMessage contains newline formatted text
-                        message.append(plugin.getDb().getMessage(id));
-                        if(!player.getName().equalsIgnoreCase(letter.getSender())) {
-                            // we're adding to existing text from someone else, add newlines
-                            // extra credits: detect if we were going to be on a new line anyway, then only append one
-                            message.append("\\n \\n "); // replaced with actual newlines by Letter, later
-                            useCached = false;
-                        }
-                    }
-                    if(!securityBlocked) {
-                        // hey I added &nl a newline -> &nl      -> &nl
-                        // hey I added\n a newline   -> added\n  -> added \n
-                        // hey I added \na newline   -> \na      -> \n a
-                        // hey I added\na newline    -> added\na -> added \n a
-                        Pattern newlines = Pattern.compile("(\\s*\\\\n\\s*|\\s*&nl\\s*)");
-                        boolean invalid = false;
-                        try {
-                            for (String arg : args) {
-                                // http://dev.bukkit.org/server-mods/courier/tickets/34-illegal-argument-exception-in-map-font/
-                                if(!MinecraftFont.Font.isValid(arg)) {
-                                    invalid = true;
-                                    continue;
-                                }
-                                // %loc -> [X,Y,Z] and such
-                                // if this grows, break it out and make it configurable
-                                if (arg.equalsIgnoreCase("%loc") || arg.equalsIgnoreCase("%pos")) {
-                                    Location loc = player.getLocation();
-                                    message.append("[" + loc.getBlockX() + "," + loc.getBlockY() + "," + loc.getBlockZ() + "]");
-                                } else {
-                                    message.append(newlines.matcher(arg).replaceAll(" $1 ").trim()); // tokenize
-                                }
-                                message.append(" ");
-                            }
-                        } catch (Exception e) {
-                            config.clog(Level.SEVERE, "Caught Exception in MinecraftFont.isValid()");
-                            invalid = true;
-                        }
-        
-                        if(invalid) {
-                            Courier.display(player, config.getLetterSkippedText());
-                        }
     
-                        if (plugin.getDb().storeMessage(id,
-                                player.getName(),
-                                message.toString(), // .trim() but then /letter on /letter needs added space anyway
-                                (int)(System.currentTimeMillis() / 1000L))) { // oh noes unix y2k issues!!!11
-            
-                            // no letter == we create and put in hands, or in inventory, or drop to ground
-                            // see CourierEventListener for similar code when Postman delivers letters
-                            if(letter == null) {
-                                ItemStack letterItem = new ItemStack(Material.MAP, 1, plugin.getCourierdb().getCourierMapId());
-                                letterItem.addUnsafeEnchantment(Enchantment.DURABILITY, id);
-                                if(!crafted && (item != null && item.getAmount() > 0)) {
-                                    config.clog(Level.FINE, "Player hands not empty");
-                                    HashMap<Integer, ItemStack> items = player.getInventory().addItem(letterItem);
-                                    if(items.isEmpty()) {
-                                        config.clog(Level.FINE, "Letter added to inventory");
-                                        Courier.display(player, config.getLetterInventory());
-                                    } else {
-                                        config.clog(Level.FINE, "Inventory full, letter dropped");
-                                        Courier.display(player, config.getLetterDrop());
-                                        player.getWorld().dropItemNaturally(player.getLocation(), letterItem);
-                                    }
+                    if(invalid) {
+                        Courier.display(player, config.getLetterSkippedText());
+                    }
+
+                    if (plugin.getDb().storeMessage(id,
+                            player.getName(),
+                            message.toString(), // .trim() but then /letter on /letter needs added space anyway
+                            (int)(System.currentTimeMillis() / 1000L))) { // oh noes unix y2k issues!!!11
+        
+                        // no letter == we create and put in hands, or in inventory, or drop to ground
+                        // see CourierEventListener for similar code when Postman delivers letters
+                        if(letter == null) {
+                            ItemStack letterItem = new ItemStack(Material.MAP, 1, plugin.getCourierdb().getCourierMapId());
+                            letterItem.addUnsafeEnchantment(Enchantment.DURABILITY, id);
+                            if(!crafted && (item != null && item.getAmount() > 0)) {
+                                config.clog(Level.FINE, "Player hands not empty");
+                                HashMap<Integer, ItemStack> items = player.getInventory().addItem(letterItem);
+                                if(items.isEmpty()) {
+                                    config.clog(Level.FINE, "Letter added to inventory");
+                                    Courier.display(player, config.getLetterInventory());
                                 } else {
-                                    // we end up here on empty hands or if we know player is holding a crafted Letter
-                                    config.clog(Level.FINE, "Letter delivered into player's hands");
-                                    player.setItemInHand(letterItem); // REALLY replaces what's there
-            
-                                    // quick render
-                                    player.sendMap(plugin.getServer().getMap(plugin.getCourierdb().getCourierMapId()));
+                                    config.clog(Level.FINE, "Inventory full, letter dropped");
+                                    Courier.display(player, config.getLetterDrop());
+                                    player.getWorld().dropItemNaturally(player.getLocation(), letterItem);
                                 }
                             } else {
-                                if(useCached) {
-                                    // set Message directly, we know no other info changed and want to keep current page info
-                                    letter.setMessage(message.toString());
-                                } else {
-                                    // existing Letter now has outdated info, will automatically be recreated from db
-                                    plugin.getTracker().removeLetter(id);
-                                    plugin.getLetterRenderer().forceClear();
-                                } 
+                                // we end up here on empty hands or if we know player is holding a crafted Letter
+                                config.clog(Level.FINE, "Letter delivered into player's hands");
+                                player.setItemInHand(letterItem); // REALLY replaces what's there
+        
+                                // quick render
+                                player.sendMap(plugin.getServer().getMap(plugin.getCourierdb().getCourierMapId()));
                             }
                         } else {
-                            Courier.display(player, config.getLetterCreateFailed());
-                            config.clog(Level.SEVERE, "Could not store letter in database!");
+                            if(useCached) {
+                                // set Message directly, we know no other info changed and want to keep current page info
+                                letter.setMessage(message.toString());
+                            } else {
+                                // existing Letter now has outdated info, will automatically be recreated from db
+                                plugin.getTracker().removeLetter(id);
+                                plugin.getLetterRenderer().forceClear();
+                            } 
                         }
-                        ret = true;
                     } else {
-                        // we were security blocked
-                        ret = true;
+                        Courier.display(player, config.getLetterCreateFailed());
+                        config.clog(Level.SEVERE, "Could not store letter in database!");
                     }
+                    ret = true;
                 } else {
-                    // letter was never created, feedback why has been sent to player
+                    // we were security blocked
                     ret = true;
                 }
+            } else {
+                // letter was never created, feedback why has been sent to player
+                ret = true;
             }
         } catch (InternalError e) {
             Courier.display(player, config.getLetterNoMoreUIDs());
@@ -523,5 +496,41 @@ class CourierCommands implements CommandExecutor {
             ret = commandPostman(player);
         }
         return ret;
+    }
+
+    // helper methods
+
+    @SuppressWarnings("deprecation") // player.updateInventory()
+    int createLetterFromResources(Player player) {
+        int id = -1;
+        if(!config.getFreeLetter()) {
+            // letters aren't free on this server
+            List<ItemStack> resources = config.getLetterResources();
+            // verify player has the goods
+            Inventory inv = player.getInventory();
+            boolean lacking = false;
+            for(ItemStack resource : resources) {
+                config.clog(Level.FINE, "Requiring resource: " + resource.toString());
+                // (ItemStack, amount) doesn't match, (Material, amount) does
+                if(!inv.contains(resource.getType(), resource.getAmount())) {
+                    config.clog(Level.FINE, "Requiring resource: " + resource.toString() + " failed");
+                    lacking = true;
+                }
+            }
+            if(lacking) {
+                Courier.display(player, config.getLetterLackingResources());
+            } else {
+                // subtract from inventory
+                for(ItemStack resource : resources) {
+                    inv.removeItem(resource);
+                }
+                player.updateInventory(); // deprecated, but apparently the correct thing to do
+                id = plugin.getDb().generateUID();
+            }
+        } else {
+            // letters are free
+            id = plugin.getDb().generateUID();
+        }
+        return id;
     }
 }
