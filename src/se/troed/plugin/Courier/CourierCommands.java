@@ -355,7 +355,7 @@ class CourierCommands implements CommandExecutor {
             if(letter == null) {
                 // player had no Courier Letter in hand, create a new one
                 // see: http://dev.bukkit.org/server-mods/courier/tickets/16-postage-charges/
-                id = createLetterFromResources(player);
+                id = createLetter(player);
             } else {
                 id = letter.getId();
             }
@@ -501,7 +501,7 @@ class CourierCommands implements CommandExecutor {
     // helper methods
 
     @SuppressWarnings("deprecation") // player.updateInventory()
-    int createLetterFromResources(Player player) {
+    int createLetter(Player player) {
         int id = -1;
         if(!config.getFreeLetter()) {
             // letters aren't free on this server

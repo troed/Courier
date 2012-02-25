@@ -171,10 +171,10 @@ public class CourierConfig {
         clog(Level.FINE, POSTMAN_BREAKSPAWNPROTECTION + ": " + breakSpawnProtection);
         showDate = config.getBoolean(LETTER_SHOWDATE, true); // added in 1.1.0
         clog(Level.FINE, LETTER_SHOWDATE + ": " + showDate);
-        freeLetter = config.getBoolean(LETTER_FREE, true); // added in 1.2.0
+        freeLetter = config.getBoolean(LETTER_FREE, true); // added in 1.1.5
         clog(Level.FINE, LETTER_FREE + ": " + freeLetter);
-        
-        List<String> letterResources = config.getStringList(LETTER_RESOURCES); // added in 1.2.0
+
+        List<String> letterResources = config.getStringList(LETTER_RESOURCES); // added in 1.1.5
         if(letterResources != null) {
             for(String resource : letterResources) {
                 Material material = Material.matchMaterial(resource);
@@ -255,7 +255,7 @@ public class CourierConfig {
     public boolean getFreeLetter() {
         return freeLetter;
     }
-    
+
     public List<ItemStack> getLetterResources() {
         return letterStacks;
     }
@@ -372,15 +372,15 @@ public class CourierConfig {
     }
     
     public String getLetterInfoCost(String resources) {
-        return String.format(colorize(config.getString(LETTER_INFOCOST, "")), resources); // 1.2.0
+        return String.format(colorize(config.getString(LETTER_INFOCOST, "")), resources); // 1.1.5
     }
 
     public String getLetterInfoFree() {
-        return colorize(config.getString(LETTER_INFOFREE, "")); // 1.2.0
+        return colorize(config.getString(LETTER_INFOFREE, "")); // 1.1.5
     }
 
     public String getLetterLackingResources() {
-        return colorize(config.getString(LETTER_LACKINGRESOURCES, "")); // 1.2.0
+        return colorize(config.getString(LETTER_LACKINGRESOURCES, "")); // 1.1.5
     }
 
     public String getInfoLine1() {

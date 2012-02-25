@@ -34,9 +34,9 @@ Courier:
     ExtraDeliveries: '&5Service postal: &fLe facteur va bientôt passer chez vous.'
     NoUnreadMail: '&5Service postal: &fVous n''avez pas de lettres en attente.'
   Letter:
-    # FreeLetter set to true disables Resources and RequiresCrafting
+    # FreeLetter set to true disables Resources
     FreeLetter: true
-    # Multiple resources example: [CobbleStone, Paper, CobbleStone]
+    # Multiple amount resources example: [CobbleStone, Paper, CobbleStone]
     Resources: [Coal, Paper]
     ShowDate: true
     Drop: '&5Service postal: &fVotre lettre a été jetée au sol.'
