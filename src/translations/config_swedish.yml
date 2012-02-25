@@ -6,7 +6,7 @@
 #   - Set to false if Villager-Postmen keep pushing you into lava ;)
 Courier:
   UseFees: false
-  Version: 1.1.1
+  Version: 1.1.5
   UpdateInterval: 18000         # Checks for new versions every 5h. A value of 0 disables.
   Fee:
     Send: 10
@@ -31,6 +31,10 @@ Courier:
     ExtraDeliveries: "&7Courier: &fBrevbäraren kommer att gå en extra runda."
     NoUnreadMail: "&7Courier: &fDu har inga olästa brev."
   Letter:
+    # FreeLetter set to true disables Resources
+    FreeLetter: true
+    # Multiple amount resources example: [CobbleStone, Paper, CobbleStone]
+    Resources: [Coal, Paper]
     ShowDate: true
     Drop: "&7Courier: &fDin packning är full, ditt brev hamnade på marken."
     Inventory: "&7Courier: &fDu hade fullt upp, brevet har lagts i din packning."
@@ -38,6 +42,9 @@ Courier:
     SkippedText: "&7Courier: &fDelar av texten kan inte visas och hoppades över."
     CreateFailed: "&7Courier: &fKunde inte skapa brevet! Säg till serveransvarig!"
     NoMoreUIDs: "&7Courier: &fSlut på brev-ID! Säg till serveransvarig!"
+    InfoCost: "&7Courier: &fResurser som behövs för att skapa ett brev: %s."
+    InfoFree: "&7Courier: &fDet behövs inga resurser för att skapa brev."
+    LackingResources: "&7Courier: &fDu har inte de resurser som behövs för att skapa brev. Se /courier fees"
   Post:
     NoCredit: "&7Courier: &fDu har tyvärr inte tillräckligt med krediter för att täcka portot (%s)"
     NoRecipient: "&7Courier: &fProblem, du glömde skriva vem brevet ska skickas till!"

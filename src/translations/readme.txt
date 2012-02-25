@@ -6,8 +6,9 @@ For more information on translations, see the Courier forum: http://dev.bukkit.o
 
 -= Translation credits =-
 
-Mogolecho   (French)
-G4M3        (French)
-defxor      (Swedish)
+spiderbiggen    (Dutch)
+Mogolecho       (French)
+G4M3            (French)
+defxor          (Swedish)
 
 (Whenever you see an incomplete translation it's purely the fault of the plugin author having added strings no one has had time to translate yet)

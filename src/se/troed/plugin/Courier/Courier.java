@@ -397,6 +397,7 @@ public class Courier extends JavaPlugin {
             this.saveResource("translations/readme.txt", true);
             this.saveResource("translations/config_french.yml", true);
             this.saveResource("translations/config_swedish.yml", true);
+            this.saveResource("translations/config_dutch.yml", true);
         } catch (Exception e) {
             config.clog(Level.WARNING, "Unable to copy translations from .jar to plugin folder");
         }

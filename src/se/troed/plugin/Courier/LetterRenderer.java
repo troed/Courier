@@ -74,7 +74,7 @@ public class LetterRenderer extends MapRenderer {
                 // this is the actual time we can be sure a letter has been read
                 // post an event to make sure we don't block the rendering pipeline
                 if(!letter.getRead()) {
-                    CourierDeliveryEvent event = new CourierDeliveryEvent(CourierDeliveryEvent.COURIER_READ, player, letter.getId());
+                    CourierReadEvent event = new CourierReadEvent(player, letter.getId());
                     plugin.getServer().getPluginManager().callEvent(event);
                     letter.setRead(true);
                 }

@@ -1,0 +1,63 @@
+# Config file version is used internally to detect non backward compatible breaks
+# All times are in seconds, distances in blocks
+# Strings can use &0..&f color coding
+# Courier has been tested with Postman.Type 'Enderman' and 'Villager', but will accept all Creature-types
+# Route.WalkToPlayer is not used for Monster-Postmen (they would attack), only "friendly mobs".
+#   - Set to false if Villager-Postmen keep pushing you into lava ;)
+Courier:
+  UseFees: false
+  Version: 1.1.5
+  UpdateInterval: 18000         # Checks for new versions every 5h. A value of 0 disables.
+  Fee:
+    Send: 10
+    InfoFee: "&7Koerier: &fDe verzend prijs is %s"
+    InfoNoFee: "&7Koerier: &fHet kost niks om post te versturen op deze server"
+  Route:
+    InitialWait: 10
+    NextRoute: 60
+    WalkToPlayer: true
+  Privacy:
+    SealedEnvelope: true
+  Postman:
+    Type: 'Enderman'
+    QuickDespawn: 3
+    Despawn: 20
+    SpawnDistance: 10
+    BreakSpawnProtection: true
+    Greeting: "&7Koerier: &fDe postbode is gearriveerd met post voor jou!"
+    MailDrop: "&7Koerier: &fJe post ligt op de grond."
+    Inventory: "&7Koerier: &fJe had je handen vol, de postbode heeft de post in je rugzak gestopt."
+    CannotDeliver: "&7Koerier: &fDe postbode heeft post voor jou, maar had geen toestemming om hier te komen."
+    ExtraDeliveries: "&7Koerier: &fDe postbode zal nog een keer post rondbrengen."
+    NoUnreadMail: "&7Koerier: &fJe hebt geen ongelezen post."
+  Letter:
+    # FreeLetter set to true disables Resources and RequiresCrafting
+    FreeLetter: true
+    # Multiple resources example: [CobbleStone, Paper, CobbleStone]
+    Resources: [Coal, Paper]
+    ShowDate: true
+    Drop: "&7Koerier: &fJe rugzak zat vol, de brief is op de grond gegooid."
+    Inventory: "&7Koerier: &fJe had je handen vol, de postbode heeft de brief in je rugzak gestopt."
+    NoText: "&7Koerier: &fFout: Geen tekst om toe te voegen aan de brief!"
+    SkippedText: "&7Koerier: &fDelen van de ingevoerde tekst kunnen niet getoond worden en zijn overgeslagen!"
+    CreateFailed: "&7Koerier: &fKon de brief niet maken! Stuur een bericht naar een Admin!"
+    NoMoreUIDs: "&7Koerier: &fGeen unieke brief-IDs meer over! Stuur een bericht naar een Admin!"
+    InfoCost: "&7Courier: &fResources needed to create letters: %s."
+    InfoFree: "&7Courier: &fLetters don't require any resources to make."
+    LackingResources: "&7Courier: &fYou don't have the required resources to create a letter. See /courier fees"
+  Post:
+    NoCredit: "&7Koerier: &fFout: Je hebt niet genoeg geld om de brief te versturen(%s)"
+    NoRecipient: "&7Koerier: &fFout: Er is niemand om de brief naar te sturen!"
+    DidYouMean: "&7Koerier: &fKon deze speler niet vinden: %1$s. Bedoelde je %2$s?"          # 1$ = input, 2$ = match
+    DidYouMeanList: "&7Koerier: &fKon deze speler niet vinden: %s. Bedoelde je een van deze spelers?"
+    DidYouMeanList2: "&7Koerier:&f %s"
+    NoSuchPlayer: "&7Koerier: &fEr is op deze server geen speler met de naam %s!"
+    LetterSent: "&7Koerier: &fBrief naar %s verzonden!"
+    LetterSentFee: "&7Koerier: &fBrief naar %1$s verzonden! Verzend prijs van %2$s betaald."    # 1$ = recipient, 2$ = fee
+    FundProblem: "&7Koerier: &fEr kon geen geen geld van je ''rekening'' gehaald worden. Stuur een bericht naar een Admin!"
+    NoLetter: "&7Koerier: &fJe moet de brief die je wilt versturen in je hand hebben! Zie /courier"
+  Info:
+    Line1: "&f/letter [bericht]: &7Maakt een brief of voegt tekst toe aan een bestaande brief"
+    Line2: "&f/post [spelernaam]: &7Verstuurt de brief die je in je hand hebt naar spelersnaam"
+    Line3: "&f/courier fees: &7Laat de kosten om een brief te versturen zien, als die er zijn."
+    Line4: "&f/courier unread: &7Aanvraag van her-bezorging van alle ongelezen post."

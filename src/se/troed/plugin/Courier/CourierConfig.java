@@ -1,10 +1,15 @@
 package se.troed.plugin.Courier;
 
+import org.bukkit.Material;
 import org.bukkit.configuration.Configuration;
 import org.bukkit.entity.CreatureType;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.material.MaterialData;
 import org.bukkit.plugin.PluginDescriptionFile;
 
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -37,6 +42,8 @@ public class CourierConfig {
     private static final String POSTMAN_CANNOTDELIVER = "Courier.Postman.CannotDeliver";
     private static final String POSTMAN_EXTRADELIVERIES = "Courier.Postman.ExtraDeliveries";
     private static final String POSTMAN_NOUNREADMAIL = "Courier.Postman.NoUnreadMail";
+    private static final String LETTER_FREE = "Courier.Letter.FreeLetter";
+    private static final String LETTER_RESOURCES = "Courier.Letter.Resources";
     private static final String LETTER_DROP = "Courier.Letter.Drop";
     private static final String LETTER_INVENTORY = "Courier.Letter.Inventory";
     private static final String LETTER_SHOWDATE = "Courier.Letter.ShowDate";
@@ -44,6 +51,9 @@ public class CourierConfig {
     private static final String LETTER_SKIPPEDTEXT = "Courier.Letter.SkippedText";
     private static final String LETTER_CREATEFAILED = "Courier.Letter.CreateFailed";
     private static final String LETTER_NOMOREUIDS = "Courier.Letter.NoMoreUIDs";
+    private static final String LETTER_INFOCOST = "Courier.Letter.InfoCost";
+    private static final String LETTER_INFOFREE = "Courier.Letter.InfoFree";
+    private static final String LETTER_LACKINGRESOURCES = "Courier.Letter.LackingResources";
     private static final String PRIVACY_SEALED = "Courier.Privacy.SealedEnvelope";
     private static final String POST_NOCREDIT = "Courier.Post.NoCredit";
     private static final String POST_NORECIPIENT = "Courier.Post.NoRecipient";
@@ -72,6 +82,8 @@ public class CourierConfig {
     private final boolean sealedEnvelope;
     private final boolean showDate;
     private final boolean walkToPlayer;
+    private final boolean freeLetter;
+    private final List<ItemStack> letterStacks = new ArrayList<ItemStack>();
     private CreatureType type = null;
     private String greeting = null;
     private String maildrop = null;
@@ -170,6 +182,35 @@ public class CourierConfig {
         clog(Level.FINE, POSTMAN_CANNOTDELIVER + ": " + cannotDeliver);
         showDate = config.getBoolean(LETTER_SHOWDATE, true); // added in 1.1.0
         clog(Level.FINE, LETTER_SHOWDATE + ": " + showDate);
+
+        freeLetter = config.getBoolean(LETTER_FREE, true); // added in 1.1.5
+        clog(Level.FINE, LETTER_FREE + ": " + freeLetter);
+
+        List<String> letterResources = config.getStringList(LETTER_RESOURCES); // added in 1.1.5
+        if(letterResources != null) {
+            for(String resource : letterResources) {
+                Material material = Material.matchMaterial(resource);
+                if(material != null) {
+                    boolean added = false;
+                    for(ItemStack is : letterStacks) {
+                        if(is.getType() == material) {
+                            // add to this existing stack
+                            is.setAmount(is.getAmount() + 1);
+                            added = true;
+                            break;
+                        }
+                    }
+                    if(!added) {
+                        // create new stack
+                        letterStacks.add(new MaterialData(material).toItemStack(1));
+                    }
+                } else {
+                    clog(Level.WARNING, "Cannot parse \'" + resource + "\' into a valid Minecraft resource! Skipped.");
+                }
+            }
+            clog(Level.FINE, LETTER_RESOURCES + ": " + letterStacks.toString());
+        }
+
         letterDrop = colorize(config.getString(LETTER_DROP, "")); // added in 0.9.10
         clog(Level.FINE, LETTER_DROP + ": " + letterDrop);
         letterInventory = colorize(config.getString(LETTER_INVENTORY, "")); // added in 0.9.10
@@ -220,6 +261,15 @@ public class CourierConfig {
 
     public boolean getShowDate() {
         return showDate;
+    }
+
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
+    public boolean getFreeLetter() {
+        return freeLetter;
+    }
+
+    public List<ItemStack> getLetterResources() {
+        return letterStacks;
     }
 
     public boolean getBreakSpawnProtection() {
@@ -330,6 +380,18 @@ public class CourierConfig {
 
     public String getLetterNoMoreUIDs() {
         return colorize(config.getString(LETTER_NOMOREUIDS)); // 1.1.0
+    }
+
+    public String getLetterInfoCost(String resources) {
+        return String.format(colorize(config.getString(LETTER_INFOCOST, "")), resources); // 1.1.5
+    }
+
+    public String getLetterInfoFree() {
+        return colorize(config.getString(LETTER_INFOFREE, "")); // 1.1.5
+    }
+
+    public String getLetterLackingResources() {
+        return colorize(config.getString(LETTER_LACKINGRESOURCES, "")); // 1.1.5
     }
 
     public String getInfoLine1() {
