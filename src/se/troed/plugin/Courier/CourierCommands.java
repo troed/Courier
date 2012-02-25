@@ -7,6 +7,7 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.*;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.map.MinecraftFont;
 
@@ -64,6 +65,13 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                     player.sendMessage(plugin.getCConfig().getInfoFee(plugin.getEconomy().format(fee)));
                 } else {
                     player.sendMessage(plugin.getCConfig().getInfoNoFee());
+                }
+                if(!plugin.getCConfig().getFreeLetter()) {
+                    // letters aren't free on this server
+                    List<ItemStack> resources = plugin.getCConfig().getLetterResources();
+                    player.sendMessage(plugin.getCConfig().getLetterInfoCost(resources.toString().replaceAll("[\\[\\]\\{\\}]|ItemStack", "")));
+                } else {
+                    player.sendMessage(plugin.getCConfig().getLetterInfoFree());
                 }
                 retVal = true;
             } else if(args[0].equalsIgnoreCase("unread")) {
@@ -256,11 +264,13 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
      */
     boolean commandLetter(Player player, String[] args) {
         // letter - no argument - chatmode?
-        // letter message - builds upon message in hand. We must be sender, I think.
-        boolean ret = false;
         if(args == null || args.length < 1) {
             player.sendMessage(plugin.getCConfig().getLetterNoText());
-        } else {
+            return false;
+        }
+        // letter message - builds upon message in hand
+        boolean ret = false;
+        try {
             ItemStack item = player.getItemInHand();
             Letter letter = null;
             if(item != null && item.getType() == Material.MAP) {
@@ -269,9 +279,8 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
             int id;
             if(letter == null) {
                 // player had no Courier Letter in hand, create a new one
-                // todo: this is a good place to add crafted Letter requirement (or other Item based cost)
                 // see: http://dev.bukkit.org/server-mods/courier/tickets/16-postage-charges/
-                id = plugin.getCourierdb().generateUID();
+                id = createLetter(player);
             } else {
                 id = letter.getId();
             }
@@ -380,10 +389,13 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                     ret = true;
                 }
             } else {
-                player.sendMessage(plugin.getCConfig().getLetterNoMoreUIDs());
-                plugin.getCConfig().clog(Level.SEVERE, "Out of unique message IDs!");
+                // letter was never created, feedback why has been sent to player
                 ret = true;
             }
+        } catch (InternalError e) {
+            player.sendMessage(plugin.getCConfig().getLetterNoMoreUIDs());
+            plugin.getCConfig().clog(Level.SEVERE, "Out of unique message IDs!");
+            ret = true;
         }
         return ret;
     }
@@ -416,7 +428,39 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
         return ret;
     }
 
-/*    public void onServerCommand(ServerCommandEvent event) {
-        plugin.getCConfig().clog(Level.FINE, "Server command event");
-    }*/
+    // helper methods
+
+    @SuppressWarnings("deprecation") // player.updateInventory()
+    int createLetter(Player player) {
+        int id = -1;
+        if(!plugin.getCConfig().getFreeLetter()) {
+            // letters aren't free on this server
+            List<ItemStack> resources = plugin.getCConfig().getLetterResources();
+            // verify player has the goods
+            Inventory inv = player.getInventory();
+            boolean lacking = false;
+            for(ItemStack resource : resources) {
+                plugin.getCConfig().clog(Level.FINE, "Requiring resource: " + resource.toString());
+                // (ItemStack, amount) doesn't match, (Material, amount) does
+                if(!inv.contains(resource.getType(), resource.getAmount())) {
+                    plugin.getCConfig().clog(Level.FINE, "Requiring resource: " + resource.toString() + " failed");
+                    lacking = true;
+                }
+            }
+            if(lacking) {
+                player.sendMessage(plugin.getCConfig().getLetterLackingResources());
+            } else {
+                // subtract from inventory
+                for(ItemStack resource : resources) {
+                    inv.removeItem(resource);
+                }
+                player.updateInventory(); // deprecated, but apparently the correct thing to do
+                id = plugin.getCourierdb().generateUID();
+            }
+        } else {
+            // letters are free
+            id = plugin.getCourierdb().generateUID();
+        }
+        return id;
+    }
 }

@@ -6,7 +6,7 @@
 #   - Set to false if Villager-Postmen keep pushing you into lava ;)
 Courier:
   UseFees: false
-  Version: 1.1.2
+  Version: 1.1.5
   UpdateInterval: 18000         # Checks for new versions every 5h. A value of 0 disables.
   Fee:
     Send: 10
@@ -31,6 +31,10 @@ Courier:
     ExtraDeliveries: "&7Courier: &fThe Postman will make extra deliveries"
     NoUnreadMail: "&7Courier: &fYou have no unread mail"
   Letter:
+    # FreeLetter set to true disables Resources
+    FreeLetter: true
+    # Multiple amount resources example: [CobbleStone, Paper, CobbleStone]
+    Resources: [Coal, Paper]
     ShowDate: true
     Drop: "&7Courier: &fYour inventory is full, the letter was dropped onto the ground."
     Inventory: "&7Courier: &fYou had your hands full, the letter can be found in your inventory."
@@ -38,6 +42,9 @@ Courier:
     SkippedText: "&7Courier: &fParts of the entered text cannot be displayed and was skipped"
     CreateFailed: "&7Courier: &fCould not create the letter! Notify your admin!"
     NoMoreUIDs: "&7Courier: &fOut of unique message IDs! Notify your admin!"
+    InfoCost: "&7Courier: &fResources needed to create letters: %s."
+    InfoFree: "&7Courier: &fLetters don't require any resources to make."
+    LackingResources: "&7Courier: &fYou don't have the required resources to create a letter. See /courier fees"
   Post:
     NoCredit: "&7Courier: &fSorry, you don't have enough credit to cover postage (%s)"
     NoRecipient: "&7Courier: &fError, no recipient to post your letter to!"
