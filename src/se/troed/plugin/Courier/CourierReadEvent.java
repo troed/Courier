@@ -5,13 +5,13 @@ import org.bukkit.event.Cancellable;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
-class CourierDeliveryEvent extends Event implements Cancellable {
+class CourierReadEvent extends Event implements Cancellable {
     private static final HandlerList handlers = new HandlerList();
     private boolean cancelled;
     private final Player player;
     private final int id;
 
-    public CourierDeliveryEvent(Player p, int id) {
+    public CourierReadEvent(Player p, int id) {
         player = p;
         this.id = id;
     }

@@ -28,17 +28,16 @@ class CourierEventListener implements Listener {
     @EventHandler(priority = EventPriority.NORMAL)
     void onCourierDeliveryEvent(CourierDeliveryEvent e) {
         if(e.getPlayer()!=null && e.getId()!=-1) {
-            if(e.getEventName().equals(CourierDeliveryEvent.COURIER_DELIVERED)) {
-                plugin.getCConfig().clog(Level.FINE, "Delivered letter to " + e.getPlayer().getName() + " with id " + e.getId());
-                plugin.getCourierdb().setDelivered(e.getPlayer().getName(), e.getId());
-            } else if(e.getEventName().equals(CourierDeliveryEvent.COURIER_READ)) {
-                plugin.getCConfig().clog(Level.FINE, e.getPlayer().getName() + " has read the letter with id " + e.getId());
-                plugin.getCourierdb().setRead(e.getPlayer().getName(), e.getId());
-            } else {
-                // dude, what?
-                plugin.getCConfig().clog(Level.WARNING, "Unknown Courier event " + e.getEventName() + " received!");
-            }
+            plugin.getCConfig().clog(Level.FINE, "Delivered letter to " + e.getPlayer().getName() + " with id " + e.getId());
+            plugin.getCourierdb().setDelivered(e.getPlayer().getName(), e.getId());
+        }
+    }
 
+    @EventHandler(priority = EventPriority.NORMAL)
+    void onCourierReadEvent(CourierReadEvent e) {
+        if(e.getPlayer()!=null && e.getId()!=-1) {
+            plugin.getCConfig().clog(Level.FINE, e.getPlayer().getName() + " has read the letter with id " + e.getId());
+            plugin.getCourierdb().setRead(e.getPlayer().getName(), e.getId());
         }
     }
 
@@ -85,7 +84,7 @@ class CourierEventListener implements Listener {
                     }
 
                     // delivered
-                    CourierDeliveryEvent event = new CourierDeliveryEvent(CourierDeliveryEvent.COURIER_DELIVERED, e.getPlayer(), letter.getEnchantmentLevel(Enchantment.DURABILITY));
+                    CourierDeliveryEvent event = new CourierDeliveryEvent(e.getPlayer(), letter.getEnchantmentLevel(Enchantment.DURABILITY));
                     plugin.getServer().getPluginManager().callEvent(event);
                 } else {
                     plugin.getCConfig().clog(Level.FINE, "Inventory full, letter dropped");
@@ -106,7 +105,7 @@ class CourierEventListener implements Listener {
                 }
 
                 // delivered
-                CourierDeliveryEvent event = new CourierDeliveryEvent(CourierDeliveryEvent.COURIER_DELIVERED, e.getPlayer(), letter.getEnchantmentLevel(Enchantment.DURABILITY));
+                CourierDeliveryEvent event = new CourierDeliveryEvent(e.getPlayer(), letter.getEnchantmentLevel(Enchantment.DURABILITY));
                 plugin.getServer().getPluginManager().callEvent(event);
             }
 
@@ -185,7 +184,7 @@ class CourierEventListener implements Listener {
                 plugin.getCConfig().clog(Level.FINE, "Letter " + letter.getId() + " picked up.");
 
                 // delivered
-                CourierDeliveryEvent event = new CourierDeliveryEvent(CourierDeliveryEvent.COURIER_DELIVERED, e.getPlayer(), letter.getId());
+                CourierDeliveryEvent event = new CourierDeliveryEvent(e.getPlayer(), letter.getId());
                 plugin.getServer().getPluginManager().callEvent(event);
 
                 // if itemheldhand was empty, we should render the letter immediately
