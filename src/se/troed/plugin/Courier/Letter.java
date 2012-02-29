@@ -164,6 +164,10 @@ public class Letter {
         return currentPage < message.size()-1 ? MARKER_COLOR + ">>" : "";
     }
 
+    public boolean isLaminated() {
+        return true; // todo: true for testing
+    }
+
     @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     public boolean getRead() {
         return read;

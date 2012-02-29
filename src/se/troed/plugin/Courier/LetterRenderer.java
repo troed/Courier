@@ -21,7 +21,7 @@ public class LetterRenderer extends MapRenderer {
     private final int CANVAS_WIDTH = 128;
     @SuppressWarnings("FieldCanBeLocal")
     private final int CANVAS_HEIGHT = 128;
-    private final byte[] clearImage;// = new byte[128*128];  // todo: "shiny" background image for laminated letters
+    private final byte[] clearImage;
     BufferedImage laminated = null;
     private int lastId = -1;
     private boolean clear = false;
@@ -30,16 +30,19 @@ public class LetterRenderer extends MapRenderer {
         super(true); // all our messages are contextual (i.e different for different players)
         plugin = p;
         try {
+            // todo: issues at /reload here
             InputStream is = plugin.getClass().getResourceAsStream("/laminated.png");
             laminated = ImageIO.read(is);
+            is.close();
         } catch (IOException e) {
             plugin.getCConfig().clog(Level.WARNING, "Unable to find laminated.png in .jar");
             e.printStackTrace();
         }
         if(laminated != null) {
-            clearImage = MapPalette.imageToBytes(laminated);
+            plugin.getCConfig().clog(Level.FINE, "Laminated image found");
+            clearImage = imageToBytes(laminated);
         } else {
-            clearImage = new byte[128*128];
+            clearImage = new byte[128*128]; // todo: manually in code "shiny" background image for laminated letters? nah, make this null
         }
     }
 
@@ -54,13 +57,20 @@ public class LetterRenderer extends MapRenderer {
         // thanks to the above bug we end up here even if we're not holding a Map specifically
         Letter letter = plugin.getTracker().getLetter(player.getItemInHand());
         if(clear || (letter != null && lastId != letter.getId())) {
-            for(int j = 0; j < CANVAS_HEIGHT; j++) {
-                for(int i = 0; i < CANVAS_WIDTH; i++) {
-//                    canvas.setPixel(i, j, clearImage[j*128+i]);
-                    canvas.setPixel(i, j, MapPalette.TRANSPARENT);
+            if(letter.isLaminated()) {
+//            canvas.drawImage(0, 0, laminated);
+                for(int j = 0; j < CANVAS_HEIGHT; j++) {
+                    for(int i = 0; i < CANVAS_WIDTH; i++) {
+                        canvas.setPixel(i, j, clearImage[j * CANVAS_WIDTH + i]);
+                    }
+                }
+            } else {
+                for(int j = 0; j < CANVAS_HEIGHT; j++) {
+                    for(int i = 0; i < CANVAS_WIDTH; i++) {
+                        canvas.setPixel(i, j, MapPalette.TRANSPARENT);
+                    }
                 }
             }
-            canvas.drawImage(0, 0, laminated);
             if(letter != null) {
                 lastId = letter.getId();
             }
@@ -105,4 +115,22 @@ public class LetterRenderer extends MapRenderer {
     public void forceClear() {
         clear = true;
     }
+
+    // MapPalette.imageToBytes fails to create Colors with alpha - corrected below
+    // https://bukkit.atlassian.net/browse/BUKKIT-852
+    public static byte[] imageToBytes(Image image) {
+        BufferedImage temp = new BufferedImage(image.getWidth(null), image.getHeight(null), BufferedImage.TYPE_INT_ARGB);
+        Graphics2D graphics = temp.createGraphics();
+        graphics.drawImage(image, 0, 0, null);
+        graphics.dispose();
+
+        int[] pixels = new int[temp.getWidth() * temp.getHeight()];
+        temp.getRGB(0, 0, temp.getWidth(), temp.getHeight(), pixels, 0, temp.getWidth());
+
+        byte[] result = new byte[temp.getWidth() * temp.getHeight()];
+        for (int i = 0; i < pixels.length; i++) {
+            result[i] = MapPalette.matchColor(new Color(pixels[i], true)); // correction: new Color(int, true)
+        }
+        return result;
+    }    
 }
