@@ -191,13 +191,14 @@ public class Courier extends JavaPlugin {
             }
             if(block.isEmpty()) {
                 // find bottom
+                // http://dev.bukkit.org/server-mods/courier/tickets/62-first-letter-sent-and-received-crash/
                 getCConfig().clog(Level.FINE, "findSpawnLocation air block");
-                while(block.getRelative(BlockFace.DOWN, 1).isEmpty()) {
+                while(block.getY() > 0 && block.getRelative(BlockFace.DOWN, 1).isEmpty()) {
                     getCConfig().clog(Level.FINE, "findSpawnLocation going down ...");
                     block = block.getRelative(BlockFace.DOWN, 1);
                 }
                 // verify this is something we can stand on and that we fit
-                if(!block.getRelative(BlockFace.DOWN, 1).isLiquid()) {
+                if(block.getY() > 0 && !block.getRelative(BlockFace.DOWN, 1).isLiquid()) {
                     if(Postman.getHeight(this) > 2 && (!block.getRelative(BlockFace.UP, 1).isEmpty() || !block.getRelative(BlockFace.UP, 2).isEmpty())) {
                         // Enderpostmen don't fit
                     } else if(Postman.getHeight(this) > 1 && !block.getRelative(BlockFace.UP, 1).isEmpty()) {
