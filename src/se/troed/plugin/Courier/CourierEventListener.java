@@ -198,7 +198,10 @@ class CourierEventListener implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onItemHeldChange(PlayerItemHeldEvent e) {
-        if(e.getPlayer().getInventory().getItem(e.getNewSlot()).getType() == Material.MAP) {
+        // adding blind null check because of
+        // http://dev.bukkit.org/server-mods/courier/tickets/63-could-not-pass-event-player-item-held-event-to-courier/
+        ItemStack item = e.getPlayer().getInventory().getItem(e.getNewSlot());
+        if(item != null && item.getType() == Material.MAP) {
             // legacy Courier support
             MapView map = plugin.getServer().getMap(e.getPlayer().getInventory().getItem(e.getNewSlot()).getDurability());
             // todo: actually, if it's enchanted we should just switch to the new map_id
