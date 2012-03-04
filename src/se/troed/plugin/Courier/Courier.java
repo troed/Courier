@@ -28,8 +28,8 @@ import org.bukkit.block.Biome;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.command.CommandSender;
-import org.bukkit.entity.CreatureType;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.FurnaceRecipe;
 import org.bukkit.inventory.ItemStack;
@@ -264,7 +264,7 @@ public class Courier extends JavaPlugin {
                 config.clog(Level.FINE, "Undelivered messageid: " + undeliveredMessageId);
                 if (undeliveredMessageId != -1) {
                     Location spawnLoc = findSpawnLocation(player);
-                    if(spawnLoc != null && player.getWorld().hasStorm() && config.getType() == CreatureType.ENDERMAN) {
+                    if(spawnLoc != null && player.getWorld().hasStorm() && config.getType() == EntityType.ENDERMAN) {
                         // hey. so rails on a block cause my findSpawnLocation to choose the block above
                         // I guess there are additional checks I should add. emptiness?
                         // todo: that also means we try to spawn an enderpostman on top of rails even in rain
@@ -340,6 +340,7 @@ public class Courier extends JavaPlugin {
             this.saveResource("translations/config_french.yml", true);
             this.saveResource("translations/config_swedish.yml", true);
             this.saveResource("translations/config_dutch.yml", true);
+            this.saveResource("translations/config_german.yml", true);
         } catch (Exception e) {
             config.clog(Level.WARNING, "Unable to copy translations from .jar to plugin folder");
         }

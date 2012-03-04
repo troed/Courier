@@ -2,7 +2,7 @@ package se.troed.plugin.Courier;
 
 import org.bukkit.Material;
 import org.bukkit.configuration.Configuration;
-import org.bukkit.entity.CreatureType;
+import org.bukkit.entity.EntityType;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.material.MaterialData;
 import org.bukkit.plugin.PluginDescriptionFile;
@@ -85,8 +85,7 @@ public class CourierConfig {
     private final boolean walkToPlayer;
     private final boolean freeLetter;
     private final List<ItemStack> letterStacks = new ArrayList<ItemStack>();
-    private CreatureType type = null;
-
+    private EntityType type = null;
     private final String version;
     
     public CourierConfig(Courier plug) {
@@ -158,9 +157,9 @@ public class CourierConfig {
         clog(Level.FINE, ROUTE_WALKTOPLAYER + ": " + walkToPlayer);
 
         String stype = config.getString(POSTMAN_TYPE, "Enderman"); // added in 1.1.0
-        type = CreatureType.fromName(stype);
+        type = EntityType.fromName(stype);
         if(type == null) {
-            type = CreatureType.ENDERMAN;
+            type = EntityType.ENDERMAN;
             clog(Level.WARNING, "Postman.Type: " + stype + " is not a valid Creature, using default.");
         }
         clog(Level.FINE, POSTMAN_TYPE + ": " + type.getName());
@@ -239,7 +238,7 @@ public class CourierConfig {
         return walkToPlayer;
     }
 
-    public CreatureType getType() {
+    public EntityType getType() {
         return type;
     }
 

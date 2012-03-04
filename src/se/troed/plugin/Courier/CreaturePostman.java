@@ -2,7 +2,7 @@ package se.troed.plugin.Courier;
 
 import org.bukkit.Location;
 import org.bukkit.entity.Creature;
-import org.bukkit.entity.CreatureType;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 
 /* Allows all Creatures to be Postmen, although we only test with Villagers (and Enderman)
@@ -14,7 +14,7 @@ import org.bukkit.entity.Player;
  */
 public class CreaturePostman extends Postman {
 
-    CreaturePostman(Courier plug, Player p, int id, CreatureType t) {
+    CreaturePostman(Courier plug, Player p, int id, EntityType t) {
         super(plug, p, id, t);
     }
 

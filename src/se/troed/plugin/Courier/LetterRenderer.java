@@ -57,7 +57,7 @@ public class LetterRenderer extends MapRenderer {
         // thanks to the above bug we end up here even if we're not holding a Map specifically
         Letter letter = plugin.getTracker().getLetter(player.getItemInHand());
         if(clear || (letter != null && lastId != letter.getId())) {
-            if(letter.isLaminated()) {
+            if(letter != null && letter.isLaminated()) {
 //            canvas.drawImage(0, 0, laminated);
                 for(int j = 0; j < CANVAS_HEIGHT; j++) {
                     for(int i = 0; i < CANVAS_WIDTH; i++) {

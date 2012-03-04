@@ -26,7 +26,7 @@ class CourierEventListener implements Listener {
         plugin = p;
         tracker = p.getTracker();
     }
-
+    // todo: use (ignoreCancelled = true) wherever appropriate
     @EventHandler(priority = EventPriority.MONITOR)
     void onCourierDeliveryEvent(CourierDeliveryEvent e) {
         if(e.getPlayer()!=null && e.getId()!=-1) {
@@ -198,8 +198,7 @@ class CourierEventListener implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onItemHeldChange(PlayerItemHeldEvent e) {
-        // adding blind null check because of
-        // http://dev.bukkit.org/server-mods/courier/tickets/63-could-not-pass-event-player-item-held-event-to-courier/
+        // http://dev.bukkit.org/server-mods/courier/tickets/36-severe-could-not-pass-event-player-item-held-event/
         ItemStack item = e.getPlayer().getInventory().getItem(e.getNewSlot());
         if(item != null && item.getType() == Material.MAP) {
             // legacy Courier support
@@ -334,7 +333,7 @@ class CourierEventListener implements Listener {
     // in theory we could add another listener at Monitor priority for announce() ..
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onCreatureSpawn(CreatureSpawnEvent e) {
-        if(e.getCreatureType() == plugin.getCConfig().getType()) {
+        if(e.getEntity().getType() == plugin.getCConfig().getType()) {
             // we end up here before we've had a chance to log and store our Postman uuids!
             // this means we cannot reliably override spawn deniers with perfect identification.
             // We match on Location instead but it's not pretty. Might be the only solution though.

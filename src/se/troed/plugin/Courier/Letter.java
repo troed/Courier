@@ -165,7 +165,7 @@ public class Letter {
     }
 
     public boolean isLaminated() {
-        return true; // todo: true for testing
+        return false; // todo: true for testing
     }
 
     @SuppressWarnings("BooleanMethodIsAlwaysInverted")

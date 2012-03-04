@@ -6,6 +6,7 @@ For more information on translations, see the Courier forum: http://dev.bukkit.o
 
 -= Translation credits =-
 
+lordtobiMC      (German)
 spiderbiggen    (Dutch)
 Mogolecho       (French)
 G4M3            (French)
