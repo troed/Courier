@@ -18,7 +18,7 @@ import org.bukkit.inventory.ItemStack;
 public abstract class Postman {
 
     protected Creature postman;
-    protected CreatureType type;
+    protected EntityType type;
     protected final Courier plugin;
     protected final ItemStack letterItem;
     protected UUID uuid;
@@ -27,7 +27,7 @@ public abstract class Postman {
     protected Runnable runnable;
     protected final Player player;
 
-    protected Postman(Courier plug, Player p, int id, CreatureType t) {
+    protected Postman(Courier plug, Player p, int id, EntityType t) {
         plugin = plug;
         player = p;
         type = t;
@@ -37,7 +37,7 @@ public abstract class Postman {
     }
     
     static Postman create(Courier plug, Player p, int id) {
-        if(plug.getCConfig().getType() == CreatureType.ENDERMAN) {
+        if(plug.getCConfig().getType() == EntityType.ENDERMAN) {
             return new EnderPostman(plug, p, id, plug.getCConfig().getType());
         } else {
             return new CreaturePostman(plug, p, id, plug.getCConfig().getType());
@@ -47,27 +47,27 @@ public abstract class Postman {
     // must be implemented
     public abstract void spawn(Location l);
 
-    public CreatureType getType() {
+    public EntityType getType() {
         return type;
     }
 
     // yes I know this fails in many cases, we only "promise" Endermen and Villagers for now
     // would need to contain all Creatures for this to work realiably
     static int getHeight(Courier plug) {
-        CreatureType type = plug.getCConfig().getType();
-        if(type == CreatureType.ENDERMAN) {
+        EntityType type = plug.getCConfig().getType();
+        if(type == EntityType.ENDERMAN) {
             return 3;
-        } else if(type == CreatureType.VILLAGER ||
-                  type == CreatureType.BLAZE ||
-                  type == CreatureType.COW ||
-                  type == CreatureType.CREEPER ||
-                  type == CreatureType.MUSHROOM_COW ||
-                  type == CreatureType.PIG_ZOMBIE ||
-                  type == CreatureType.SHEEP ||
-                  type == CreatureType.SKELETON ||
-                  type == CreatureType.SNOWMAN ||
-                  type == CreatureType.SQUID ||
-                  type == CreatureType.ZOMBIE) {
+        } else if(type == EntityType.VILLAGER ||
+                  type == EntityType.BLAZE ||
+                  type == EntityType.COW ||
+                  type == EntityType.CREEPER ||
+                  type == EntityType.MUSHROOM_COW ||
+                  type == EntityType.PIG_ZOMBIE ||
+                  type == EntityType.SHEEP ||
+                  type == EntityType.SKELETON ||
+                  type == EntityType.SNOWMAN ||
+                  type == EntityType.SQUID ||
+                  type == EntityType.ZOMBIE) {
             return 2;
         } else {
             return 1;
