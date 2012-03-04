@@ -25,7 +25,7 @@ import org.bukkit.block.Biome;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.enchantments.Enchantment;
-import org.bukkit.entity.CreatureType;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.map.MapRenderer;
@@ -191,13 +191,14 @@ public class Courier extends JavaPlugin {
             }
             if(block.isEmpty()) {
                 // find bottom
+                // http://dev.bukkit.org/server-mods/courier/tickets/62-first-letter-sent-and-received-crash/
                 getCConfig().clog(Level.FINE, "findSpawnLocation air block");
-                while(block.getRelative(BlockFace.DOWN, 1).isEmpty()) {
+                while(block.getY() > 0 && block.getRelative(BlockFace.DOWN, 1).isEmpty()) {
                     getCConfig().clog(Level.FINE, "findSpawnLocation going down ...");
                     block = block.getRelative(BlockFace.DOWN, 1);
                 }
                 // verify this is something we can stand on and that we fit
-                if(!block.getRelative(BlockFace.DOWN, 1).isLiquid()) {
+                if(block.getY() > 0 && !block.getRelative(BlockFace.DOWN, 1).isLiquid()) {
                     if(Postman.getHeight(this) > 2 && (!block.getRelative(BlockFace.UP, 1).isEmpty() || !block.getRelative(BlockFace.UP, 2).isEmpty())) {
                         // Enderpostmen don't fit
                     } else if(Postman.getHeight(this) > 1 && !block.getRelative(BlockFace.UP, 1).isEmpty()) {
@@ -320,7 +321,7 @@ public class Courier extends JavaPlugin {
                 config.clog(Level.FINE, "Undelivered messageid: " + undeliveredMessageId);
                 if (undeliveredMessageId != -1) {
                     Location spawnLoc = findSpawnLocation(player);
-                    if(spawnLoc != null && player.getWorld().hasStorm() && config.getType() == CreatureType.ENDERMAN) {
+                    if(spawnLoc != null && player.getWorld().hasStorm() && config.getType() == EntityType.ENDERMAN) {
                         // hey. so rails on a block cause my findSpawnLocation to choose the block above
                         // I guess there are additional checks I should add. emptiness?
                         // todo: that also means we try to spawn an enderpostman on top of rails even in rain
@@ -398,6 +399,7 @@ public class Courier extends JavaPlugin {
             this.saveResource("translations/config_french.yml", true);
             this.saveResource("translations/config_swedish.yml", true);
             this.saveResource("translations/config_dutch.yml", true);
+            this.saveResource("translations/config_german.yml", true);
         } catch (Exception e) {
             config.clog(Level.WARNING, "Unable to copy translations from .jar to plugin folder");
         }

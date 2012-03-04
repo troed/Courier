@@ -6,8 +6,8 @@
 #   - Set to false if Villager-Postmen keep pushing you into lava ;)
 Courier:
   UseFees: false
-  Version: 1.1.5
-  UpdateInterval: 18000
+  Version: 1.1.6
+  UpdateInterval: 18000         # Checks for new versions every 5h. A value of 0 disables.
   Fee:
     Send: 10
     InfoFee: '&5Service postal: &fL''envoi vous coûtera %s'
