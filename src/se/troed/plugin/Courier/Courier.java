@@ -180,8 +180,16 @@ public class Courier extends JavaPlugin {
     Location findSpawnLocation(Player p) {
         Location sLoc = null;
 
-        // o,o,o,o,o,o,x 
-        List<Block> blocks = p.getLineOfSight(null, getCConfig().getSpawnDistance());
+        List<Block> blocks;
+        // http://dev.bukkit.org/server-mods/courier/tickets/67-task-of-courier-generated-an-exception/
+        // "@param maxDistance This is the maximum distance in blocks for the trace. Setting this value above 140 may lead to problems with unloaded chunks. A value of 0 indicates no limit"
+        try {
+            // o,o,o,o,o,o,x
+            blocks = p.getLineOfSight(null, getCConfig().getSpawnDistance());
+        } catch (IllegalStateException e) {
+            blocks = null;
+            getCConfig().clog(Level.WARNING, "caught IllegalStateException in getLineOfSight");
+        }
         if(blocks != null && !blocks.isEmpty()) {
             Block block = blocks.get(blocks.size()-1); // get last block
             getCConfig().clog(Level.FINE, "findSpawnLocation got lineOfSight");
