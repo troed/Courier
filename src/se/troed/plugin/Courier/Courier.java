@@ -20,11 +20,15 @@ package se.troed.plugin.Courier;
 
 import net.milkbowl.vault.Vault;
 import net.milkbowl.vault.economy.Economy;
+import org.bukkit.Difficulty;
+import org.bukkit.GameMode;
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.block.Biome;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.Animals;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -71,6 +75,7 @@ public class Courier extends JavaPlugin {
     public static final String PM_LIST = "courier.list";
     public static final String PM_INFO = "courier.info";
     public static final String PM_THEONEPERCENT = "courier.theonepercent";
+    public static final String PM_PRIVACYOVERRIDE = "courier.privacyoverride";
 
     public static final int MAGIC_NUMBER = Integer.MAX_VALUE - 395743; // used to id our map
     public static final int MAX_ID = Short.MAX_VALUE; // really, we don't do negative numbers well atm
@@ -324,7 +329,19 @@ public class Courier extends JavaPlugin {
         Player[] players = getServer().getOnlinePlayers();
         for (Player player : players) {
             if (courierdb.undeliveredMail(player.getName())) {
-                // if already delivery out for this player do something
+                // Do not deliver mail to players in Creative mode
+                // http://dev.bukkit.org/server-mods/courier/tickets/49-pagination-stops-working-after-changing-slot-creative/
+                if(player.getGameMode() == GameMode.CREATIVE) {
+                    // todo: this might well turn out to be too spammy ... and the message is about "place" not "mode"
+                    // Also, could warn when detecting PlayerGameModeChangeEvent
+                    config.clog(Level.FINE, "Didn't deliver mail to " + player.getDisplayName() + " - player is in Creative mode");
+                    String cannotDeliver = getCConfig().getCannotDeliver();
+                    if(cannotDeliver != null && !cannotDeliver.isEmpty()) {
+                        player.sendMessage(cannotDeliver);
+                    }
+                    continue;
+                }
+                // if already delivery out for this player do something?
                 int undeliveredMessageId = getCourierdb().undeliveredMessageId(player.getName());
                 config.clog(Level.FINE, "Undelivered messageid: " + undeliveredMessageId);
                 if (undeliveredMessageId != -1) {
@@ -408,6 +425,7 @@ public class Courier extends JavaPlugin {
             this.saveResource("translations/config_swedish.yml", true);
             this.saveResource("translations/config_dutch.yml", true);
             this.saveResource("translations/config_german.yml", true);
+            this.saveResource("translations/config_portuguese.yml", true);
         } catch (Exception e) {
             config.clog(Level.WARNING, "Unable to copy translations from .jar to plugin folder");
         }
@@ -526,6 +544,15 @@ public class Courier extends JavaPlugin {
                 config.clog(Level.INFO, "If you don't want economy support, set UseFees to false in Courier config.");
                 abort = true;
             }
+        }
+
+        // Warn about "facepalm" moments:
+        // http://dev.bukkit.org/server-mods/courier/tickets/81-entity-not-appearing-heads-up-comment/
+        World defWorld = getServer().getWorlds().get(0);
+// It seems Courier can spawn animals and monsters even though the server setting is for them to be off, except for Monsters on Peaceful
+//        if(!defWorld.getAllowAnimals() || !defWorld.getAllowMonsters() || defWorld.getDifficulty() == Difficulty.PEACEFUL) {
+        if(defWorld.getDifficulty() == Difficulty.PEACEFUL) {
+            config.clog(Level.WARNING, "With difficulty set to Peaceful Monsters cannot spawn. Verify that the Postman type you've configured Courier to use isn't a Monster.");
         }
 
         if(!abort) {

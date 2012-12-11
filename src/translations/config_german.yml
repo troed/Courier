@@ -6,12 +6,12 @@
 #   - Set to false if Villager-Postmen keep pushing you into lava ;)
 Courier:
   UseFees: false
-  Version: 1.1.6
+  Version: 1.1.7
   UpdateInterval: 18000         # Checks for new versions every 5h. A value of 0 disables.
   Fee:
     Send: 10
-    InfoFee: '&7Courier: &fDas Porto betraegt %s'
-    InfoNoFee: '&7Courier: &fAuf diesem Server enstehen keine Kosten fuer das Senden von Nachrichten'
+    InfoFee: "&7Kurier: &fDas Porto beträgt %s"
+    InfoNoFee: "&7Kurier: &fAuf diesem Server enstehen keine Kosten für das Senden von Nachrichten"
   Route:
     InitialWait: 10
     NextRoute: 60
@@ -24,48 +24,40 @@ Courier:
     Despawn: 20
     SpawnDistance: 10
     BreakSpawnProtection: true
-    Greeting: '&7Courier: &fEin Brieftraeger ist mit deiner Nachricht angekommen!'
-    MailDrop: '&7Courier: &fDeine Nachricht wurde auf den Boden gelegt.'
-    Inventory: '&7Courier: &fDeine Haende waren voll, der Postbote hat sie
-      fuer dich in dein Inventar gelegt.'
-    CannotDeliver: '&7Courier: &fEin Postbote hat eine Nachricht fuer dich aber es war
-      hier nicht erlaubt.'
-    ExtraDeliveries: '&7Courier: &fDer Postbote wir extra Lieferungen machen'
-    NoUnreadMail: '&7Courier: &fDu hast keine ungelesene Nachricht'
+    Greeting: "&7Kurier: &fEin Briefträger ist mit deiner Nachricht angekommen!"
+    MailDrop: "&7Kurier: &fDeine Nachricht wurde auf den Boden gelegt."
+    Inventory: "&7Kurier: &fDeine Hände waren voll, der Postbote hat die Nachricht für dich in dein Inventar gelegt."
+    CannotDeliver: "&7Kurier: &fEin Postbote hat eine Nachricht für dich aber es hier nicht erlaubt."
+    ExtraDeliveries: "&7Kurier: &fDer Postbote wir extra Lieferungen machen"
+    NoUnreadMail: "&7Kurier: &fDu hast keine ungelesene Nachricht"
   Letter:
     # FreeLetter set to true disables Resources
     FreeLetter: true
     # Multiple amount resources example: [CobbleStone, Paper, CobbleStone]
     Resources: [Coal, Paper]
     ShowDate: true
-    Drop: '&7Courier: &fDein Inventar ist voll, der Brief wurde auf den Boden gelegt.'
-    Inventory: '&7Courier: &fDu hattest deine Haende voll, der Brief kann in deinem
-      Inventar gefunden werden.'
-    NoText: '&7Courier: &fError, kein Text um ihn dem Brief hinzuzufuegen!'
-    SkippedText: '&7Courier: &fTeile des eingegebenen Textes koennen nicht angezeigt werden und wurden
-      uebersprungen'
-    CreateFailed: '&7Courier: &fKonnte dein Brief nicht erstellen! Benachrichtige deinen Administrator!'
-    NoMoreUIDs: '&7Courier: &fKeine einzigartigen Nachrichten-IDs mehr! Benachrichtige deinen Administrator!'
-    InfoCost: '&7Courier: &fBenoetigte Mittel um Briefe zu erstellen: %s.'
-    InfoFree: '&7Courier: &fBriefe brauchen keine Mittel um erstellt zu werden.'
-    LackingResources: '&7Courier: &fDu hast nicht die benoetigten Mittel um
-      einen Brief zu erstellen. Siehe /courier fees'
+    Drop: "&7Kurier: &fDein Inventar ist voll, der Brief wurde auf den Boden gelegt."
+    Inventory: "&7Kurier: &fDu hattest deine Hände voll, der Brief kann in deinem Inventar gefunden werden."
+    NoText: "&7Kurier: &fError, kein Text um ihn dem Brief hinzuzufügen!"
+    SkippedText: "&7Kurier: &fTeile des eingegebenen Textes können nicht angezeigt werden und wurden übersprungen"
+    CreateFailed: "&7Kurier: &fKonnte dein Brief nicht erstellen! Benachrichtige deinen Administrator!"
+    NoMoreUIDs: "&7Kurier: &fKeine einzigartigen Nachrichten-IDs mehr! Benachrichtige deinen Administrator!"
+    InfoCost: "&7Kurier: &fBenötigte Mittel um Briefe zu erstellen: %s."
+    InfoFree: "&7Kurier: &fBriefe brauchen keine Mittel um erstellt zu werden."
+    LackingResources: "&7Kurier: &fDu hast nicht die benötigten Mittel um einen Brief zu erstellen. Siehe /courier fees"
   Post:
-    NoCredit: '&7Courier: &fEntschuldigung du hast nicht genug Kredit, um das Porto zu decken
-      (%s)'
-    NoRecipient: '&7Courier: &fError, kein Empfaenger dem ein Brief geschickt werden kann!'
-    DidYouMean: '&7Courier: &fKonnte %1$s nicht finden. Meintest du %2$s?'          # 1$ = input, 2$ = match
-    DidYouMeanList: '&7Courier: &fKonnte %s nicht finden. Meintest du einen dieser
-      Spieler?'
-    DidYouMeanList2: '&7Courier:&f %s'
-    NoSuchPlayer: '&7Courier: &fAuf diesem Server ist kein Spieler namens %s'
-    LetterSent: '&7Courier: &fBrief zu %s geschickt!'
-    LetterSentFee: '&7Courier: &fBrief zu %1$s geschickt! Protp Gebuer von %2$s bezahlt'    # 1$ = recipient, 2$ = fee
-    FundProblem: '&7Courier: &fEs gab ein Problem mit der Abhebungen fuer das Porto.
-      Bitte informiere deinen Administrator.'
-    NoLetter: '&7Courier: &fDu must den Brief den du schicken willst in der Hand halten! Siehe /courier'
+    NoCredit: "&7Kurier: &fEntschuldigung du hast nicht genug Kredit, um das Porto zu decken (%s)"
+    NoRecipient: "&7Kurier: &fError, kein Empfänger dem ein Brief geschickt werden kann!"
+    DidYouMean: "&7Kurier: &fKonnte %1$s nicht finden. Meintest du %2$s?"
+    DidYouMeanList: "&7Kurier: &fKonnte %s nicht finden. Meintest du einen dieser Spieler?"
+    DidYouMeanList2: "&7Kurier:&f %s"
+    NoSuchPlayer: "&7Kurier: &fAuf diesem Server ist kein Spieler namens %s"
+    LetterSent: "&7Kurier: &fBrief zu %s geschickt!"
+    LetterSentFee: "&7Kurier: &fBrief zu %1$s geschickt! Protp Gebühr von %2$s bezahlt"
+    FundProblem: "&7Kurier: &fEs gab ein Problem mit der Abhebungen für das Porto. Bitte informiere deinen Administrator."
+    NoLetter: "&7Kurier: &fDu must den Brief den du schicken willst in der Hand halten! Siehe /courier"
   Info:
-    Line1: '&f/letter [Nachricht]: &7Erstellt einen Brief oder fuegt Text zu einem existierenden hinzu'
-    Line2: '&f/post [Spielername]: &7Sendet den Brief den du haeltst zu [Spielername]'
-    Line3: '&f/courier fees: &7Listet die Kosten, wenn ueberhaupt, fuer die Sendung eines Brief'
-    Line4: '&f/courier unread: &7Fordert erneute Lieferung aller ungelesenen Briefe an'
+    Line1: "&f/letter [Nachricht]: &7Erstellt einen Brief oder fügt Text zu einem existierenden hinzu"
+    Line2: "&f/post [Spielername]: &7Sendet den Brief den du hältst zu [Spielername]"
+    Line3: "&f/courier fees: &7Listet die Kosten, wenn überhaupt, für die Sendung eines Brief"
+    Line4: "&f/courier unread: &7Fordert erneute Lieferung aller ungelesenen Briefe an"

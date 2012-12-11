@@ -50,7 +50,7 @@ public class LetterRenderer extends MapRenderer {
                 clear = false;
             }
             // todo: idea for pvp war servers: "your mail has fallen into enemy hands". "they've read it!")
-            if(letter != null && letter.isAllowedToSee(player.getName())) {
+            if(letter != null && letter.isAllowedToSee(player)) {
                 int drawPos = HEADER_POS;
 //                if(!letter.getReceiver().equalsIgnoreCase(letter.getSender())) {
                 if(letter.getHeader() != null) {
