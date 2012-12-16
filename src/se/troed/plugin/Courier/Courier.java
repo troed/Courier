@@ -38,6 +38,8 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitTask;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -92,8 +94,7 @@ public class Courier extends JavaPlugin {
     private CourierConfig config;
     private LetterRenderer letterRenderer = null;
 
-    private Runnable updateThread;
-    private int updateId = -1;
+    private BukkitTask updateTask;
     private Runnable deliveryThread;
     private int deliveryId = -1;
     private final Map<UUID, Postman> postmen = new HashMap<UUID, Postman>();
@@ -293,11 +294,10 @@ public class Courier extends JavaPlugin {
         if(getCConfig().getUpdateInterval() == 0) { // == disabled
             return;
         }
-        if(updateId >= 0) {
+        if(updateTask != null) {
             config.clog(Level.WARNING, "Multiple calls to startUpdateThread()!");
-        }
-        if(updateThread == null) {
-            updateThread = new Runnable() {
+        } else {
+            updateTask = new BukkitRunnable() {
                 public void run() {
                     String version = config.getVersion();
                     String checkVersion = updateCheck(version);
@@ -307,20 +307,18 @@ public class Courier extends JavaPlugin {
                         config.clog(Level.WARNING, "Please visit the Courier home: http://dev.bukkit.org/server-mods/courier/");
                     }
                 }
-            };
+            }.runTaskTimer(this, 400, getCConfig().getUpdateInterval() * 20);
         }
-        // 400 = 20 seconds from start, then a period according to config (default every 5h)
-        updateId = getServer().getScheduler().scheduleAsyncRepeatingTask(this, updateThread, 400, getCConfig().getUpdateInterval()*20);
-        if(updateId < 0) {
+        if(updateTask == null) {
             config.clog(Level.WARNING, "UpdateCheck task scheduling failed");
         }
     }
 
     private void stopUpdateThread() {
-        if(updateId != -1) {
-            getServer().getScheduler().cancelTask(updateId);
-            updateId = -1;
+        if(updateTask != null) {
+            updateTask.cancel();
         }
+        updateTask = null;
     }
 
     private void deliverMail() {
