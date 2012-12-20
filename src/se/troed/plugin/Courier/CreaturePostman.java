@@ -19,7 +19,7 @@ public class CreaturePostman extends Postman {
     }
 
     public void spawn(Location l) {
-        postman = (Creature) player.getWorld().spawnCreature(l, type);
+        postman = (Creature) player.getWorld().spawnEntity(l, type);
         if(plugin.getCConfig().getWalkToPlayer()) {
             postman.setTarget(player);
         }

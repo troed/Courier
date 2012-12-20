@@ -20,11 +20,15 @@ package se.troed.plugin.Courier;
 
 import net.milkbowl.vault.Vault;
 import net.milkbowl.vault.economy.Economy;
+import org.bukkit.Difficulty;
+import org.bukkit.GameMode;
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.block.Biome;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.Animals;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -34,6 +38,8 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitTask;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -71,6 +77,7 @@ public class Courier extends JavaPlugin {
     public static final String PM_LIST = "courier.list";
     public static final String PM_INFO = "courier.info";
     public static final String PM_THEONEPERCENT = "courier.theonepercent";
+    public static final String PM_PRIVACYOVERRIDE = "courier.privacyoverride";
 
     public static final int MAGIC_NUMBER = Integer.MAX_VALUE - 395743; // used to id our map
     public static final int MAX_ID = Short.MAX_VALUE; // really, we don't do negative numbers well atm
@@ -87,8 +94,7 @@ public class Courier extends JavaPlugin {
     private CourierConfig config;
     private LetterRenderer letterRenderer = null;
 
-    private Runnable updateThread;
-    private int updateId = -1;
+    private BukkitTask updateTask;
     private Runnable deliveryThread;
     private int deliveryId = -1;
     private final Map<UUID, Postman> postmen = new HashMap<UUID, Postman>();
@@ -180,8 +186,16 @@ public class Courier extends JavaPlugin {
     Location findSpawnLocation(Player p) {
         Location sLoc = null;
 
-        // o,o,o,o,o,o,x 
-        List<Block> blocks = p.getLineOfSight(null, getCConfig().getSpawnDistance());
+        List<Block> blocks;
+        // http://dev.bukkit.org/server-mods/courier/tickets/67-task-of-courier-generated-an-exception/
+        // "@param maxDistance This is the maximum distance in blocks for the trace. Setting this value above 140 may lead to problems with unloaded chunks. A value of 0 indicates no limit"
+        try {
+            // o,o,o,o,o,o,x
+            blocks = p.getLineOfSight(null, getCConfig().getSpawnDistance());
+        } catch (IllegalStateException e) {
+            blocks = null;
+            getCConfig().clog(Level.WARNING, "caught IllegalStateException in getLineOfSight");
+        }
         if(blocks != null && !blocks.isEmpty()) {
             Block block = blocks.get(blocks.size()-1); // get last block
             getCConfig().clog(Level.FINE, "findSpawnLocation got lineOfSight");
@@ -280,11 +294,10 @@ public class Courier extends JavaPlugin {
         if(getCConfig().getUpdateInterval() == 0) { // == disabled
             return;
         }
-        if(updateId >= 0) {
+        if(updateTask != null) {
             config.clog(Level.WARNING, "Multiple calls to startUpdateThread()!");
-        }
-        if(updateThread == null) {
-            updateThread = new Runnable() {
+        } else {
+            updateTask = new BukkitRunnable() {
                 public void run() {
                     String version = config.getVersion();
                     String checkVersion = updateCheck(version);
@@ -294,20 +307,18 @@ public class Courier extends JavaPlugin {
                         config.clog(Level.WARNING, "Please visit the Courier home: http://dev.bukkit.org/server-mods/courier/");
                     }
                 }
-            };
+            }.runTaskTimer(this, 400, getCConfig().getUpdateInterval() * 20);
         }
-        // 400 = 20 seconds from start, then a period according to config (default every 5h)
-        updateId = getServer().getScheduler().scheduleAsyncRepeatingTask(this, updateThread, 400, getCConfig().getUpdateInterval()*20);
-        if(updateId < 0) {
+        if(updateTask == null) {
             config.clog(Level.WARNING, "UpdateCheck task scheduling failed");
         }
     }
 
     private void stopUpdateThread() {
-        if(updateId != -1) {
-            getServer().getScheduler().cancelTask(updateId);
-            updateId = -1;
+        if(updateTask != null) {
+            updateTask.cancel();
         }
+        updateTask = null;
     }
 
     private void deliverMail() {
@@ -316,7 +327,19 @@ public class Courier extends JavaPlugin {
         Player[] players = getServer().getOnlinePlayers();
         for (Player player : players) {
             if (courierdb.undeliveredMail(player.getName())) {
-                // if already delivery out for this player do something
+                // Do not deliver mail to players in Creative mode
+                // http://dev.bukkit.org/server-mods/courier/tickets/49-pagination-stops-working-after-changing-slot-creative/
+                if(player.getGameMode() == GameMode.CREATIVE) {
+                    // todo: this might well turn out to be too spammy ... and the message is about "place" not "mode"
+                    // Also, could warn when detecting PlayerGameModeChangeEvent
+                    config.clog(Level.FINE, "Didn't deliver mail to " + player.getDisplayName() + " - player is in Creative mode");
+                    String cannotDeliver = getCConfig().getCannotDeliver();
+                    if(cannotDeliver != null && !cannotDeliver.isEmpty()) {
+                        player.sendMessage(cannotDeliver);
+                    }
+                    continue;
+                }
+                // if already delivery out for this player do something?
                 int undeliveredMessageId = getCourierdb().undeliveredMessageId(player.getName());
                 config.clog(Level.FINE, "Undelivered messageid: " + undeliveredMessageId);
                 if (undeliveredMessageId != -1) {
@@ -400,6 +423,7 @@ public class Courier extends JavaPlugin {
             this.saveResource("translations/config_swedish.yml", true);
             this.saveResource("translations/config_dutch.yml", true);
             this.saveResource("translations/config_german.yml", true);
+            this.saveResource("translations/config_portuguese.yml", true);
         } catch (Exception e) {
             config.clog(Level.WARNING, "Unable to copy translations from .jar to plugin folder");
         }
@@ -518,6 +542,15 @@ public class Courier extends JavaPlugin {
                 config.clog(Level.INFO, "If you don't want economy support, set UseFees to false in Courier config.");
                 abort = true;
             }
+        }
+
+        // Warn about "facepalm" moments:
+        // http://dev.bukkit.org/server-mods/courier/tickets/81-entity-not-appearing-heads-up-comment/
+        World defWorld = getServer().getWorlds().get(0);
+// It seems Courier can spawn animals and monsters even though the server setting is for them to be off, except for Monsters on Peaceful
+//        if(!defWorld.getAllowAnimals() || !defWorld.getAllowMonsters() || defWorld.getDifficulty() == Difficulty.PEACEFUL) {
+        if(defWorld.getDifficulty() == Difficulty.PEACEFUL) {
+            config.clog(Level.WARNING, "With difficulty set to Peaceful Monsters cannot spawn. Verify that the Postman type you've configured Courier to use isn't a Monster.");
         }
 
         if(!abort) {

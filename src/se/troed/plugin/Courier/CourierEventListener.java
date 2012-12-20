@@ -5,6 +5,7 @@ import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Creature;
 import org.bukkit.entity.Enderman;
 import org.bukkit.entity.Monster;
+import org.bukkit.entity.Villager;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -59,7 +60,7 @@ class CourierEventListener implements Listener {
         }
     }
 
-    @EventHandler(priority = EventPriority.MONITOR)
+    @EventHandler(priority = EventPriority.NORMAL)
     public void onPlayerInteractEntity(PlayerInteractEntityEvent e) {
         Postman postman = plugin.getPostman(e.getRightClicked().getUniqueId());
         if(!e.isCancelled() && !e.getRightClicked().isDead() && postman != null && !postman.scheduledForQuickRemoval()) {
@@ -107,6 +108,13 @@ class CourierEventListener implements Listener {
                 // delivered
                 CourierDeliveryEvent event = new CourierDeliveryEvent(e.getPlayer(), letter.getEnchantmentLevel(Enchantment.DURABILITY));
                 plugin.getServer().getPluginManager().callEvent(event);
+            }
+
+            // Only cancelling the event for Villagers, less possible legacy issues
+            // There might be a good reason for cancelling it for all entities though
+            if(e.getRightClicked() instanceof Villager) {
+                plugin.getCConfig().clog(Level.FINE, "Cancel Villager trading screen");
+                e.setCancelled(true);
             }
 
             postman.quickDespawn();
