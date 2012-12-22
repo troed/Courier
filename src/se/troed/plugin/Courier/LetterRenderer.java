@@ -77,7 +77,7 @@ public class LetterRenderer extends MapRenderer {
             clear = false;
         }
 
-        if(letter != null && letter.isAllowedToSee(player.getName())) {
+        if(letter != null && letter.isAllowedToSee(player)) {
             int drawPos = HEADER_POS;
             if(letter.getHeader() != null) {
                 canvas.drawText(0, MinecraftFont.Font.getHeight() * drawPos, MinecraftFont.Font, letter.getHeader());

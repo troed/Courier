@@ -1,0 +1,63 @@
+# Config file version is used internally to detect non backward compatible breaks
+# All times are in seconds, distances in blocks
+# Strings can use &0..&f color coding
+# Courier has been tested with Postman.Type 'Enderman' and 'Villager', but will accept all Creature-types
+# Route.WalkToPlayer is not used for Monster-Postmen (they would attack), only "friendly mobs".
+#   - Set to false if Villager-Postmen keep pushing you into lava ;)
+Courier:
+  UseFees: false
+  Version: 1.2.0
+  UpdateInterval: 18000         # Checks for new versions every 5h. A value of 0 disables.
+  Fee:
+    Send: 10
+    InfoFee: '&7Courier: &fO selo custa %s'
+    InfoNoFee: '&7Courier: &fO envio de carta nao tem custos associados'
+  Route:
+    InitialWait: 10
+    NextRoute: 60
+    WalkToPlayer: true
+  Privacy:
+    SealedEnvelope: true
+  Postman:
+    Type: Enderman
+    QuickDespawn: 3
+    Despawn: 20
+    SpawnDistance: 10
+    BreakSpawnProtection: true
+    Greeting: '&7Courier: &fO Carteiro chegou com o teu correio!'
+    MailDrop: '&7Courier: &fO teu correio foi largado no chao.'
+    Inventory: '&7Courier: &fTinhas as maos ocupadas, o Carteiro colocou o correio no teu inventario.'
+    CannotDeliver: '&7Courier: &fO Carteiro tem correio para ti mas nao tem autorizacao para aqui estar.'
+    ExtraDeliveries: '&7Courier: &fO Carteiro vai fazer recados extra'
+    NoUnreadMail: '&7Courier: &fNao tens correio por ler'
+  Letter:
+    # FreeLetter set to true disables Resources
+    FreeLetter: true
+    # Multiple amount resources example: [CobbleStone, Paper, CobbleStone]
+    Resources: [Coal, Paper]
+    ShowDate: true
+    Drop: '&7Courier: &fTens o inventario cheio, a carta foi deixada no chao.'
+    Inventory: '&7Courier: &fTinhas as tuas maos ocupadas, a carta foi deixada no teu inventario.'
+    NoText: '&7Courier: &fErro, nao foi adicionado texto a carta!'
+    SkippedText: '&7Courier: &fPartes do texto nao podem ser mostradas e foram ignoradas'
+    CreateFailed: '&7Courier: &fNao foi possivel a criacao da carta! Avisa o admin!'
+    NoMoreUIDs: '&7Courier: &fAcabaram-se os identificadores! Avisa o admin!'
+    InfoCost: '&7Courier: &fCusto associado a criacao de uma carta: %s.'
+    InfoFree: '&7Courier: &fAs cartas nao tem custos associados.'
+    LackingResources: '&7Courier: &fNao tens dinheiro suficiente para a criacao da carta. Faz /courier fees'
+  Post:
+    NoCredit: '&7Courier: &fLamento, nao tens dinheiro para pagar o selo (%s)'
+    NoRecipient: '&7Courier: &fErro, nao ha destinatarios para receber a carta!'
+    DidYouMean: '&7Courier: &fNao foi encontrado o %1$s. Querias dizer %2$s?'
+    DidYouMeanList: '&7Courier: &fNao foi encontrado o %s. Querias dizer algum destes jogadores?'
+    DidYouMeanList2: '&7Courier:&f %s'
+    NoSuchPlayer: '&7Courier: &fAqui nao ha jogadores com o nome %s'
+    LetterSent: '&7Courier: &fCarta para %s enviada!'
+    LetterSentFee: '&7Courier: &fCarta para %1$s enviada! Custo do selo %2$s pago'
+    FundProblem: '&7Courier: &fHouve um problema com o pagamento do selo. Avisa o admin.'
+    NoLetter: '&7Courier: &fTens que ter na mao a carta que queres enviar! Faz /courier'
+  Info:
+    Line1: '&f/letter message: &7Cria a carta ou adiciona texto a carta ja criada'
+    Line2: '&f/post playername: &7Envia a carta que tens na mao ao ''playername'' '
+    Line3: '&f/courier fees: &7Mostra os custos, caso hajam, do selo'
+    Line4: '&f/courier unread: &7Pede reenvio de correio por ler'

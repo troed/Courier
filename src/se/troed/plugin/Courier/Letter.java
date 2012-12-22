@@ -1,5 +1,6 @@
 package se.troed.plugin.Courier;
 
+import org.bukkit.entity.Player;
 import org.bukkit.map.*;
 
 import java.util.*;
@@ -107,14 +108,16 @@ public class Letter {
     }
 
     // boolean OR intentional
-    public boolean isAllowedToSee(String p) {
+    public boolean isAllowedToSee(Player p) {
         return receiver.equalsIgnoreCase(sender)        |    // Letters are public
                !plugin.getCConfig().getSealedEnvelope() |    // Config override
-               p.equalsIgnoreCase(receiver);                 // Player is receiver
+               p.hasPermission(Courier.PM_PRIVACYOVERRIDE) | // Permission to read all
+               p.getName().equalsIgnoreCase(receiver);                 // Player is receiver
     }
 
     // if we have more pages after format() than before, switch to the new page
     // hmm maybe should always switch to the _last_ page? extreme case
+    // todo: http://dev.bukkit.org/server-mods/courier/tickets/55-letter-empty-after-creating-via-long-command-line/
     public void setMessage(String m) {
         int size;
         if(message != null) {

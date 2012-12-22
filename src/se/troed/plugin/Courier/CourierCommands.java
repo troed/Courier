@@ -132,7 +132,7 @@ class CourierCommands implements CommandExecutor {
                     plugin.getTracker().removeLetter(letter.getId());
                     plugin.getLetterRenderer().forceClear();
                     player.setItemInHand(null);
-                    if(letter.isAllowedToSee(player.getName())) {
+                    if(letter.isAllowedToSee(player)) {
                         // only _really_ delete those Letters we "own"
                         if(plugin.getDb().deleteMessage((short)letter.getId())) {
                             // letter was in db, now gone
@@ -223,7 +223,7 @@ class CourierCommands implements CommandExecutor {
             // /post player1 player2 player3 etc in the future?
             } else {
                 String receiver = args[0];
-                if(!letter.isAllowedToSee(player.getName())) {
+                if(!letter.isAllowedToSee(player)) {
                     // fishy, this player is not allowed to see this Letter
                     // only agree to sending it on to the intended receiver
                     // silent substitution to correct receiver - Postmen can read envelopes you know ;)
@@ -363,7 +363,7 @@ class CourierCommands implements CommandExecutor {
             if(id != -1) {
                 boolean useCached = true;
                 StringBuilder message = new StringBuilder();
-                if(letter != null && !letter.isAllowedToSee(player.getName())) {
+                if(letter != null && !letter.isAllowedToSee(player)) {
                     // oh my, we're not allowed to read this letter, just do nothing from here on
                     securityBlocked = true;
                 } else if(letter != null) {

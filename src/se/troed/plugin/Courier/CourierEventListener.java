@@ -61,7 +61,7 @@ class CourierEventListener implements Listener {
             if(e.getClickedBlock().getState().getType() == Material.FURNACE) {
                 if(e.getAction() == Action.RIGHT_CLICK_BLOCK) {
                     plugin.getCConfig().clog(Level.FINE, e.getPlayer().getName() + " is using a furnace");
-                    tracker.setSmelter(e.getClickedBlock().getState().getBlock().getLocation(), e.getPlayer().getName());
+                    tracker.setSmelter(e.getClickedBlock().getState().getBlock().getLocation(), e.getPlayer());
                 }
             }
         }
@@ -70,7 +70,7 @@ class CourierEventListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerDropItemEvent(PlayerDropItemEvent e) {
         Letter letter = tracker.getLetter(e.getItemDrop().getItemStack());
-        if(!e.isCancelled() && letter != null && letter.isAllowedToSee(e.getPlayer().getName())) {
+        if(!e.isCancelled() && letter != null && letter.isAllowedToSee(e.getPlayer())) {
             tracker.addDrop(e.getItemDrop().getUniqueId(), letter);
             plugin.getCConfig().clog(Level.FINE, e.getPlayer().getDisplayName() + " dropped Letter " + letter.getId());
         }
@@ -102,24 +102,24 @@ class CourierEventListener implements Listener {
         Letter letter = tracker.getLetter(e.getSource());
         if(letter != null) {
             // verify that the player who last right-clicked this furnace "owns" the letter and can delete it
-            String pn = tracker.getSmelter(e.getFurnace().getLocation());
-            if(pn != null && letter.isAllowedToSee(pn)) {
+            Player p = tracker.getSmelter(e.getBlock().getLocation());
+            if(p != null && letter.isAllowedToSee(p)) {
                 tracker.removeLetter(letter.getId());
                 plugin.getLetterRenderer().forceClear();
                 plugin.getDb().deleteMessage((short)letter.getId());
-                plugin.getCConfig().clog(Level.FINE, "Letter " + letter.getId() + " was burnt in a furnace by " + pn + ", removed from database");
+                plugin.getCConfig().clog(Level.FINE, "Letter " + letter.getId() + " was burnt in a furnace by " + p.getName() + ", removed from database");
             }
         }
 
         // avoid NPE by manually faking the intended result and cancelling event
-        // https://bukkit.atlassian.net/browse/BUKKIT-745
-        Furnace furnace = (Furnace) e.getFurnace().getState();
+        // todo: https://bukkit.atlassian.net/browse/BUKKIT-745
+        Furnace furnace = (Furnace) e.getBlock().getState();
         furnace.getInventory().clear(0); // 0 = ingredient slot
         // here would be some magic as to understanding whether to decrease the amount of fuel .. not trivial
         e.setCancelled(true);
     }
     
-    @EventHandler(priority = EventPriority.MONITOR)
+    @EventHandler(priority = EventPriority.NORMAL)
     public void onPlayerInteractEntity(PlayerInteractEntityEvent e) {
         Postman postman = tracker.getPostman(e.getRightClicked().getUniqueId());
         if(!e.isCancelled() && !e.getRightClicked().isDead() && postman != null && !postman.scheduledForQuickRemoval()) {
@@ -163,6 +163,13 @@ class CourierEventListener implements Listener {
                 // delivered
                 CourierDeliveryEvent event = new CourierDeliveryEvent(e.getPlayer(), letter.getEnchantmentLevel(Enchantment.DURABILITY));
                 plugin.getServer().getPluginManager().callEvent(event);
+            }
+
+            // Only cancelling the event for Villagers, less possible legacy issues
+            // There might be a good reason for cancelling it for all entities though
+            if(e.getRightClicked() instanceof Villager) {
+                plugin.getCConfig().clog(Level.FINE, "Cancel Villager trading screen");
+                e.setCancelled(true);
             }
 
             postman.quickDespawn();

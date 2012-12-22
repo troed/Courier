@@ -16,12 +16,10 @@ commands:
     usage: /courier [subcommand]
   post:
     description: Sends the letter currently held in hand to someone
-    aliases: [mail]
     permission: courier.send
     usage: /post playername
   letter:
     description: Creates a letter
-    aliases: [note]
     permission: courier.write
     usage: /letter message        # Can be repeated to add additional text to existing handheld letter
 permissions:
@@ -45,4 +43,7 @@ permissions:
     default: op
   courier.theonepercent:
     description: No postage fees apply even if UseFees is set to true
+    default: false
+  courier.privacyoverride:
+    description: Allows the player to read privacy locked Letters
     default: false

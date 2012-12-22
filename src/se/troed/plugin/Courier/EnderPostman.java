@@ -14,7 +14,7 @@ public class EnderPostman extends Postman {
     }
 
     public void spawn(Location l) {
-        postman = (Enderman) player.getWorld().spawnCreature(l, EntityType.ENDERMAN);
+        postman = (Enderman) player.getWorld().spawnEntity(l, EntityType.ENDERMAN);
         // gah, item vs block ...
         // MaterialData material = new MaterialData(Material.PAPER);
         ((Enderman)postman).setCarriedMaterial(new MaterialData(Material.BOOKSHELF));

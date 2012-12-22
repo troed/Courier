@@ -28,17 +28,17 @@ public class Tracker {
     // tracks dropped Letters until despawn
     private final Map<UUID, Letter> drops = new HashMap<UUID, Letter>();
     // tracks the last player to right-click a furnace [forever]
-    private final Map<Location, String> smelters = new HashMap<Location, String>();
+    private final Map<Location, Player> smelters = new HashMap<Location, Player>();
 
     public Tracker(Courier p) {
         plugin = p;
     }
 
-    public void setSmelter(Location loc, String pn) {
-        smelters.put(loc, pn);
+    public void setSmelter(Location loc, Player p) {
+        smelters.put(loc, p);
     }
     
-    public String getSmelter(Location loc) {
+    public Player getSmelter(Location loc) {
         return smelters.get(loc);
     }
     
