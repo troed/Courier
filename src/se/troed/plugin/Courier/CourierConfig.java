@@ -36,6 +36,7 @@ public class CourierConfig {
     private static final String POSTMAN_TYPE = "Courier.Postman.Type";
     private static final String POSTMAN_SPAWNDISTANCE = "Courier.Postman.SpawnDistance";
     private static final String POSTMAN_BREAKSPAWNPROTECTION = "Courier.Postman.BreakSpawnProtection";
+    private static final String POSTMAN_CREATIVEDELIVERY = "Courier.Postman.CreativeDelivery";
     private static final String POSTMAN_GREETING = "Courier.Postman.Greeting";
     private static final String POSTMAN_MAILDROP = "Courier.Postman.MailDrop";
     private static final String POSTMAN_INVENTORY = "Courier.Postman.Inventory";
@@ -279,6 +280,10 @@ public class CourierConfig {
     @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     public boolean getSealedEnvelope() {
         return sealedEnvelope;
+    }
+
+    public boolean getCreativeDelivery() {
+        return config.getBoolean(POSTMAN_CREATIVEDELIVERY, false);
     }
 
     public String getGreeting() {
