@@ -270,7 +270,7 @@ public class Courier extends JavaPlugin {
             if (db.undeliveredMail(player.getName())) {
                 // Do not deliver mail to players in Creative mode
                 // http://dev.bukkit.org/server-mods/courier/tickets/49-pagination-stops-working-after-changing-slot-creative/
-                if(player.getGameMode() == GameMode.CREATIVE) {
+                if(player.getGameMode() == GameMode.CREATIVE  && !config.getCreativeDelivery()) {
                     // todo: this might well turn out to be too spammy ... and the message is about "place" not "mode"
                     // Also, could warn when detecting PlayerGameModeChangeEvent
                     config.clog(Level.FINE, "Didn't deliver mail to " + player.getDisplayName() + " - player is in Creative mode");
