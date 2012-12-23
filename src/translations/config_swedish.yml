@@ -10,6 +10,7 @@ Courier:
   UpdateInterval: 18000         # Checks for new versions every 5h. A value of 0 disables.
   Fee:
     Send: 10
+    BankAccount: <none>
     InfoFee: "&7Courier: &fPortot är %s"
     InfoNoFee: "&7Courier: &fDet kostar inget att skicka brev här"
   Route:

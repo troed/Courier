@@ -15,7 +15,7 @@ import java.util.logging.Logger;
 
 
 public class CourierConfig {
-    private static final boolean debug = false;
+    private static final boolean debug = true;
 
     private final Logger log;
     private final Configuration config;
@@ -28,6 +28,7 @@ public class CourierConfig {
     private static final String FEE_SEND = "Courier.Fee.Send";
     private static final String FEE_INFOFEE = "Courier.Fee.InfoFee";
     private static final String FEE_INFONOFEE = "Courier.Fee.InfoNoFee";
+    private static final String FEE_BANKACCOUNT = "Courier.Fee.BankAccount";
     private static final String POSTMAN_QUICK_DESPAWN = "Courier.Postman.QuickDespawn";
     private static final String POSTMAN_DESPAWN = "Courier.Postman.Despawn";
     private static final String ROUTE_INITIALWAIT = "Courier.Route.InitialWait";
@@ -284,6 +285,10 @@ public class CourierConfig {
 
     public boolean getCreativeDelivery() {
         return config.getBoolean(POSTMAN_CREATIVEDELIVERY, false);
+    }
+
+    public String getBankAccount() {
+        return config.getString(FEE_BANKACCOUNT, "");
     }
 
     public String getGreeting() {

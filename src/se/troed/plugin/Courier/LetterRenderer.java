@@ -25,16 +25,20 @@ public class LetterRenderer extends MapRenderer {
         plugin = p;
     }
 
-    // what? I'm getting _constant_ calls to this renderer method, 20tps, no matter if I'm holding a map or not!
-    // it starts as soon as I have a map (to check: any map or Courier) in the inventory, but whether it's
-    // in my hands or not isn't relevant
-    // this is also in old code with non-enchanted maps. bug reported.
+    // This method gets called at 20tps whenever a map is in a players inventory. Bail out as quickly as possible if we
+    // shouldn't do anything with it.
     // https://bukkit.atlassian.net/browse/BUKKIT-476
     @Override
     public void render(MapView map, MapCanvas canvas, Player player) {
-//        System.out.print("render(); ");
         // thanks to the above bug we end up here even if we're not holding a Map specifically
         ItemStack item = player.getItemInHand();
+        // todo: Trying to figure out if we can render Letters in ItemFrames
+        if(map.getId() == plugin.getCourierdb().getCourierMapId()) {
+            // it's a Courier map, and we get called even when it's in an ItemFrame in a loaded chunk. Player doesn't
+            // even need to be near it. Performance issues galore ...
+//            System.out.print("render() called on a Courier Map");
+            // but if it's an ItemFrame - how will I be able to know _which one_ to extract the enchantment/lore?
+        }
         if(item != null && item.getType() == Material.MAP) {
             Letter letter = plugin.getLetter(item);
             if(clear || (letter != null && lastId != letter.getId())) {

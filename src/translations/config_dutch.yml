@@ -10,6 +10,7 @@ Courier:
   UpdateInterval: 18000         # Checks for new versions every 5h. A value of 0 disables.
   Fee:
     Send: 10
+    BankAccount: <none>
     InfoFee: "&7Koerier: &fDe verzend prijs is %s"
     InfoNoFee: "&7Koerier: &fHet kost niks om post te versturen op deze server"
   Route:

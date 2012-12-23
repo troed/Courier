@@ -144,9 +144,7 @@ public class Courier extends JavaPlugin {
         Letter letter = letters.get(letterItem.getEnchantmentLevel(Enchantment.DURABILITY));
         if(letter == null) {
             // server has lost the ItemStack<->Letter associations, re-populate
-//            // we also end up here for unenchanted maps - with id 0
             int id = letterItem.getEnchantmentLevel(Enchantment.DURABILITY);
-//            if(id != 0) {
                 String to = getCourierdb().getPlayer(id);
                 if(to != null) {
                     String from = getCourierdb().getSender(to, id);
@@ -158,7 +156,6 @@ public class Courier extends JavaPlugin {
                     // we've found an item pointing to a Courier letter that does not exist anylonger
                     // ripe for re-use!
                     getCConfig().clog(Level.FINE, "BAD: " + id + " not found in messages database");
-//                }
             }
         }
         return letter;

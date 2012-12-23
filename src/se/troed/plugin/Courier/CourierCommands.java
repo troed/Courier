@@ -9,8 +9,10 @@ import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.*;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.map.MinecraftFont;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.logging.Level;
@@ -175,7 +177,7 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                         break;
                     }
                 }
-                if(p == null) { // todo: remove this section for 1.0.1-R2
+/*                if(p == null) { // todo: remove this section for 1.0.1-R2
                     // See https://bukkit.atlassian.net/browse/BUKKIT-404 by GICodeWarrior
                     // https://github.com/troed/Courier/issues/2
                     // We could end up here if this is to a player who's on the server for the first time
@@ -183,7 +185,7 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                     if(p != null) {
                         plugin.getCConfig().clog(Level.FINE, "Found " + p.getName() + " in getPlayerExact");
                     }
-                }
+                }*/
                 if(p == null) {
                     // still not found, try lazy matching and display suggestions
                     // (searches online players only)
@@ -226,6 +228,26 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                         } else {
                             player.sendMessage(plugin.getCConfig().getPostFundProblem());
                             plugin.getCConfig().clog(Level.WARNING, "Could not withdraw postage fee from " + p.getName());
+                        }
+                        // add postage fee to bank account if one has been configured
+                        // allows both bank accounts and player accounts
+                        String account = plugin.getCConfig().getBankAccount();
+                        if(account != null && !account.isEmpty() && !account.equalsIgnoreCase("<none>")) {
+                            if(plugin.getEconomy().getBanks().contains(account)) {
+                                // named Bank Account exists
+                                er = plugin.getEconomy().bankDeposit(account, fee);
+                                plugin.getCConfig().clog(Level.INFO, "Depositing fee into bank account " + account);
+                            } else if (plugin.getEconomy().hasAccount(account)) {
+                                // it's a Player
+                                er = plugin.getEconomy().depositPlayer(account, fee);
+                                plugin.getCConfig().clog(Level.INFO, "Depositing fee into player account " + account);
+                            } else {
+                                // config is in error
+                                plugin.getCConfig().clog(Level.WARNING, "Configured Post office account " + account + " does not exist.");
+                            }
+                            if(!er.transactionSuccess()) {
+                                plugin.getCConfig().clog(Level.WARNING, "Could not add postage fee to configured account: " + account);
+                            }
                         }
                     } else {
                         player.sendMessage(plugin.getCConfig().getPostLetterSent(p.getName()));
@@ -345,6 +367,18 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                         if(letter == null) {
                             ItemStack letterItem = new ItemStack(Material.MAP, 1, plugin.getCourierdb().getCourierMapId());
                             letterItem.addUnsafeEnchantment(Enchantment.DURABILITY, id);
+                            // todo: is this the best place?
+                            // also see similar code in CourierEventListener
+                            ItemMeta meta = letterItem.getItemMeta();
+                            if(meta != null) {
+                                meta.setDisplayName("Courier Letter");
+                                List<String> strings = new ArrayList<String>();
+                                strings.add("Letter by " + player.getName());
+                                meta.setLore(strings);
+                                letterItem.setItemMeta(meta);
+                            } else {
+                                // ???
+                            }
                             if(item != null && item.getAmount() > 0) {
                                 plugin.getCConfig().clog(Level.FINE, "Player hands not empty");
                                 HashMap<Integer, ItemStack> items = player.getInventory().addItem(letterItem);

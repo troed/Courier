@@ -13,10 +13,13 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.*;
 import org.bukkit.event.player.*;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.map.MapView;
 import org.bukkit.material.MaterialData;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.logging.Level;
 
 class CourierEventListener implements Listener {
@@ -146,6 +149,24 @@ class CourierEventListener implements Listener {
         return letterItem;
     }
 
+    // helper method
+    // also see similar code in CourierEventListener
+    private ItemStack setLore(ItemStack item, String from) {
+        ItemMeta meta = item.getItemMeta();
+        if(meta != null) {
+            // todo: translateable strings
+            meta.setDisplayName("Courier Letter");
+            List<String> strings = new ArrayList<String>();
+            // todo: verify I'm allowed to read the letter
+            strings.add("Letter by " + from);
+            meta.setLore(strings);
+            item.setItemMeta(meta);
+        } else {
+            // ???
+        }
+        return item;
+    }
+
     @EventHandler(priority = EventPriority.MONITOR)
     public void onItemHeldChange(PlayerItemHeldEvent e) {
         // http://dev.bukkit.org/server-mods/courier/tickets/36-severe-could-not-pass-event-player-item-held-event/
@@ -164,6 +185,9 @@ class CourierEventListener implements Listener {
             // legacy end
             Letter letter = plugin.getLetter(e.getPlayer().getInventory().getItem(e.getNewSlot()));
             if(letter != null) {
+                // todo: is this the best place?
+                e.getPlayer().getInventory().setItem(e.getNewSlot(), setLore(item, letter.getSender()));
+
                 plugin.getCConfig().clog(Level.FINE, "Switched to Letter id " + letter.getId());
 
                 // quick render
@@ -191,6 +215,9 @@ class CourierEventListener implements Listener {
             plugin.getCConfig().clog(Level.FINE, "Letter id " + e.getItem().getItemStack().getEnchantmentLevel(Enchantment.DURABILITY));
             Letter letter = plugin.getLetter(e.getItem().getItemStack());
             if(letter != null) {
+                // todo: is this the best place?
+                e.getItem().setItemStack(setLore(e.getItem().getItemStack(), letter.getSender()));
+
                 plugin.getCConfig().clog(Level.FINE, "Letter " + letter.getId() + " picked up.");
 
                 // delivered

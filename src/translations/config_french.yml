@@ -10,6 +10,7 @@ Courier:
   UpdateInterval: 18000         # Checks for new versions every 5h. A value of 0 disables.
   Fee:
     Send: 10
+    BankAccount: <none>
     InfoFee: '&5Service postal: &fL''envoi vous coûtera %s'
     InfoNoFee: '&5Service postal: &fEnvoyer une lettre est gratuit !'
   Route:
