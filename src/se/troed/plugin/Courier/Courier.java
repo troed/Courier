@@ -86,7 +86,9 @@ public class Courier extends JavaPlugin {
 
     private static Vault vault = null;
     private static Economy economy = null;
-    
+    private boolean abort = false; // used to abort plugin load on error
+    private boolean initDone = false; // failsafe for postWorldInit()
+
     private final CourierEventListener eventListener = new CourierEventListener(this);
     private final CourierCommands courierCommands = new CourierCommands(this);
     private final CourierDB courierdb = new CourierDB(this);
@@ -137,28 +139,31 @@ public class Courier extends JavaPlugin {
 
     // finds the Letter associated with a specific id
     // recreates structure from db after each restart as needed
+    public Letter getLetter(int id) {
+        Letter letter = letters.get(id);
+        if(letter == null) {
+            // server has lost the ItemStack<->Letter associations, re-populate
+            String to = getCourierdb().getPlayer(id);
+            if(to != null) {
+                String from = getCourierdb().getSender(to, id);
+                String message = getCourierdb().getMessage(to, id);
+                letter = new Letter(this, from, to, message, id, getCourierdb().getRead(to, id), getCourierdb().getDate(to, id));
+                addLetter(id, letter);
+                getCConfig().clog(Level.FINE, "Letter " + id + " recreated from db for " + to);
+            } else {
+                // we've found an item pointing to a Courier letter that does not exist anylonger
+                // ripe for re-use!
+                getCConfig().clog(Level.FINE, "BAD: " + id + " not found in messages database");
+            }
+        }
+        return letter;
+    }
+
     public Letter getLetter(ItemStack letterItem) {
         if(letterItem == null || !letterItem.containsEnchantment(Enchantment.DURABILITY)) {
             return null;
         }
-        Letter letter = letters.get(letterItem.getEnchantmentLevel(Enchantment.DURABILITY));
-        if(letter == null) {
-            // server has lost the ItemStack<->Letter associations, re-populate
-            int id = letterItem.getEnchantmentLevel(Enchantment.DURABILITY);
-                String to = getCourierdb().getPlayer(id);
-                if(to != null) {
-                    String from = getCourierdb().getSender(to, id);
-                    String message = getCourierdb().getMessage(to, id);
-                    letter = new Letter(this, from, to, message, id, getCourierdb().getRead(to, id), getCourierdb().getDate(to, id));
-                    addLetter(id, letter);
-                    getCConfig().clog(Level.FINE, "Letter " + id + " recreated from db for " + to);
-                } else {
-                    // we've found an item pointing to a Courier letter that does not exist anylonger
-                    // ripe for re-use!
-                    getCConfig().clog(Level.FINE, "BAD: " + id + " not found in messages database");
-            }
-        }
-        return letter;
+        return getLetter(letterItem.getEnchantmentLevel(Enchantment.DURABILITY));
     }
 
     public LetterRenderer getLetterRenderer() {
@@ -413,6 +418,9 @@ public class Courier extends JavaPlugin {
     public void onEnable() {
         this.loadConfig();
 
+        abort = false;
+        initDone = false;
+
         try {
             this.saveResource("translations/readme.txt", true);
             this.saveResource("translations/config_french.yml", true);
@@ -423,8 +431,6 @@ public class Courier extends JavaPlugin {
         } catch (Exception e) {
             config.clog(Level.WARNING, "Unable to copy translations from .jar to plugin folder");
         }
-
-        boolean abort = false;
 
         boolean dbExist = false;
         try {
@@ -458,6 +464,26 @@ public class Courier extends JavaPlugin {
             getCommand(CMD_COURIER).setExecutor(courierCommands);
             getCommand(CMD_POST).setExecutor(courierCommands);
             getCommand(CMD_LETTER).setExecutor(courierCommands);
+        }
+
+        // wait until default world has been loaded for the rest of our startup code
+        if(!getServer().getWorlds().isEmpty()) {
+            // We've been reloaded, continue post-World loading now
+            postWorldLoad();
+        } else {
+            // hacky workaround since we're not getting WorldLoadEvent
+            getServer().getScheduler().scheduleSyncDelayedTask(this, new Runnable() {
+                public void run() {
+                    postWorldLoad();
+                }
+            }, 0);
+        }
+    }
+
+    // called from onWorldLoad event
+    public void postWorldLoad() {
+        if(initDone) {
+            getCConfig().clog(Level.WARNING, "postWorldLoad() called more than once! Contact plugin developer.");
         }
 
         short mapId = 0;
@@ -505,7 +531,7 @@ public class Courier extends JavaPlugin {
         if(!abort) {
             MapView mv = getServer().getMap(mapId);
             if(letterRenderer == null) {
-                letterRenderer = new LetterRenderer(this);
+                letterRenderer = new LetterRenderer(this, true);
             }
             letterRenderer.initialize(mv); // does this make a difference at all?
             List<MapRenderer> renderers = mv.getRenderers();
@@ -549,15 +575,18 @@ public class Courier extends JavaPlugin {
             config.clog(Level.WARNING, "With difficulty set to Peaceful Monsters cannot spawn. Verify that the Postman type you've configured Courier to use isn't a Monster.");
         }
 
+        PluginDescriptionFile pdfFile = this.getDescription();
         if(!abort) {
-            PluginDescriptionFile pdfFile = this.getDescription();
             config.clog(Level.INFO, pdfFile.getName() + " version v" + pdfFile.getVersion() + " is enabled!");
 
             // launch our background thread checking for Courier updates
             startUpdateThread();
         } else {
+            config.clog(Level.INFO, pdfFile.getName() + " version v" + pdfFile.getVersion() + " has been disabled!");
             setEnabled(false);
         }
+
+        initDone = true;
     }
 
     // in preparation for plugin config dynamic reloading

@@ -2,18 +2,18 @@ package se.troed.plugin.Courier;
 
 import org.bukkit.Material;
 import org.bukkit.enchantments.Enchantment;
-import org.bukkit.entity.Creature;
-import org.bukkit.entity.Enderman;
-import org.bukkit.entity.Monster;
-import org.bukkit.entity.Villager;
+import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.*;
 import org.bukkit.event.player.*;
+import org.bukkit.event.world.ChunkLoadEvent;
+import org.bukkit.event.world.WorldLoadEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.map.MapRenderer;
 import org.bukkit.map.MapView;
 import org.bukkit.material.MaterialData;
 
@@ -28,6 +28,26 @@ class CourierEventListener implements Listener {
     public CourierEventListener(Courier instance) {
         plugin = instance;
     }
+
+    // todo: Bukkit 1.4.6 R0.1 - I don't seem to get WorldLoadEvents. Why?
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onWorldLoad(WorldLoadEvent e) {
+        plugin.getCConfig().clog(Level.FINE, "World " + e.getWorld().getName() + " load");
+        if(plugin.getServer().getWorlds().size() == 1) {
+            // first world loaded - it's also the default in all cases I've seen [world(0)]
+//            plugin.postWorldInit();
+        }
+    }
+
+/*    @EventHandler(priority = EventPriority.MONITOR)
+    public void onWorldInit(WorldInitEvent e) {
+        plugin.getCConfig().clog(Level.FINE, "World " + e.getWorld().getName() + " init");
+        if(plugin.getServer().getWorlds().size() == 1) {
+            // first world loaded - it's also the default in all cases I've seen [world(0)]
+            plugin.postWorldLoad();
+        }
+    }*/
 
     @EventHandler(priority = EventPriority.NORMAL)
     void onCourierDeliveryEvent(CourierDeliveryEvent e) {
@@ -65,6 +85,36 @@ class CourierEventListener implements Listener {
 
     @EventHandler(priority = EventPriority.NORMAL)
     public void onPlayerInteractEntity(PlayerInteractEntityEvent e) {
+        // Did we put a map into an ItemFrame?
+        if(e.getRightClicked().getType() == EntityType.ITEM_FRAME && e.getPlayer().getItemInHand().getType() == Material.MAP) {
+            // Is it a Letter?
+            MapView map = plugin.getServer().getMap(e.getPlayer().getItemInHand().getDurability());
+            if(map.getCenterX() == Courier.MAGIC_NUMBER) {
+                if(map.getId() == plugin.getCourierdb().getCourierMapId()) {
+                    // Regular Courier Letter using our shared Map - convert to unique Map for ItemFrame use
+                    plugin.getCConfig().clog(Level.FINE, "Courier Letter placed into ItemFrame");
+                    MapView newMap = plugin.getServer().createMap(plugin.getServer().getWorlds().get(0));
+                    newMap.setCenterX(Courier.MAGIC_NUMBER);
+                    // the one and only rendering map uses 0, but we need the database key stored in pure Map data here
+                    newMap.setCenterZ(e.getPlayer().getItemInHand().getEnchantmentLevel(Enchantment.DURABILITY));
+                    List<MapRenderer> renderers = map.getRenderers();
+                    for(MapRenderer r : renderers) { // remove existing renderers
+                        newMap.removeRenderer(r);
+                    }
+                    newMap.addRenderer(new LetterRenderer(plugin, true));
+                    ItemStack mapItem = new ItemStack(Material.MAP, 1, newMap.getId());
+                    // Copy the same Enchantment level (our database lookup key) to the new ItemStack
+                    mapItem.addUnsafeEnchantment(Enchantment.DURABILITY, e.getPlayer().getItemInHand().getEnchantmentLevel(Enchantment.DURABILITY));
+                    e.getPlayer().setItemInHand(mapItem); // Replace the Courier Letter the player had with the new unique Map
+                } else {
+                    // Unique Courier Map
+                    // Probably never happens since we convert them back on pickup and heldchange into regular Courier Letters
+                    plugin.getCConfig().clog(Level.FINE, "Courier unique Map placed into ItemFrame");
+                }
+            }
+        }
+
+        // Did we right click a Postman?
         Postman postman = plugin.getPostman(e.getRightClicked().getUniqueId());
         if(!e.isCancelled() && !e.getRightClicked().isDead() && postman != null && !postman.scheduledForQuickRemoval()) {
             plugin.getCConfig().clog(Level.FINE, e.getPlayer().getDisplayName() + " receiving mail");
@@ -125,7 +175,8 @@ class CourierEventListener implements Listener {
     }
 
     // helper method for converting legacy Courier Letters from MapID to Enchantment Level
-    ItemStack legacyConversion(int id, MapView map) {
+    // also used when converting Maps that have been placed in ItemFrames back to regular Courier Maps
+    ItemStack convertMap(int id, MapView map) {
         if(id == 0) {
             // special case. MapID 0 was a valid Courier Letter, Enchantment Level 0 is not!
             // (actually I was probably wrong about that, but let's go with it anyway)
@@ -134,19 +185,24 @@ class CourierEventListener implements Listener {
                 plugin.getCConfig().clog(Level.SEVERE, "Out of unique message IDs! Notify your admin!");
                 return null;
             }
-            plugin.getCConfig().clog(Level.FINE, "Converting legacy Courier Letter 0 to " + newId);
+            plugin.getCConfig().clog(Level.FINE, "Converting unique Courier Letter 0 to " + newId);
             plugin.getCourierdb().changeId(id, newId);
             id = newId;
         } else {
-            plugin.getCConfig().clog(Level.FINE, "Converting legacy Courier Letter id " + id);
+            plugin.getCConfig().clog(Level.FINE, "Converting unique Courier Letter id " + id);
         }
         // convert old Courier Letter into new
         ItemStack letterItem = new ItemStack(Material.MAP, 1, plugin.getCourierdb().getCourierMapId());
         // I can trust this id to stay the same thanks to how we handle it in CourierDB
         letterItem.addUnsafeEnchantment(Enchantment.DURABILITY, id);
+        return letterItem;
+    }
+
+    ItemStack convertLegacyMap(int id, MapView map) {
+        ItemStack converted = convertMap(id, map);
         // store the date in the db
         plugin.getCourierdb().storeDate(id, map.getCenterZ());
-        return letterItem;
+        return converted;
     }
 
     // helper method
@@ -172,18 +228,28 @@ class CourierEventListener implements Listener {
         // http://dev.bukkit.org/server-mods/courier/tickets/36-severe-could-not-pass-event-player-item-held-event/
         ItemStack item = e.getPlayer().getInventory().getItem(e.getNewSlot());
         if(item != null && item.getType() == Material.MAP) {
-            // legacy Courier support
-            MapView map = plugin.getServer().getMap(e.getPlayer().getInventory().getItem(e.getNewSlot()).getDurability());
+            // convert legacy and ItemFrame maps
+            MapView map = plugin.getServer().getMap(item.getDurability());
             if(map.getCenterX() == Courier.MAGIC_NUMBER && map.getId() != plugin.getCourierdb().getCourierMapId()) {
-                int id = e.getPlayer().getInventory().getItem(e.getNewSlot()).getDurability();
-                ItemStack letterItem = legacyConversion(id, map);
+                ItemStack letterItem = null;
+                if(item.containsEnchantment(Enchantment.DURABILITY)) {
+                    // unique map item having been freed from its ItemFrame
+                    int id = item.getEnchantmentLevel(Enchantment.DURABILITY);
+                    plugin.getCConfig().clog(Level.FINE, "Converting unique Courier Letter id " + id);
+                    letterItem = convertMap(id, map);
+                } else {
+                    // legacy Courier map from pre v1.0.0 days
+                    int id = item.getDurability();
+                    plugin.getCConfig().clog(Level.FINE, "Converting legacy Courier Letter id " + id);
+                    letterItem = convertLegacyMap(id, map);
+                }
                 // replacing under the hood
                 if(letterItem != null) {
-                    e.getPlayer().getInventory().setItem(e.getNewSlot(), letterItem);
+                    item = letterItem;
                 }
             }
-            // legacy end
-            Letter letter = plugin.getLetter(e.getPlayer().getInventory().getItem(e.getNewSlot()));
+            // conversion end
+            Letter letter = plugin.getLetter(item);
             if(letter != null) {
                 // todo: is this the best place?
                 e.getPlayer().getInventory().setItem(e.getNewSlot(), setLore(item, letter.getSender()));
@@ -193,7 +259,7 @@ class CourierEventListener implements Listener {
                 // quick render
                 e.getPlayer().sendMap(plugin.getServer().getMap(plugin.getCourierdb().getCourierMapId()));
             } else { // not needed?
-                plugin.getCConfig().clog(Level.FINE, "Id " + e.getPlayer().getInventory().getItem(e.getNewSlot()).getDurability() + " is not a Letter");
+                plugin.getCConfig().clog(Level.FINE, "Id " + item.getDurability() + " is not a Letter");
             }
         }
     }
@@ -201,22 +267,31 @@ class CourierEventListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerPickupItem(PlayerPickupItemEvent e) {
         if(!e.isCancelled() && e.getItem().getItemStack().getType() == Material.MAP) {
-            // legacy Courier support
-            MapView map = plugin.getServer().getMap(e.getItem().getItemStack().getDurability());
+            // convert legacy and ItemFrame maps
+            ItemStack item = e.getItem().getItemStack();
+            MapView map = plugin.getServer().getMap(item.getDurability());
             if(map.getCenterX() == Courier.MAGIC_NUMBER && map.getId() != plugin.getCourierdb().getCourierMapId()) {
-                int id = e.getItem().getItemStack().getDurability();
-                ItemStack letterItem = legacyConversion(id, map);
+                ItemStack letterItem = null;
+                if(item.containsEnchantment(Enchantment.DURABILITY)) {
+                    // unique map item having been freed from its ItemFrame
+                    int id = item.getEnchantmentLevel(Enchantment.DURABILITY);
+                    letterItem = convertMap(id, map);
+                } else {
+                    // legacy Courier map from pre v1.0.0 days
+                    int id = item.getDurability();
+                    letterItem = convertLegacyMap(id, map);
+                }
                 // replacing under the hood
                 if(letterItem != null) {
-                    e.getItem().setItemStack(letterItem);
+                    item = letterItem;
                 }
             }
-            // legacy end
-            plugin.getCConfig().clog(Level.FINE, "Letter id " + e.getItem().getItemStack().getEnchantmentLevel(Enchantment.DURABILITY));
-            Letter letter = plugin.getLetter(e.getItem().getItemStack());
+            // conversion end
+            plugin.getCConfig().clog(Level.FINE, "Letter id " + item.getEnchantmentLevel(Enchantment.DURABILITY));
+            Letter letter = plugin.getLetter(item);
             if(letter != null) {
                 // todo: is this the best place?
-                e.getItem().setItemStack(setLore(e.getItem().getItemStack(), letter.getSender()));
+                e.getItem().setItemStack(setLore(item, letter.getSender()));
 
                 plugin.getCConfig().clog(Level.FINE, "Letter " + letter.getId() + " picked up.");
 
@@ -225,8 +300,8 @@ class CourierEventListener implements Listener {
                 plugin.getServer().getPluginManager().callEvent(event);
 
                 // if itemheldhand was empty, we should render the letter immediately
-                ItemStack item = e.getPlayer().getItemInHand();
-                if(item != null && item.getAmount() == 0) {
+                ItemStack heldItem = e.getPlayer().getItemInHand();
+                if(heldItem != null && heldItem.getAmount() == 0) {
                     e.getPlayer().sendMap(plugin.getServer().getMap(plugin.getCourierdb().getCourierMapId()));
                 }
             }
@@ -234,6 +309,33 @@ class CourierEventListener implements Listener {
     }
 
     // onPlayerDropItem for recycling? or something more active? (furnace? :D)
+
+    @EventHandler(priority = EventPriority.NORMAL)
+    public void onChunkLoad(ChunkLoadEvent e) {
+        // todo: only do this if ItemFrame support is on in config
+        if(e.isNewChunk()) {
+            return;
+        }
+        Entity[] entities = e.getChunk().getEntities();
+        for(Entity entity : entities) {
+            if(entity instanceof ItemFrame) {
+//            if(entity.getType() == EntityType.ITEM_FRAME) {
+                ItemStack item = ((ItemFrame)entity).getItem();
+                if(item.getType() == Material.MAP && item.containsEnchantment(Enchantment.DURABILITY)) {
+                    MapView map = plugin.getServer().getMap(item.getDurability());
+                    if(map.getCenterX() == Courier.MAGIC_NUMBER) {
+                        // finally, we're home
+                        List<MapRenderer> renderers = map.getRenderers();
+                        for(MapRenderer r : renderers) { // remove existing renderers
+                            map.removeRenderer(r);
+                        }
+                        map.addRenderer(new LetterRenderer(plugin, true));
+                        plugin.getCConfig().clog(Level.FINE, "Found Courier Map in ItemFrame, re-added renderer");
+                    }
+                }
+            }
+        }
+    }
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerQuit(PlayerQuitEvent event) {

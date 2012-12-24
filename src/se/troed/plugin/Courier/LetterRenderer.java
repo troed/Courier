@@ -5,6 +5,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.map.*;
 
+import java.util.logging.Level;
+
 public class LetterRenderer extends MapRenderer {
 
     @SuppressWarnings("FieldCanBeLocal")
@@ -20,8 +22,8 @@ public class LetterRenderer extends MapRenderer {
     private int lastId = -1;
     private boolean clear = false;
 
-    public LetterRenderer(Courier p) {
-        super(true); // all our messages are contextual (i.e different for different players)
+    public LetterRenderer(Courier p, boolean contextual) {
+        super(contextual); // all our messages are contextual (i.e different for different players)
         plugin = p;
     }
 
@@ -30,17 +32,19 @@ public class LetterRenderer extends MapRenderer {
     // https://bukkit.atlassian.net/browse/BUKKIT-476
     @Override
     public void render(MapView map, MapCanvas canvas, Player player) {
-        // thanks to the above bug we end up here even if we're not holding a Map specifically
+        Letter letter = null;
         ItemStack item = player.getItemInHand();
         // todo: Trying to figure out if we can render Letters in ItemFrames
-        if(map.getId() == plugin.getCourierdb().getCourierMapId()) {
+        if(map.getCenterX() == Courier.MAGIC_NUMBER && map.getId() != plugin.getCourierdb().getCourierMapId()) {
             // it's a Courier map, and we get called even when it's in an ItemFrame in a loaded chunk. Player doesn't
             // even need to be near it. Performance issues galore ...
-//            System.out.print("render() called on a Courier Map");
-            // but if it's an ItemFrame - how will I be able to know _which one_ to extract the enchantment/lore?
+            letter = plugin.getLetter(map.getCenterZ());
+//            plugin.getCConfig().clog(Level.FINE, "Rendering a Courier ItemFrame map");
         }
-        if(item != null && item.getType() == Material.MAP) {
-            Letter letter = plugin.getLetter(item);
+        if(letter != null || (item != null && item.getType() == Material.MAP)) {
+            if(letter == null) {
+                letter = plugin.getLetter(item);
+            }
             if(clear || (letter != null && lastId != letter.getId())) {
                 for(int j = 0; j < CANVAS_HEIGHT; j++) {
                     for(int i = 0; i < CANVAS_WIDTH; i++) {
