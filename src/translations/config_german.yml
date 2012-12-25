@@ -5,9 +5,9 @@
 # Route.WalkToPlayer is not used for Monster-Postmen (they would attack), only "friendly mobs".
 #   - Set to false if Villager-Postmen keep pushing you into lava ;)
 Courier:
-  UseFees: false
   Version: 1.1.7
   UpdateInterval: 18000         # Checks for new versions every 5h. A value of 0 disables.
+  UseFees: false
   Fee:
     Send: 10
     BankAccount: <none>
@@ -38,6 +38,7 @@ Courier:
     # Multiple amount resources example: [CobbleStone, Paper, CobbleStone]
     Resources: [Coal, Paper]
     ShowDate: true
+    Frameable: true
     Drop: "&7Kurier: &fDein Inventar ist voll, der Brief wurde auf den Boden gelegt."
     Inventory: "&7Kurier: &fDu hattest deine Hände voll, der Brief kann in deinem Inventar gefunden werden."
     NoText: "&7Kurier: &fError, kein Text um ihn dem Brief hinzuzufügen!"

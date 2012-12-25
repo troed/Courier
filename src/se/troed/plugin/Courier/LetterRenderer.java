@@ -34,7 +34,6 @@ public class LetterRenderer extends MapRenderer {
     public void render(MapView map, MapCanvas canvas, Player player) {
         Letter letter = null;
         ItemStack item = player.getItemInHand();
-        // todo: Trying to figure out if we can render Letters in ItemFrames
         if(map.getCenterX() == Courier.MAGIC_NUMBER && map.getId() != plugin.getCourierdb().getCourierMapId()) {
             // it's a Courier map, and we get called even when it's in an ItemFrame in a loaded chunk. Player doesn't
             // even need to be near it. Performance issues galore ...

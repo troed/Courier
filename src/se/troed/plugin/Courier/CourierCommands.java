@@ -236,11 +236,11 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                             if(plugin.getEconomy().getBanks().contains(account)) {
                                 // named Bank Account exists
                                 er = plugin.getEconomy().bankDeposit(account, fee);
-                                plugin.getCConfig().clog(Level.INFO, "Depositing fee into bank account " + account);
+                                plugin.getCConfig().clog(Level.FINE, "Depositing fee into bank account " + account);
                             } else if (plugin.getEconomy().hasAccount(account)) {
                                 // it's a Player
                                 er = plugin.getEconomy().depositPlayer(account, fee);
-                                plugin.getCConfig().clog(Level.INFO, "Depositing fee into player account " + account);
+                                plugin.getCConfig().clog(Level.FINE, "Depositing fee into player account " + account);
                             } else {
                                 // config is in error
                                 plugin.getCConfig().clog(Level.WARNING, "Configured Post office account " + account + " does not exist.");

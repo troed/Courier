@@ -49,6 +49,7 @@ public class CourierConfig {
     private static final String LETTER_DROP = "Courier.Letter.Drop";
     private static final String LETTER_INVENTORY = "Courier.Letter.Inventory";
     private static final String LETTER_SHOWDATE = "Courier.Letter.ShowDate";
+    private static final String LETTER_FRAMEABLE = "Courier.Letter.Frameable";
     private static final String LETTER_NOTEXT = "Courier.Letter.NoText";
     private static final String LETTER_SKIPPEDTEXT = "Courier.Letter.SkippedText";
     private static final String LETTER_CREATEFAILED = "Courier.Letter.CreateFailed";
@@ -281,6 +282,10 @@ public class CourierConfig {
     @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     public boolean getSealedEnvelope() {
         return sealedEnvelope;
+    }
+
+    public boolean getLetterFrameable() {
+        return config.getBoolean(LETTER_FRAMEABLE, true);
     }
 
     public boolean getCreativeDelivery() {

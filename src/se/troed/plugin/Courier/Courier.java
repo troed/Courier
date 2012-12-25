@@ -77,7 +77,7 @@ public class Courier extends JavaPlugin {
     public static final String PM_INFO = "courier.info";
     public static final String PM_THEONEPERCENT = "courier.theonepercent";
     public static final String PM_PRIVACYOVERRIDE = "courier.privacyoverride";
-
+    public static final String PM_USEITEMFRAMES = "courier.useitemframes";
     public static final int MAGIC_NUMBER = Integer.MAX_VALUE - 395743; // used to id our map
     public static final int MAX_ID = Short.MAX_VALUE; // really, we don't do negative numbers well atm
     public static final int MIN_ID = 1; // since unenchanted items are level 0

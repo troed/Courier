@@ -5,6 +5,7 @@ author: defxor
 description: Item based Player to Player realistically rendered mail
 website: http://dev.bukkit.org/server-mods/courier/
 softdepend: [Vault]
+load: STARTUP
 commands:
   postman:
     description: Spawns a postman
@@ -44,3 +45,6 @@ permissions:
   courier.privacyoverride:
     description: Allows the player to read privacy locked Letters
     default: false
+  courier.useitemframes:
+    description: Allows the player to put Letters into ItemFrames
+    default: true

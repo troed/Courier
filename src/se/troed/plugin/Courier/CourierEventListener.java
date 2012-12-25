@@ -30,7 +30,6 @@ class CourierEventListener implements Listener {
     }
 
     // todo: Bukkit 1.4.6 R0.1 - I don't seem to get WorldLoadEvents. Why?
-
     @EventHandler(priority = EventPriority.MONITOR)
     public void onWorldLoad(WorldLoadEvent e) {
         plugin.getCConfig().clog(Level.FINE, "World " + e.getWorld().getName() + " load");
@@ -90,26 +89,32 @@ class CourierEventListener implements Listener {
             // Is it a Letter?
             MapView map = plugin.getServer().getMap(e.getPlayer().getItemInHand().getDurability());
             if(map.getCenterX() == Courier.MAGIC_NUMBER) {
-                if(map.getId() == plugin.getCourierdb().getCourierMapId()) {
-                    // Regular Courier Letter using our shared Map - convert to unique Map for ItemFrame use
-                    plugin.getCConfig().clog(Level.FINE, "Courier Letter placed into ItemFrame");
-                    MapView newMap = plugin.getServer().createMap(plugin.getServer().getWorlds().get(0));
-                    newMap.setCenterX(Courier.MAGIC_NUMBER);
-                    // the one and only rendering map uses 0, but we need the database key stored in pure Map data here
-                    newMap.setCenterZ(e.getPlayer().getItemInHand().getEnchantmentLevel(Enchantment.DURABILITY));
-                    List<MapRenderer> renderers = map.getRenderers();
-                    for(MapRenderer r : renderers) { // remove existing renderers
-                        newMap.removeRenderer(r);
+                if(plugin.getCConfig().getLetterFrameable() && e.getPlayer().hasPermission(Courier.PM_USEITEMFRAMES)) {
+                    if(map.getId() == plugin.getCourierdb().getCourierMapId()) {
+                        // Regular Courier Letter using our shared Map - convert to unique Map for ItemFrame use
+                        plugin.getCConfig().clog(Level.FINE, "Courier Letter placed into ItemFrame");
+                        MapView newMap = plugin.getServer().createMap(plugin.getServer().getWorlds().get(0));
+                        newMap.setCenterX(Courier.MAGIC_NUMBER);
+                        // the one and only rendering map uses 0, but we need the database key stored in pure Map data here
+                        newMap.setCenterZ(e.getPlayer().getItemInHand().getEnchantmentLevel(Enchantment.DURABILITY));
+                        List<MapRenderer> renderers = map.getRenderers();
+                        for(MapRenderer r : renderers) { // remove existing renderers
+                            newMap.removeRenderer(r);
+                        }
+                        newMap.addRenderer(new LetterRenderer(plugin, true));
+                        ItemStack mapItem = new ItemStack(Material.MAP, 1, newMap.getId());
+                        // Copy the same Enchantment level (our database lookup key) to the new ItemStack
+                        mapItem.addUnsafeEnchantment(Enchantment.DURABILITY, e.getPlayer().getItemInHand().getEnchantmentLevel(Enchantment.DURABILITY));
+                        e.getPlayer().setItemInHand(mapItem); // Replace the Courier Letter the player had with the new unique Map
+                    } else {
+                        // Unique Courier Map
+                        // Probably never happens since we convert them back on pickup and heldchange into regular Courier Letters
+                        plugin.getCConfig().clog(Level.FINE, "Courier unique Map placed into ItemFrame");
                     }
-                    newMap.addRenderer(new LetterRenderer(plugin, true));
-                    ItemStack mapItem = new ItemStack(Material.MAP, 1, newMap.getId());
-                    // Copy the same Enchantment level (our database lookup key) to the new ItemStack
-                    mapItem.addUnsafeEnchantment(Enchantment.DURABILITY, e.getPlayer().getItemInHand().getEnchantmentLevel(Enchantment.DURABILITY));
-                    e.getPlayer().setItemInHand(mapItem); // Replace the Courier Letter the player had with the new unique Map
                 } else {
-                    // Unique Courier Map
-                    // Probably never happens since we convert them back on pickup and heldchange into regular Courier Letters
-                    plugin.getCConfig().clog(Level.FINE, "Courier unique Map placed into ItemFrame");
+                    // if we don't allow ItemFrames - block the interaction
+                    plugin.getCConfig().clog(Level.FINE, "Blocked Courier Letter into ItemFrame");
+                    e.setCancelled(true);
                 }
             }
         }
@@ -312,11 +317,12 @@ class CourierEventListener implements Listener {
 
     @EventHandler(priority = EventPriority.NORMAL)
     public void onChunkLoad(ChunkLoadEvent e) {
-        // todo: only do this if ItemFrame support is on in config
-        if(e.isNewChunk()) {
+        // immediately return if we don't support ItemFrames or if it's a newly generated chunk
+        if(!plugin.getCConfig().getLetterFrameable() || e.isNewChunk()) {
             return;
         }
         Entity[] entities = e.getChunk().getEntities();
+        int found = 0;
         for(Entity entity : entities) {
             if(entity instanceof ItemFrame) {
 //            if(entity.getType() == EntityType.ITEM_FRAME) {
@@ -330,10 +336,13 @@ class CourierEventListener implements Listener {
                             map.removeRenderer(r);
                         }
                         map.addRenderer(new LetterRenderer(plugin, true));
-                        plugin.getCConfig().clog(Level.FINE, "Found Courier Map in ItemFrame, re-added renderer");
+                        found++;
                     }
                 }
             }
+        }
+        if(found > 0) {
+            plugin.getCConfig().clog(Level.FINE, "Found " + found + " Courier Maps in ItemFrames, re-added renderers");
         }
     }
 
