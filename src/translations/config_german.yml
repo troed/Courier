@@ -25,7 +25,7 @@ Courier:
     Despawn: 20
     SpawnDistance: 10
     BreakSpawnProtection: true
-    CreativeDelivery: false
+    CreativeDelivery: true
     Greeting: "&7Kurier: &fEin Briefträger ist mit deiner Nachricht angekommen!"
     MailDrop: "&7Kurier: &fDeine Nachricht wurde auf den Boden gelegt."
     Inventory: "&7Kurier: &fDeine Hände waren voll, der Postbote hat die Nachricht für dich in dein Inventar gelegt."
