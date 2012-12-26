@@ -89,7 +89,10 @@ class CourierEventListener implements Listener {
             // Is it a Letter?
             MapView map = plugin.getServer().getMap(e.getPlayer().getItemInHand().getDurability());
             if(map.getCenterX() == Courier.MAGIC_NUMBER) {
-                if(plugin.getCConfig().getLetterFrameable() && e.getPlayer().hasPermission(Courier.PM_USEITEMFRAMES)) {
+                Letter letter = plugin.getLetter(e.getPlayer().getItemInHand());
+                if(plugin.getCConfig().getLetterFrameable() &&
+                            e.getPlayer().hasPermission(Courier.PM_USEITEMFRAMES) &&
+                            letter.isAllowedToSee(e.getPlayer())) {
                     if(map.getId() == plugin.getCourierdb().getCourierMapId()) {
                         // Regular Courier Letter using our shared Map - convert to unique Map for ItemFrame use
                         plugin.getCConfig().clog(Level.FINE, "Courier Letter placed into ItemFrame");
@@ -101,7 +104,7 @@ class CourierEventListener implements Listener {
                         for(MapRenderer r : renderers) { // remove existing renderers
                             newMap.removeRenderer(r);
                         }
-                        newMap.addRenderer(new LetterRenderer(plugin, true));
+                        newMap.addRenderer(new FramedLetterRenderer(plugin));
                         ItemStack mapItem = new ItemStack(Material.MAP, 1, newMap.getId());
                         // Copy the same Enchantment level (our database lookup key) to the new ItemStack
                         mapItem.addUnsafeEnchantment(Enchantment.DURABILITY, e.getPlayer().getItemInHand().getEnchantmentLevel(Enchantment.DURABILITY));
@@ -114,6 +117,7 @@ class CourierEventListener implements Listener {
                 } else {
                     // if we don't allow ItemFrames - block the interaction
                     plugin.getCConfig().clog(Level.FINE, "Blocked Courier Letter into ItemFrame");
+                    // todo: feedback string to player
                     e.setCancelled(true);
                 }
             }
@@ -211,15 +215,19 @@ class CourierEventListener implements Listener {
     }
 
     // helper method
-    // also see similar code in CourierEventListener
-    private ItemStack setLore(ItemStack item, String from) {
+    // also see similar code in CourierCommands
+    private ItemStack setLore(ItemStack item, Letter letter, Player player) {
         ItemMeta meta = item.getItemMeta();
         if(meta != null) {
             // todo: translateable strings
             meta.setDisplayName("Courier Letter");
             List<String> strings = new ArrayList<String>();
-            // todo: verify I'm allowed to read the letter
-            strings.add("Letter by " + from);
+            if(letter.isAllowedToSee(player)) {
+                strings.add("Letter from " + letter.getSender());
+                // todo: add first line of text
+            } else {
+                strings.add("Letter to " + letter.getReceiver());
+            }
             meta.setLore(strings);
             item.setItemMeta(meta);
         } else {
@@ -257,7 +265,7 @@ class CourierEventListener implements Listener {
             Letter letter = plugin.getLetter(item);
             if(letter != null) {
                 // todo: is this the best place?
-                e.getPlayer().getInventory().setItem(e.getNewSlot(), setLore(item, letter.getSender()));
+                e.getPlayer().getInventory().setItem(e.getNewSlot(), setLore(item, letter, e.getPlayer()));
 
                 plugin.getCConfig().clog(Level.FINE, "Switched to Letter id " + letter.getId());
 
@@ -296,7 +304,7 @@ class CourierEventListener implements Listener {
             Letter letter = plugin.getLetter(item);
             if(letter != null) {
                 // todo: is this the best place?
-                e.getItem().setItemStack(setLore(item, letter.getSender()));
+                e.getItem().setItemStack(setLore(item, letter, e.getPlayer()));
 
                 plugin.getCConfig().clog(Level.FINE, "Letter " + letter.getId() + " picked up.");
 
@@ -335,7 +343,7 @@ class CourierEventListener implements Listener {
                         for(MapRenderer r : renderers) { // remove existing renderers
                             map.removeRenderer(r);
                         }
-                        map.addRenderer(new LetterRenderer(plugin, true));
+                        map.addRenderer(new FramedLetterRenderer(plugin));
                         found++;
                     }
                 }

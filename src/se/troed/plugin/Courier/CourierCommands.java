@@ -373,6 +373,7 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                             if(meta != null) {
                                 meta.setDisplayName("Courier Letter");
                                 List<String> strings = new ArrayList<String>();
+                                // todo: should be first line of text
                                 strings.add("Letter by " + player.getName());
                                 meta.setLore(strings);
                                 letterItem.setItemMeta(meta);

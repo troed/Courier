@@ -5,9 +5,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.map.*;
 
-import java.util.logging.Level;
-
-public class LetterRenderer extends MapRenderer {
+public class FramedLetterRenderer extends MapRenderer {
 
     @SuppressWarnings("FieldCanBeLocal")
     private final int HEADER_POS = 2; // 2*getHeight()
@@ -22,8 +20,8 @@ public class LetterRenderer extends MapRenderer {
     private int lastId = -1;
     private boolean clear = false;
 
-    public LetterRenderer(Courier p) {
-        super(true); // all our messages are contextual (i.e different for different players)
+    public FramedLetterRenderer(Courier p) {
+        super(false); // Framed Letters are not contextual (i.e same for all players)
         plugin = p;
     }
 
@@ -32,18 +30,11 @@ public class LetterRenderer extends MapRenderer {
     // https://bukkit.atlassian.net/browse/BUKKIT-476
     @Override
     public void render(MapView map, MapCanvas canvas, Player player) {
-        Letter letter = null;
-        ItemStack item = player.getItemInHand();
         if(map.getCenterX() == Courier.MAGIC_NUMBER && map.getId() != plugin.getCourierdb().getCourierMapId()) {
-            // it's a Courier map, and we get called even when it's in an ItemFrame in a loaded chunk. Player doesn't
+            // it's a Courier map in an ItemFrame. We get called when it's in a loaded chunk. Player doesn't
             // even need to be near it. Performance issues galore ...
-            letter = plugin.getLetter(map.getCenterZ());
-            plugin.getCConfig().clog(Level.FINE, "ItemFrame map render call to LetterRenderer");
-        }
-        if(letter != null || (item != null && item.getType() == Material.MAP)) {
-            if(letter == null) {
-                letter = plugin.getLetter(item);
-            }
+            Letter letter = plugin.getLetter(map.getCenterZ());
+//            plugin.getCConfig().clog(Level.FINE, "Rendering a Courier ItemFrame map");
             if(clear || (letter != null && lastId != letter.getId())) {
                 for(int j = 0; j < CANVAS_HEIGHT; j++) {
                     for(int i = 0; i < CANVAS_WIDTH; i++) {
@@ -56,10 +47,11 @@ public class LetterRenderer extends MapRenderer {
                 }
                 clear = false;
             }
-            // todo: idea for pvp war servers: "your mail has fallen into enemy hands". "they've read it!")
-            if(letter != null && letter.isAllowedToSee(player)) {
+
+            if(letter != null) {
+
                 int drawPos = HEADER_POS;
-//                if(!letter.getReceiver().equalsIgnoreCase(letter.getSender())) {
+
                 if(letter.getHeader() != null) {
                     canvas.drawText(0, MinecraftFont.Font.getHeight() * drawPos, MinecraftFont.Font, letter.getHeader());
                     drawPos = BODY_POS;
@@ -77,18 +69,6 @@ public class LetterRenderer extends MapRenderer {
                                     0,
                                     MinecraftFont.Font, Letter.DATE_COLOR + letter.getDisplayDate());
                 }
-
-                // this is the actual time we can be sure a letter has been read
-                // post an event to make sure we don't block the rendering pipeline
-                if(!letter.getRead()) {
-                    CourierReadEvent event = new CourierReadEvent(player, letter.getId());
-                    plugin.getServer().getPluginManager().callEvent(event);
-                    letter.setRead(true);
-                }
-            } else if(letter != null) {
-                String temp = Letter.HEADER_COLOR + "Sorry, only " + Letter.HEADER_FROM_COLOR +
-                              letter.getReceiver() + "\n" + Letter.HEADER_COLOR + "can read this letter";
-                canvas.drawText(0, MinecraftFont.Font.getHeight()*HEADER_POS, MinecraftFont.Font, temp);
             }
         }
     }

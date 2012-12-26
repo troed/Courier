@@ -531,7 +531,7 @@ public class Courier extends JavaPlugin {
         if(!abort) {
             MapView mv = getServer().getMap(mapId);
             if(letterRenderer == null) {
-                letterRenderer = new LetterRenderer(this, true);
+                letterRenderer = new LetterRenderer(this);
             }
             letterRenderer.initialize(mv); // does this make a difference at all?
             List<MapRenderer> renderers = mv.getRenderers();
