@@ -224,7 +224,7 @@ class CourierEventListener implements Listener {
             List<String> strings = new ArrayList<String>();
             if(letter.isAllowedToSee(player)) {
                 strings.add("Letter from " + letter.getSender());
-                // todo: add first line of text
+                strings.add(letter.getTopRow());
             } else {
                 strings.add("Letter to " + letter.getReceiver());
             }
@@ -264,7 +264,6 @@ class CourierEventListener implements Listener {
             // conversion end
             Letter letter = plugin.getLetter(item);
             if(letter != null) {
-                // todo: is this the best place?
                 e.getPlayer().getInventory().setItem(e.getNewSlot(), setLore(item, letter, e.getPlayer()));
 
                 plugin.getCConfig().clog(Level.FINE, "Switched to Letter id " + letter.getId());
@@ -303,7 +302,6 @@ class CourierEventListener implements Listener {
             plugin.getCConfig().clog(Level.FINE, "Letter id " + item.getEnchantmentLevel(Enchantment.DURABILITY));
             Letter letter = plugin.getLetter(item);
             if(letter != null) {
-                // todo: is this the best place?
                 e.getItem().setItemStack(setLore(item, letter, e.getPlayer()));
 
                 plugin.getCConfig().clog(Level.FINE, "Letter " + letter.getId() + " picked up.");

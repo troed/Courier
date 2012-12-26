@@ -367,14 +367,13 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                         if(letter == null) {
                             ItemStack letterItem = new ItemStack(Material.MAP, 1, plugin.getCourierdb().getCourierMapId());
                             letterItem.addUnsafeEnchantment(Enchantment.DURABILITY, id);
-                            // todo: is this the best place?
+                            letter = plugin.getLetter(letterItem);
                             // also see similar code in CourierEventListener
                             ItemMeta meta = letterItem.getItemMeta();
                             if(meta != null) {
                                 meta.setDisplayName("Courier Letter");
                                 List<String> strings = new ArrayList<String>();
-                                // todo: should be first line of text
-                                strings.add("Letter by " + player.getName());
+                                strings.add(letter.getTopRow());
                                 meta.setLore(strings);
                                 letterItem.setItemMeta(meta);
                             } else {

@@ -28,8 +28,8 @@ public class Letter {
     @SuppressWarnings("FieldCanBeLocal")
     private final String sender;
     private final int id;
-//    private final String message;
     private List<String> message;
+    private String topRow;
     private final String header;
     private final int date;
     private String displayDate;
@@ -85,7 +85,6 @@ public class Letter {
             header = null; // tested by LetterRenderer
         }
         // must be done after header, we use that knowledge for height calculation
-//        setMessage("Ohyggligt &nl &nl &nl &nl &nl &nl &nl &nl &nl &nl &nl &nl &nl långt &nl &nl &nl &nl &nl &nl &nl &nl &nl &nl &nl &nl &nl &nl &nl &nl &nl brev");
         setMessage(m);
     }
 
@@ -133,6 +132,11 @@ public class Letter {
     
     public String getMessage() {
         return message.get(currentPage);
+    }
+
+    // helper method used when adding Lore to Letter ItemStacks
+    public String getTopRow() {
+        return topRow != null ? topRow : "";
     }
 
     public void advancePage() {
@@ -230,6 +234,10 @@ public class Letter {
                     x+=width;
                     i++;
                 }
+            }
+            // store first line of text on the first page for convenience
+            if(height == 0 && page == 0) {
+                topRow = buffer.toString();
             }
             // if there's more to come, newline and check if we need a new page
             if(i < words.size()) {
