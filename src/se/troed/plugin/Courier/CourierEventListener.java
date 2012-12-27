@@ -92,7 +92,8 @@ class CourierEventListener implements Listener {
                 Letter letter = plugin.getLetter(e.getPlayer().getItemInHand());
                 if(plugin.getCConfig().getLetterFrameable() &&
                             e.getPlayer().hasPermission(Courier.PM_USEITEMFRAMES) &&
-                            letter.isAllowedToSee(e.getPlayer())) {
+                            (letter == null || letter.isAllowedToSee(e.getPlayer()))) {
+                    // todo: deal with blank parchments here
                     if(map.getId() == plugin.getCourierdb().getCourierMapId()) {
                         // Regular Courier Letter using our shared Map - convert to unique Map for ItemFrame use
                         plugin.getCConfig().clog(Level.FINE, "Courier Letter placed into ItemFrame");
@@ -188,7 +189,6 @@ class CourierEventListener implements Listener {
     ItemStack convertMap(int id, MapView map) {
         if(id == 0) {
             // special case. MapID 0 was a valid Courier Letter, Enchantment Level 0 is not!
-            // (actually I was probably wrong about that, but let's go with it anyway)
             int newId = plugin.getCourierdb().generateUID();
             if(newId == -1) {
                 plugin.getCConfig().clog(Level.SEVERE, "Out of unique message IDs! Notify your admin!");
@@ -270,8 +270,8 @@ class CourierEventListener implements Listener {
 
                 // quick render
                 e.getPlayer().sendMap(plugin.getServer().getMap(plugin.getCourierdb().getCourierMapId()));
-            } else { // not needed?
-                plugin.getCConfig().clog(Level.FINE, "Id " + item.getDurability() + " is not a Letter");
+            } else {
+                plugin.getCConfig().clog(Level.FINE, "Switched to blank parchment");
             }
         }
     }
@@ -299,7 +299,6 @@ class CourierEventListener implements Listener {
                 }
             }
             // conversion end
-            plugin.getCConfig().clog(Level.FINE, "Letter id " + item.getEnchantmentLevel(Enchantment.DURABILITY));
             Letter letter = plugin.getLetter(item);
             if(letter != null) {
                 e.getItem().setItemStack(setLore(item, letter, e.getPlayer()));
@@ -315,6 +314,8 @@ class CourierEventListener implements Listener {
                 if(heldItem != null && heldItem.getAmount() == 0) {
                     e.getPlayer().sendMap(plugin.getServer().getMap(plugin.getCourierdb().getCourierMapId()));
                 }
+            } else {
+                plugin.getCConfig().clog(Level.FINE, "Picked up blank parchment");
             }
         }        
     }

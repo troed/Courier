@@ -46,6 +46,7 @@ public class CourierConfig {
     private static final String POSTMAN_NOUNREADMAIL = "Courier.Postman.NoUnreadMail";
     private static final String LETTER_FREE = "Courier.Letter.FreeLetter";
     private static final String LETTER_RESOURCES = "Courier.Letter.Resources";
+    private static final String LETTER_REQUIRESCRAFTING = "Courier.Letter.RequiresCrafting";
     private static final String LETTER_DROP = "Courier.Letter.Drop";
     private static final String LETTER_INVENTORY = "Courier.Letter.Inventory";
     private static final String LETTER_SHOWDATE = "Courier.Letter.ShowDate";
@@ -57,6 +58,7 @@ public class CourierConfig {
     private static final String LETTER_INFOCOST = "Courier.Letter.InfoCost";
     private static final String LETTER_INFOFREE = "Courier.Letter.InfoFree";
     private static final String LETTER_LACKINGRESOURCES = "Courier.Letter.LackingResources";
+    private static final String LETTER_NOCRAFTEDFOUND = "Courier.Letter.NoCraftedFound";
     private static final String PRIVACY_SEALED = "Courier.Privacy.SealedEnvelope";
     private static final String POST_NOCREDIT = "Courier.Post.NoCredit";
     private static final String POST_NORECIPIENT = "Courier.Post.NoRecipient";
@@ -275,6 +277,10 @@ public class CourierConfig {
         return letterStacks;
     }
 
+    public boolean getRequiresCrafting() {
+        return config.getBoolean(LETTER_REQUIRESCRAFTING, false);
+    }
+
     public boolean getBreakSpawnProtection() {
         return breakSpawnProtection;
     }
@@ -407,6 +413,10 @@ public class CourierConfig {
 
     public String getLetterLackingResources() {
         return colorize(config.getString(LETTER_LACKINGRESOURCES, "")); // 1.1.5
+    }
+
+    public String getLetterNoCraftedFound() {
+        return colorize(config.getString(LETTER_NOCRAFTEDFOUND, "")); // 1.1.8
     }
 
     public String getInfoLine1() {

@@ -10,6 +10,7 @@ import org.bukkit.entity.*;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.map.MapView;
 import org.bukkit.map.MinecraftFont;
 
 import java.util.ArrayList;
@@ -295,14 +296,24 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
         try {
             ItemStack item = player.getItemInHand();
             Letter letter = null;
+            boolean crafted = false;
             if(item != null && item.getType() == Material.MAP) {
-                letter = plugin.getLetter(item);
+                MapView map = plugin.getServer().getMap(item.getDurability());
+                if(map.getId() == plugin.getCourierdb().getCourierMapId()) {
+                    // this is a current Courier Letter
+                    letter = plugin.getLetter(item);
+                    if(letter == null) {
+                        // this is apparently a crafted and pristine Letter, can safely be replaced properly later
+                        crafted = true;
+                        plugin.getCConfig().clog(Level.FINE, "Found crafted letter");
+                    }
+                }
             }
-            int id;
+            int id = -1;
             if(letter == null) {
-                // player had no Courier Letter in hand, create a new one
+                // player had no, or blank, Courier Letter in hand
                 // see: http://dev.bukkit.org/server-mods/courier/tickets/16-postage-charges/
-                id = createLetter(player);
+                id = createLetter(player, crafted);
             } else {
                 id = letter.getId();
             }
@@ -379,7 +390,7 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                             } else {
                                 // ???
                             }
-                            if(item != null && item.getAmount() > 0) {
+                            if(!crafted && (item != null && item.getAmount() > 0)) {
                                 plugin.getCConfig().clog(Level.FINE, "Player hands not empty");
                                 HashMap<Integer, ItemStack> items = player.getInventory().addItem(letterItem);
                                 if(items.isEmpty()) {
@@ -397,6 +408,8 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                                     player.getWorld().dropItemNaturally(player.getLocation(), letterItem);
                                 }
                             } else {
+                                // we end up here on empty hands or if we know player is holding a crafted Letter
+                                // todo: oops! we might be holding a stack of parchment!
                                 plugin.getCConfig().clog(Level.FINE, "Letter delivered into player's hands");
                                 player.setItemInHand(letterItem); // REALLY replaces what's there
         
@@ -465,31 +478,41 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
     // helper methods
 
     @SuppressWarnings("deprecation") // player.updateInventory()
-    int createLetter(Player player) {
+    int createLetter(Player player, boolean crafted) {
         int id = -1;
         if(!plugin.getCConfig().getFreeLetter()) {
             // letters aren't free on this server
-            List<ItemStack> resources = plugin.getCConfig().getLetterResources();
-            // verify player has the goods
-            Inventory inv = player.getInventory();
-            boolean lacking = false;
-            for(ItemStack resource : resources) {
-                plugin.getCConfig().clog(Level.FINE, "Requiring resource: " + resource.toString());
-                // (ItemStack, amount) doesn't match, (Material, amount) does
-                if(!inv.contains(resource.getType(), resource.getAmount())) {
-                    plugin.getCConfig().clog(Level.FINE, "Requiring resource: " + resource.toString() + " failed");
-                    lacking = true;
+            if(plugin.getCConfig().getRequiresCrafting()) {
+                if(crafted) {
+                    id = plugin.getCourierdb().generateUID();
+                } else {
+                    // Well, if we end up here the player hadn't crafted a Letter and we're not making one for him/her
+                    player.sendMessage(plugin.getCConfig().getLetterNoCraftedFound());
                 }
-            }
-            if(lacking) {
-                player.sendMessage(plugin.getCConfig().getLetterLackingResources());
             } else {
-                // subtract from inventory
+
+                    List<ItemStack> resources = plugin.getCConfig().getLetterResources();
+                // verify player has the goods
+                Inventory inv = player.getInventory();
+                boolean lacking = false;
                 for(ItemStack resource : resources) {
-                    inv.removeItem(resource);
+                    plugin.getCConfig().clog(Level.FINE, "Requiring resource: " + resource.toString());
+                    // (ItemStack, amount) doesn't match, (Material, amount) does
+                    if(!inv.contains(resource.getType(), resource.getAmount())) {
+                        plugin.getCConfig().clog(Level.FINE, "Requiring resource: " + resource.toString() + " failed");
+                        lacking = true;
+                    }
                 }
-                player.updateInventory(); // deprecated, but apparently the correct thing to do
-                id = plugin.getCourierdb().generateUID();
+                if(lacking) {
+                    player.sendMessage(plugin.getCConfig().getLetterLackingResources());
+                } else {
+                    // subtract from inventory
+                    for(ItemStack resource : resources) {
+                        inv.removeItem(resource);
+                    }
+                    player.updateInventory(); // deprecated, but apparently the correct thing to do
+                    id = plugin.getCourierdb().generateUID();
+                }
             }
         } else {
             // letters are free

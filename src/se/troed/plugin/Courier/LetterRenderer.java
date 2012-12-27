@@ -34,17 +34,11 @@ public class LetterRenderer extends MapRenderer {
     public void render(MapView map, MapCanvas canvas, Player player) {
         Letter letter = null;
         ItemStack item = player.getItemInHand();
-        if(map.getCenterX() == Courier.MAGIC_NUMBER && map.getId() != plugin.getCourierdb().getCourierMapId()) {
-            // it's a Courier map, and we get called even when it's in an ItemFrame in a loaded chunk. Player doesn't
-            // even need to be near it. Performance issues galore ...
-            letter = plugin.getLetter(map.getCenterZ());
-            plugin.getCConfig().clog(Level.FINE, "ItemFrame map render call to LetterRenderer");
-        }
-        if(letter != null || (item != null && item.getType() == Material.MAP)) {
-            if(letter == null) {
-                letter = plugin.getLetter(item);
-            }
-            if(clear || (letter != null && lastId != letter.getId())) {
+        if(item != null && item.getType() == Material.MAP) {
+
+            letter = plugin.getLetter(item);
+
+            if(clear || letter == null || (letter != null && lastId != letter.getId())) {
                 for(int j = 0; j < CANVAS_HEIGHT; j++) {
                     for(int i = 0; i < CANVAS_WIDTH; i++) {
                         //                    canvas.setPixel(i, j, clearImage[j*128+i]);

@@ -39,6 +39,8 @@ Courier:
     FreeLetter: true
     # Multiple amount resources example: [CobbleStone, Paper, CobbleStone]
     Resources: [Coal, Paper]
+    # Whether Courier should just deduct the resources or if players need to manually craft Letters
+    RequiresCrafting: false
     ShowDate: true
     Frameable: true
     Drop: '&5Service postal: &fVotre lettre a été jetée au sol.'
@@ -54,6 +56,7 @@ Courier:
     InfoCost: "&7Courier: &fResources needed to create letters: %s."
     InfoFree: "&7Courier: &fLetters don't require any resources to make."
     LackingResources: "&7Courier: &fYou don't have the required resources to create a letter. See /courier fees"
+    NoCraftedFound: "&7Courier: &fTo write a Letter you first need to craft blank parchment. See /courier fees"
   Post:
     NoCredit: '&5Service postal: &fVous n''avez pas assez d''argent pour envoyer une
       lettre (%s)'

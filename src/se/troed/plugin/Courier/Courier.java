@@ -20,10 +20,7 @@ package se.troed.plugin.Courier;
 
 import net.milkbowl.vault.Vault;
 import net.milkbowl.vault.economy.Economy;
-import org.bukkit.Difficulty;
-import org.bukkit.GameMode;
-import org.bukkit.Location;
-import org.bukkit.World;
+import org.bukkit.*;
 import org.bukkit.block.Biome;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
@@ -31,6 +28,8 @@ import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.ShapelessRecipe;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.map.MapRenderer;
 import org.bukkit.map.MapView;
 import org.bukkit.plugin.Plugin;
@@ -140,6 +139,10 @@ public class Courier extends JavaPlugin {
     // finds the Letter associated with a specific id
     // recreates structure from db after each restart as needed
     public Letter getLetter(int id) {
+        if(id == 0) {
+            // currently happens when crafted Letters put into ItemFrames are rendered
+            return null;
+        }
         Letter letter = letters.get(id);
         if(letter == null) {
             // server has lost the ItemStack<->Letter associations, re-populate
@@ -573,6 +576,23 @@ public class Courier extends JavaPlugin {
 //        if(!defWorld.getAllowAnimals() || !defWorld.getAllowMonsters() || defWorld.getDifficulty() == Difficulty.PEACEFUL) {
         if(defWorld.getDifficulty() == Difficulty.PEACEFUL) {
             config.clog(Level.WARNING, "With difficulty set to Peaceful Monsters cannot spawn. Verify that the Postman type you've configured Courier to use isn't a Monster.");
+        }
+
+        if(config.getRequiresCrafting()) {
+            config.clog(Level.FINE, "Crafting recipe required");
+            ItemStack item = new ItemStack(Material.MAP, 1, getCourierdb().getCourierMapId());
+            ItemMeta meta = item.getItemMeta();
+            if(meta != null) {
+                // todo: translateable strings
+                meta.setDisplayName("Blank Courier Parchment");
+                item.setItemMeta(meta);
+            }
+            ShapelessRecipe recipe = new ShapelessRecipe(item);
+            for(ItemStack resource : config.getLetterResources()) {
+                config.clog(Level.FINE, "Crafting recipe adding: " + resource.getAmount() + " x " + resource.getType());
+                recipe.addIngredient(resource.getAmount(), resource.getType());
+            }
+            getServer().addRecipe(recipe);
         }
 
         PluginDescriptionFile pdfFile = this.getDescription();
