@@ -12,9 +12,8 @@ import java.util.logging.Level;
  */
 public class Letter {
     // while not specified with an API constant map width is hardcoded as 128 pixels
-//    private final int CANVAS_WIDTH = 128; // I don't get the width calc correct .. or is getWidth buggy?
     @SuppressWarnings("FieldCanBeLocal")
-    private final int CANVAS_WIDTH = 90; // 96 is a temp fix. Changed to 90 in 0.9.10. Need to deal with this properly.
+    private final int CANVAS_WIDTH = 128;
     @SuppressWarnings("UnusedDeclaration")
     private final int CANVAS_HEIGHT = 128;
     static final String DATE_COLOR = "§"+(MapPalette.DARK_BROWN+2)+";";
@@ -30,11 +29,11 @@ public class Letter {
     private final int id;
     private List<String> message;
     private String topRow;
-    private final String header;
+    private String header;
     private final int date;
     private String displayDate;
     private int displayDatePos;
-    // note, this is JUST to avoid event spamming. Actual read status is saved in CourierDB
+    // note, this is JUST to avoid event spamming. Actual read status is saved in the database
     private boolean read;
     private int currentPage = 0;
 
@@ -65,7 +64,7 @@ public class Letter {
             int day = calendar.get(Calendar.DAY_OF_MONTH);
             displayDate = (month != null ? month : "") + " " + day;
             try {
-                displayDatePos = 112 - MinecraftFont.Font.getWidth(displayDate); // getWidth() must be so off
+                displayDatePos = CANVAS_WIDTH - getWidth(displayDate);
             } catch (Exception e) {
                 plugin.getCConfig().clog(Level.SEVERE, "Caught exception in MinecraftFont.Font.getWidth(displayDate)");
                 displayDate = null;
@@ -76,10 +75,13 @@ public class Letter {
             displayDatePos = 0;
         }
         if(!r.equalsIgnoreCase(s)) { // r == s is an unposted Letter (same sender as receiver)
-            if(s.length() < 13) { // a nice version would do an actual check vs width, but [see issue with width]
-                header = HEADER_COLOR + "Letter from " + HEADER_FROM_COLOR + sender + HEADER_COLOR + ":";
-            } else {
-                header = HEADER_COLOR + "From " + HEADER_FROM_COLOR + sender + HEADER_COLOR + ":";
+            header = HEADER_COLOR + "Letter from " + HEADER_FROM_COLOR + sender + HEADER_COLOR + ":";
+            try {
+                if(getWidth(header) > CANVAS_WIDTH) {
+                    header = HEADER_COLOR + "From " + HEADER_FROM_COLOR + sender + HEADER_COLOR + ":";
+                }
+            } catch (Exception e) {
+                plugin.getCConfig().clog(Level.SEVERE, "Caught exception in MinecraftFont.Font.getWidth(displayDate)");
             }
         } else {
             header = null; // tested by LetterRenderer
@@ -204,16 +206,13 @@ public class Letter {
                     i++;
                     break; // inner loop break, will cause a newline
                 }
-                // getWidth() seems to NPE in MapFont.java:55 on '§'
-                // Unicode Character 'SECTION SIGN' (U+00A7)
-                // isValid() passes over '\u00a7' and '\n' - but getWidth() doesn't
-                // https://bukkit.atlassian.net/browse/BUKKIT-685
+
                 try {
-                    width = MinecraftFont.Font.getWidth(words.get(i)); // NPE warning!
+                    width = getWidth(words.get(i)); // NPE warning!
                 } catch (Exception e) {
                     i++; // obviously needs skipping
                     plugin.getCConfig().clog(Level.SEVERE, "Caught Exception in MinecraftFont.Font.getWidth()");
-                    break;
+                    continue; // was break;
                 }
                 if(width > CANVAS_WIDTH) {
                     // always splits words in half, if they're still too long it wraps around and splits again ..
@@ -223,7 +222,7 @@ public class Letter {
                     words.add(i, s1);
                     words.set(i+1, s2);
                     try {
-                        width = MinecraftFont.Font.getWidth(words.get(i)); // NPE warning!
+                        width = getWidth(words.get(i)); // NPE warning!
                     } catch (Exception e) {
                         plugin.getCConfig().clog(Level.SEVERE, "Caught Exception in MinecraftFont.Font.getWidth()");
                     }
@@ -231,7 +230,7 @@ public class Letter {
                 if((x+width) <= CANVAS_WIDTH) {
                     buffer.append(words.get(i));
                     buffer.append(" ");
-                    x+=width;
+                    x += (width + getWidth(" ")); // space cannot NPE
                     i++;
                 }
             }
@@ -255,5 +254,18 @@ public class Letter {
             pages.add(buffer.toString());
         }
         return pages;
+    }
+
+    // getWidth() seems to NPE in MapFont.java:55 on '§'
+    // Unicode Character 'SECTION SIGN' (U+00A7)
+    // isValid() passes over '\u00a7' and '\n' - but getWidth() doesn't
+    // https://bukkit.atlassian.net/browse/BUKKIT-685
+    int getWidth(String s) throws NullPointerException {
+        if((s == null) || s.isEmpty()) {
+            return 0;
+        }
+        int width = MinecraftFont.Font.getWidth(s);
+        width += s.length(); // getWidth currently does not include the space between characters (1px) in its calculation
+        return width;
     }
 }
