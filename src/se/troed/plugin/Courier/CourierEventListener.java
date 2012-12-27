@@ -84,37 +84,37 @@ class CourierEventListener implements Listener {
 
     @EventHandler(priority = EventPriority.NORMAL)
     public void onPlayerInteractEntity(PlayerInteractEntityEvent e) {
+        ItemStack item = e.getPlayer().getItemInHand();
+
         // Did we put a map into an ItemFrame?
-        if(e.getRightClicked().getType() == EntityType.ITEM_FRAME && e.getPlayer().getItemInHand().getType() == Material.MAP) {
+        if(e.getRightClicked().getType() == EntityType.ITEM_FRAME) {
             // Is it a Letter?
-            MapView map = plugin.getServer().getMap(e.getPlayer().getItemInHand().getDurability());
-            if(map.getCenterX() == Courier.MAGIC_NUMBER) {
-                Letter letter = plugin.getLetter(e.getPlayer().getItemInHand());
+            int type = plugin.courierMapType(item);
+            if(type != Courier.NONE) {
+                Letter letter = plugin.getLetter(item);
                 if(plugin.getCConfig().getLetterFrameable() &&
                             e.getPlayer().hasPermission(Courier.PM_USEITEMFRAMES) &&
                             (letter == null || letter.isAllowedToSee(e.getPlayer()))) {
-                    // todo: deal with blank parchments here
-                    if(map.getId() == plugin.getCourierdb().getCourierMapId()) {
+                    if(type == Courier.LETTER) {
                         // Regular Courier Letter using our shared Map - convert to unique Map for ItemFrame use
                         plugin.getCConfig().clog(Level.FINE, "Courier Letter placed into ItemFrame");
                         MapView newMap = plugin.getServer().createMap(plugin.getServer().getWorlds().get(0));
                         newMap.setCenterX(Courier.MAGIC_NUMBER);
                         // the one and only rendering map uses 0, but we need the database key stored in pure Map data here
-                        newMap.setCenterZ(e.getPlayer().getItemInHand().getEnchantmentLevel(Enchantment.DURABILITY));
-                        List<MapRenderer> renderers = map.getRenderers();
+                        newMap.setCenterZ(item.getEnchantmentLevel(Enchantment.DURABILITY));
+                        List<MapRenderer> renderers = newMap.getRenderers();
                         for(MapRenderer r : renderers) { // remove existing renderers
                             newMap.removeRenderer(r);
                         }
                         newMap.addRenderer(new FramedLetterRenderer(plugin));
                         ItemStack mapItem = new ItemStack(Material.MAP, 1, newMap.getId());
                         // Copy the same Enchantment level (our database lookup key) to the new ItemStack
-                        mapItem.addUnsafeEnchantment(Enchantment.DURABILITY, e.getPlayer().getItemInHand().getEnchantmentLevel(Enchantment.DURABILITY));
+                        mapItem.addUnsafeEnchantment(Enchantment.DURABILITY, item.getEnchantmentLevel(Enchantment.DURABILITY));
                         e.getPlayer().setItemInHand(mapItem); // Replace the Courier Letter the player had with the new unique Map
-                    } else {
-                        // Unique Courier Map
+                    } else if(type == Courier.FRAMEDLETTER) {
                         // Probably never happens since we convert them back on pickup and heldchange into regular Courier Letters
-                        plugin.getCConfig().clog(Level.FINE, "Courier unique Map placed into ItemFrame");
-                    }
+                        plugin.getCConfig().clog(Level.FINE, "Courier Framed Letter placed into ItemFrame");
+                    } // else it's parchment and we just don't do anything
                 } else {
                     // if we don't allow ItemFrames - block the interaction
                     plugin.getCConfig().clog(Level.FINE, "Blocked Courier Letter into ItemFrame");
@@ -130,7 +130,6 @@ class CourierEventListener implements Listener {
             plugin.getCConfig().clog(Level.FINE, e.getPlayer().getDisplayName() + " receiving mail");
             ItemStack letter = postman.getLetterItem();
 
-            ItemStack item = e.getPlayer().getItemInHand();
             if(item != null && item.getAmount() > 0) {
                 plugin.getCConfig().clog(Level.FINE, "Player hands not empty");
                 HashMap<Integer, ItemStack> items = e.getPlayer().getInventory().addItem(letter);
@@ -271,6 +270,7 @@ class CourierEventListener implements Listener {
                 // quick render
                 e.getPlayer().sendMap(plugin.getServer().getMap(plugin.getCourierdb().getCourierMapId()));
             } else {
+                // or regular map
                 plugin.getCConfig().clog(Level.FINE, "Switched to blank parchment");
             }
         }
@@ -315,6 +315,7 @@ class CourierEventListener implements Listener {
                     e.getPlayer().sendMap(plugin.getServer().getMap(plugin.getCourierdb().getCourierMapId()));
                 }
             } else {
+                // or regular map
                 plugin.getCConfig().clog(Level.FINE, "Picked up blank parchment");
             }
         }        

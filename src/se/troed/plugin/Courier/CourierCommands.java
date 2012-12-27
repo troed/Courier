@@ -297,7 +297,7 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
             ItemStack item = player.getItemInHand();
             Letter letter = null;
             boolean crafted = false;
-            if(item != null && item.getType() == Material.MAP) {
+/*            if(item != null && item.getType() == Material.MAP) {
                 MapView map = plugin.getServer().getMap(item.getDurability());
                 if(map.getId() == plugin.getCourierdb().getCourierMapId()) {
                     // this is a current Courier Letter
@@ -307,6 +307,16 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                         crafted = true;
                         plugin.getCConfig().clog(Level.FINE, "Found crafted letter");
                     }
+                }
+            }*/
+            if(item != null) {
+                if(plugin.courierMapType(item) == Courier.PARCHMENT) {
+                    // crafted parchment can safely be replaced properly later
+                    crafted = true;
+                    plugin.getCConfig().clog(Level.FINE, "Found crafted letter");
+                } else if(plugin.courierMapType(item) == Courier.LETTER) {
+                    // this is a current Courier Letter
+                    letter = plugin.getLetter(item);
                 }
             }
             int id = -1;
@@ -374,12 +384,11 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                             (int)(System.currentTimeMillis() / 1000L))) { // oh noes unix y2k issues!!!11
         
                         // no letter == we create and put in hands, or in inventory, or drop to ground
-                        // see CourierEventListener for similar code when Postman delivers letters
                         if(letter == null) {
                             ItemStack letterItem = new ItemStack(Material.MAP, 1, plugin.getCourierdb().getCourierMapId());
                             letterItem.addUnsafeEnchantment(Enchantment.DURABILITY, id);
                             letter = plugin.getLetter(letterItem);
-                            // also see similar code in CourierEventListener
+                            // also see similar Lore code in CourierEventListener
                             ItemMeta meta = letterItem.getItemMeta();
                             if(meta != null) {
                                 meta.setDisplayName("Courier Letter");
@@ -390,31 +399,36 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                             } else {
                                 // ???
                             }
-                            if(!crafted && (item != null && item.getAmount() > 0)) {
+
+                            // if empty hands || crafted && itemInHand == single Courier parchment
+                            //   setItemInHand
+                            // else
+                            //   addToInventory
+                            //
+                            // This code is very similar to code in EventListener when right clicking Postmen
+                            if((item == null || item.getAmount() == 0) ||
+                                    (crafted && item.getAmount() == 1 && plugin.courierMapType(item) == Courier.PARCHMENT)) {
+                                plugin.getCConfig().clog(Level.FINE, "Letter delivered into player's hands");
+                                player.setItemInHand(letterItem); // REALLY replaces what's there
+
+                                // quick render
+                                player.sendMap(plugin.getServer().getMap(plugin.getCourierdb().getCourierMapId()));
+                            } else {
+                                if(crafted && plugin.courierMapType(item) == Courier.PARCHMENT) {
+                                    // subtract one parchment
+                                    item.setAmount(item.getAmount()-1);
+                                    player.setItemInHand(item);
+                                }
                                 plugin.getCConfig().clog(Level.FINE, "Player hands not empty");
                                 HashMap<Integer, ItemStack> items = player.getInventory().addItem(letterItem);
                                 if(items.isEmpty()) {
                                     plugin.getCConfig().clog(Level.FINE, "Letter added to inventory");
-                                    String inventory = plugin.getCConfig().getLetterInventory();
-                                    if(inventory != null && !inventory.isEmpty()) {
-                                        player.sendMessage(inventory);
-                                    }
+                                    player.sendMessage(plugin.getCConfig().getLetterInventory());
                                 } else {
                                     plugin.getCConfig().clog(Level.FINE, "Inventory full, letter dropped");
-                                    String drop = plugin.getCConfig().getLetterDrop();
-                                    if(drop != null && !drop.isEmpty()) {
-                                        player.sendMessage(drop);
-                                    }
+                                    player.sendMessage(plugin.getCConfig().getLetterDrop());
                                     player.getWorld().dropItemNaturally(player.getLocation(), letterItem);
                                 }
-                            } else {
-                                // we end up here on empty hands or if we know player is holding a crafted Letter
-                                // todo: oops! we might be holding a stack of parchment!
-                                plugin.getCConfig().clog(Level.FINE, "Letter delivered into player's hands");
-                                player.setItemInHand(letterItem); // REALLY replaces what's there
-        
-                                // quick render
-                                player.sendMap(plugin.getServer().getMap(plugin.getCourierdb().getCourierMapId()));
                             }
                         } else {
                             if(useCached) {
@@ -490,8 +504,7 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                     player.sendMessage(plugin.getCConfig().getLetterNoCraftedFound());
                 }
             } else {
-
-                    List<ItemStack> resources = plugin.getCConfig().getLetterResources();
+                List<ItemStack> resources = plugin.getCConfig().getLetterResources();
                 // verify player has the goods
                 Inventory inv = player.getInventory();
                 boolean lacking = false;

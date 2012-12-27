@@ -77,6 +77,13 @@ public class Courier extends JavaPlugin {
     public static final String PM_THEONEPERCENT = "courier.theonepercent";
     public static final String PM_PRIVACYOVERRIDE = "courier.privacyoverride";
     public static final String PM_USEITEMFRAMES = "courier.useitemframes";
+
+    // Courier Map types internal enum
+    public static final int NONE = 0;
+    public static final int LETTER = 1;
+    public static final int FRAMEDLETTER = 2;
+    public static final int PARCHMENT = 3;
+
     public static final int MAGIC_NUMBER = Integer.MAX_VALUE - 395743; // used to id our map
     public static final int MAX_ID = Short.MAX_VALUE; // really, we don't do negative numbers well atm
     public static final int MIN_ID = 1; // since unenchanted items are level 0
@@ -134,6 +141,27 @@ public class Courier extends JavaPlugin {
     
     private void addLetter(int id, Letter l) {
         letters.put(id, l);
+    }
+
+    // Helper method to quickly identify a Courier Map ItemStack
+    // Should be used in many more places than it is currently
+    // Valid for Enchanted Courier Letters, Blank Courier Parchments && Framed Letters
+    int courierMapType(ItemStack item) {
+        if(item != null && item.getType() == Material.MAP) {
+            MapView map = getServer().getMap(item.getDurability());
+            if(map.getCenterX() == Courier.MAGIC_NUMBER) {
+                if(map.getId() == getCourierdb().getCourierMapId()) {
+                    if(item.containsEnchantment(Enchantment.DURABILITY)) { // && level > 0
+                        return Courier.LETTER;
+                    } else {
+                        return Courier.PARCHMENT;
+                    }
+                } else {
+                    return Courier.FRAMEDLETTER;
+                }
+            }
+        }
+        return Courier.NONE;
     }
 
     // finds the Letter associated with a specific id
