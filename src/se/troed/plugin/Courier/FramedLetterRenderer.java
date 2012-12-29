@@ -35,7 +35,7 @@ public class FramedLetterRenderer extends MapRenderer {
             // even need to be near it. Performance issues galore ...
             Letter letter = plugin.getLetter(map.getCenterZ());
 //            plugin.getCConfig().clog(Level.FINE, "Rendering a Courier ItemFrame map");
-            if(clear || letter == null || (letter != null && lastId != letter.getId())) {
+            if(clear || letter == null || lastId != letter.getId()) {
                 for(int j = 0; j < CANVAS_HEIGHT; j++) {
                     for(int i = 0; i < CANVAS_WIDTH; i++) {
                         //                    canvas.setPixel(i, j, clearImage[j*128+i]);

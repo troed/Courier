@@ -154,6 +154,25 @@ public class Letter {
             plugin.getLetterRenderer().forceClear();
         }
     }
+
+    public int getPageCount() {
+        return message.size();
+    }
+
+    // 0 internally is page 1 externally
+    public int getCurPage() {
+        return currentPage + 1;
+    }
+
+    // page 1 externally is 0 internally
+    public void setCurPage(int p) {
+        if(p > 0 && p <= message.size()) {
+            currentPage = p - 1;
+            if(plugin.getLetterRenderer() != null) {
+                plugin.getLetterRenderer().forceClear();
+            }
+        }
+    }
     
     public int getLeftMarkerPos() {
         return 48;

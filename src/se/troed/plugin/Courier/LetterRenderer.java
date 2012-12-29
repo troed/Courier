@@ -83,8 +83,7 @@ public class LetterRenderer extends MapRenderer {
                     cachedReceiver = letter.getReceiver();
                     cachedPrivacy = plugin.getCConfig().getPrivacyLocked(cachedReceiver);
                 }
-                canvas.drawText(0, MinecraftFont.Font.getHeight()*HEADER_POS,
-                                MinecraftFont.Font, cachedPrivacy);
+                canvas.drawText(0, MinecraftFont.Font.getHeight()*HEADER_POS, MinecraftFont.Font, cachedPrivacy);
             }
         }
     }

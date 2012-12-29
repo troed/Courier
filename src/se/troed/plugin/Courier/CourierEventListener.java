@@ -20,6 +20,7 @@ import org.bukkit.material.MaterialData;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.logging.Level;
 
 class CourierEventListener implements Listener {
@@ -57,8 +58,11 @@ class CourierEventListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGH)
     public void onPlayerInteract(PlayerInteractEvent e) {
-        if(e.getMaterial() == Material.MAP && e.getItem().containsEnchantment(Enchantment.DURABILITY)) {
-            Letter letter = plugin.getLetter(e.getItem());
+        ItemStack item = e.getItem();
+        if(plugin.courierMapType(item) == Courier.LETTER) {
+ // todo: would it be awesome to allow page flipping in itemframes or do people want rotation instead?
+ //       if(e.getMaterial() == Material.MAP && e.getItem().containsEnchantment(Enchantment.DURABILITY)) {
+            Letter letter = plugin.getLetter(item);
             if(letter != null) {
                 plugin.getCConfig().clog(Level.FINE, e.getPlayer().getDisplayName() + " navigating letter");
                 Action act = e.getAction();
@@ -101,6 +105,18 @@ class CourierEventListener implements Listener {
                         ItemStack mapItem = new ItemStack(Material.MAP, 1, newMap.getId());
                         // Copy the same Enchantment level (our database lookup key) to the new ItemStack
                         mapItem.addUnsafeEnchantment(Enchantment.DURABILITY, item.getEnchantmentLevel(Enchantment.DURABILITY));
+
+                        // use Lore to add info on current page
+                        ItemMeta meta = mapItem.getItemMeta();
+                        if(meta != null && letter != null) {
+                            List<String> strings = meta.getLore();
+                            if(strings == null) {
+                                strings = new ArrayList<String>();
+                            }
+                            strings.add(letter.getCurPage() + "/" + letter.getPageCount());
+                            meta.setLore(strings);
+                            mapItem.setItemMeta(meta);
+                        }
                         e.getPlayer().setItemInHand(mapItem); // Replace the Courier Letter the player had with the new unique Map
                     } else if(type == Courier.FRAMEDLETTER) {
                         // Probably never happens since we convert them back on pickup and heldchange into regular Courier Letters
@@ -206,7 +222,7 @@ class CourierEventListener implements Listener {
 
     // helper method
     // also see similar code in CourierCommands
-    private ItemStack setLore(ItemStack item, Letter letter, Player player) {
+    private ItemStack updateLore(ItemStack item, Letter letter, Player player) {
         ItemMeta meta = item.getItemMeta();
         if(meta != null) {
             meta.setDisplayName(plugin.getCConfig().getLetterDisplayName());
@@ -225,7 +241,7 @@ class CourierEventListener implements Listener {
         return item;
     }
 
-    @EventHandler(priority = EventPriority.MONITOR)
+    @EventHandler(priority = EventPriority.NORMAL)
     public void onItemHeldChange(PlayerItemHeldEvent e) {
         // http://dev.bukkit.org/server-mods/courier/tickets/36-severe-could-not-pass-event-player-item-held-event/
         ItemStack item = e.getPlayer().getInventory().getItem(e.getNewSlot());
@@ -253,7 +269,7 @@ class CourierEventListener implements Listener {
             // conversion end
             Letter letter = plugin.getLetter(item);
             if(letter != null) {
-                e.getPlayer().getInventory().setItem(e.getNewSlot(), setLore(item, letter, e.getPlayer()));
+                e.getPlayer().getInventory().setItem(e.getNewSlot(), updateLore(item, letter, e.getPlayer()));
 
                 plugin.getCConfig().clog(Level.FINE, "Switched to Letter id " + letter.getId());
 
@@ -266,7 +282,7 @@ class CourierEventListener implements Listener {
         }
     }
 
-    @EventHandler(priority = EventPriority.MONITOR)
+    @EventHandler(priority = EventPriority.NORMAL)
     public void onPlayerPickupItem(PlayerPickupItemEvent e) {
         if(!e.isCancelled() && e.getItem().getItemStack().getType() == Material.MAP) {
             // convert legacy and ItemFrame maps
@@ -291,7 +307,7 @@ class CourierEventListener implements Listener {
             // conversion end
             Letter letter = plugin.getLetter(item);
             if(letter != null) {
-                e.getItem().setItemStack(setLore(item, letter, e.getPlayer()));
+                e.getItem().setItemStack(updateLore(item, letter, e.getPlayer()));
 
                 plugin.getCConfig().clog(Level.FINE, "Letter " + letter.getId() + " picked up.");
 
@@ -313,7 +329,7 @@ class CourierEventListener implements Listener {
 
     // onPlayerDropItem for recycling? or something more active? (furnace? :D)
 
-    @EventHandler(priority = EventPriority.NORMAL)
+    @EventHandler(priority = EventPriority.MONITOR)
     public void onChunkLoad(ChunkLoadEvent e) {
         // immediately return if we don't support ItemFrames or if it's a newly generated chunk
         if(!plugin.getCConfig().getLetterFrameable() || e.isNewChunk()) {
@@ -323,19 +339,34 @@ class CourierEventListener implements Listener {
         int found = 0;
         for(Entity entity : entities) {
             if(entity instanceof ItemFrame) {
-//            if(entity.getType() == EntityType.ITEM_FRAME) {
                 ItemStack item = ((ItemFrame)entity).getItem();
-                if(item.getType() == Material.MAP && item.containsEnchantment(Enchantment.DURABILITY)) {
+                if(plugin.courierMapType(item) == Courier.FRAMEDLETTER) {
                     MapView map = plugin.getServer().getMap(item.getDurability());
-                    if(map.getCenterX() == Courier.MAGIC_NUMBER) {
-                        // finally, we're home
-                        List<MapRenderer> renderers = map.getRenderers();
-                        for(MapRenderer r : renderers) { // remove existing renderers
-                            map.removeRenderer(r);
+                    if(item.hasItemMeta() && item.getItemMeta().hasLore()) {
+                        // Lore
+                        ItemMeta meta = item.getItemMeta();
+                        int page = 0;
+                        ListIterator iter = meta.getLore().listIterator(meta.getLore().size());
+                        while(iter.hasPrevious()) {
+                            String[] strings = ((String)iter.previous()).split("/");
+                            if(strings.length > 1) {
+                                // starting from the back the first '/' delimeter we find is for our our page info
+                                page = Integer.valueOf(strings[0]);
+                                plugin.getCConfig().clog(Level.FINE, "Extracted page info: " + page);
+                                break;
+                            }
                         }
-                        map.addRenderer(new FramedLetterRenderer(plugin));
-                        found++;
+                        if(page > 0) {
+                            Letter letter = plugin.getLetter(map.getCenterZ());
+                            letter.setCurPage(page);
+                        }
                     }
+                    List<MapRenderer> renderers = map.getRenderers();
+                    for(MapRenderer r : renderers) { // remove existing renderers
+                        map.removeRenderer(r);
+                    }
+                    map.addRenderer(new FramedLetterRenderer(plugin));
+                    found++;
                 }
             }
         }
