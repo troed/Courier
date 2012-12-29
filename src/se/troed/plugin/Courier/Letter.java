@@ -2,7 +2,6 @@ package se.troed.plugin.Courier;
 
 import org.bukkit.entity.Player;
 import org.bukkit.map.*;
-import org.bukkit.plugin.Plugin;
 
 import java.util.*;
 import java.util.logging.Level;
@@ -75,12 +74,11 @@ public class Letter {
             displayDatePos = 0;
         }
         if(!r.equalsIgnoreCase(s)) { // r == s is an unposted Letter (same sender as receiver)
-            header = HEADER_COLOR + "Letter from " + HEADER_FROM_COLOR + sender + HEADER_COLOR + ":";
+            header = plugin.getCConfig().getLetterFrom2(sender) + HEADER_COLOR + ":";
             try {
 // See comment to getWidth on NPE
-//                if(getWidth(header) > CANVAS_WIDTH) {
-                if(getWidth("Letter from " + sender) > CANVAS_WIDTH) {
-                    header = HEADER_COLOR + "From " + HEADER_FROM_COLOR + sender + HEADER_COLOR + ":";
+                if(getWidth(plugin.getCConfig().getLetterFrom(sender) + ":") > CANVAS_WIDTH) {
+                    header = HEADER_FROM_COLOR + sender + HEADER_COLOR + ":";
                 }
             } catch (Exception e) {
                 plugin.getCConfig().clog(Level.SEVERE, "Caught exception in MinecraftFont.Font.getWidth(header)");
@@ -208,7 +206,6 @@ public class Letter {
                     i++;
                     break; // inner loop break, will cause a newline
                 }
-
                 try {
                     width = getWidth(words.get(i)); // NPE warning!
                 } catch (Exception e) {

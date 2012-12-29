@@ -5,8 +5,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.map.*;
 
-import java.util.logging.Level;
-
 public class LetterRenderer extends MapRenderer {
 
     @SuppressWarnings("FieldCanBeLocal")
@@ -21,6 +19,8 @@ public class LetterRenderer extends MapRenderer {
 //    private final byte[] clearImage = new byte[128*128];  // nice letter background image todo
     private int lastId = -1;
     private boolean clear = false;
+    private String cachedPrivacy;
+    private String cachedReceiver = "";
 
     public LetterRenderer(Courier p) {
         super(true); // all our messages are contextual (i.e different for different players)
@@ -38,7 +38,7 @@ public class LetterRenderer extends MapRenderer {
 
             letter = plugin.getLetter(item);
 
-            if(clear || letter == null || (letter != null && lastId != letter.getId())) {
+            if(clear || letter == null || lastId != letter.getId()) {
                 for(int j = 0; j < CANVAS_HEIGHT; j++) {
                     for(int i = 0; i < CANVAS_WIDTH; i++) {
                         //                    canvas.setPixel(i, j, clearImage[j*128+i]);
@@ -53,7 +53,6 @@ public class LetterRenderer extends MapRenderer {
             // todo: idea for pvp war servers: "your mail has fallen into enemy hands". "they've read it!")
             if(letter != null && letter.isAllowedToSee(player)) {
                 int drawPos = HEADER_POS;
-//                if(!letter.getReceiver().equalsIgnoreCase(letter.getSender())) {
                 if(letter.getHeader() != null) {
                     canvas.drawText(0, MinecraftFont.Font.getHeight() * drawPos, MinecraftFont.Font, letter.getHeader());
                     drawPos = BODY_POS;
@@ -80,13 +79,16 @@ public class LetterRenderer extends MapRenderer {
                     letter.setRead(true);
                 }
             } else if(letter != null) {
-                String temp = Letter.HEADER_COLOR + "Sorry, only " + Letter.HEADER_FROM_COLOR +
-                              letter.getReceiver() + "\n" + Letter.HEADER_COLOR + "can read this letter";
-                canvas.drawText(0, MinecraftFont.Font.getHeight()*HEADER_POS, MinecraftFont.Font, temp);
+                if(!letter.getReceiver().equalsIgnoreCase(cachedReceiver)) {
+                    cachedReceiver = letter.getReceiver();
+                    cachedPrivacy = plugin.getCConfig().getPrivacyLocked(cachedReceiver);
+                }
+                canvas.drawText(0, MinecraftFont.Font.getHeight()*HEADER_POS,
+                                MinecraftFont.Font, cachedPrivacy);
             }
         }
     }
-    
+
     // called by CourierCommands commandLetter. Not terribly pretty architectured.
     public void forceClear() {
         clear = true;

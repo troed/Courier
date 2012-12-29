@@ -5,7 +5,7 @@
 # Route.WalkToPlayer is not used for Monster-Postmen (they would attack), only "friendly mobs".
 #   - Set to false if Villager-Postmen keep pushing you into lava ;)
 Courier:
-  Version: 1.1.7
+  Version: 1.1.8
   UpdateInterval: 18000         # Checks for new versions every 5h. A value of 0 disables.
   UseFees: false
   Fee:
@@ -19,6 +19,7 @@ Courier:
     WalkToPlayer: true
   Privacy:
     SealedEnvelope: true
+    Locked: "&0Sorry, only&2 %s\n&0can read this letter"
   Postman:
     Type: 'Enderman'
     QuickDespawn: 3
@@ -37,7 +38,7 @@ Courier:
     FreeLetter: true
     # Multiple amount resources example: [CobbleStone, Paper, CobbleStone]
     Resources: [Coal, Paper]
-    # Whether Courier should just deduct the resources or if players need to manually craft Letters
+    # Whether Courier should just deduct the resources or if players need to manually craft letters
     RequiresCrafting: false
     ShowDate: true
     Frameable: true
@@ -50,7 +51,12 @@ Courier:
     InfoCost: "&7Courier: &fResources needed to create letters: %s."
     InfoFree: "&7Courier: &fLetters don't require any resources to make."
     LackingResources: "&7Courier: &fYou don't have the required resources to create a letter. See /courier fees"
-    NoCraftedFound: "&7Courier: &fTo write a Letter you first need to craft blank parchment. See /courier fees"
+    NoCraftedFound: "&7Courier: &fTo write a letter you first need to craft blank parchment. See /courier fees"
+    DisplayName: "Courier Letter"
+    From: "&0Letter from&2 %s"
+    To: "Letter to %s"
+  Parchment:
+    DisplayName: "Blank Courier Parchment"
   Post:
     NoCredit: "&7Courier: &fSorry, you don't have enough credit to cover postage (%s)"
     NoRecipient: "&7Courier: &fError, no recipient to post your letter to!"
@@ -63,7 +69,7 @@ Courier:
     FundProblem: "&7Courier: &fThere was a problem withdrawing funds for postage. Please tell your admin."
     NoLetter: "&7Courier: &fYou must be holding the letter you want to post! See /courier"
   Info:
-    Line1: "&f/letter message: &7Creates a Letter or adds text to an existing one"
-    Line2: "&f/post playername: &7Posts the Letter you're holding to playername"
-    Line3: "&f/courier fees: &7Lists cost, if any, for Posting a Letter"
+    Line1: "&f/letter message: &7Creates a letter or adds text to an existing one"
+    Line2: "&f/post playername: &7Posts the letter you're holding to playername"
+    Line3: "&f/courier fees: &7Lists cost, if any, for creating and posting letters"
     Line4: "&f/courier unread: &7Request re-delivery of any unread mail"

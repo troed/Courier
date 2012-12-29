@@ -611,8 +611,7 @@ public class Courier extends JavaPlugin {
             ItemStack item = new ItemStack(Material.MAP, 1, getCourierdb().getCourierMapId());
             ItemMeta meta = item.getItemMeta();
             if(meta != null) {
-                // todo: translateable strings
-                meta.setDisplayName("Blank Courier Parchment");
+                meta.setDisplayName(config.getParchmentDisplayName());
                 item.setItemMeta(meta);
             }
             ShapelessRecipe recipe = new ShapelessRecipe(item);

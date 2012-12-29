@@ -4,6 +4,7 @@ import org.bukkit.Material;
 import org.bukkit.configuration.Configuration;
 import org.bukkit.entity.EntityType;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.map.MapPalette;
 import org.bukkit.material.MaterialData;
 import org.bukkit.plugin.PluginDescriptionFile;
 
@@ -12,6 +13,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 
 public class CourierConfig {
@@ -29,6 +32,8 @@ public class CourierConfig {
     private static final String FEE_INFOFEE = "Courier.Fee.InfoFee";
     private static final String FEE_INFONOFEE = "Courier.Fee.InfoNoFee";
     private static final String FEE_BANKACCOUNT = "Courier.Fee.BankAccount";
+    private static final String PRIVACY_SEALED = "Courier.Privacy.SealedEnvelope";
+    private static final String PRIVACY_LOCKED = "Courier.Privacy.Locked";
     private static final String POSTMAN_QUICK_DESPAWN = "Courier.Postman.QuickDespawn";
     private static final String POSTMAN_DESPAWN = "Courier.Postman.Despawn";
     private static final String ROUTE_INITIALWAIT = "Courier.Route.InitialWait";
@@ -59,7 +64,10 @@ public class CourierConfig {
     private static final String LETTER_INFOFREE = "Courier.Letter.InfoFree";
     private static final String LETTER_LACKINGRESOURCES = "Courier.Letter.LackingResources";
     private static final String LETTER_NOCRAFTEDFOUND = "Courier.Letter.NoCraftedFound";
-    private static final String PRIVACY_SEALED = "Courier.Privacy.SealedEnvelope";
+    private static final String LETTER_DISPLAYNAME = "Courier.Letter.DisplayName";
+    private static final String LETTER_FROM = "Courier.Letter.From";
+    private static final String LETTER_TO = "Courier.Letter.To";
+    private static final String PARCHMENT_DISPLAYNAME = "Courier.Parchment.DisplayName";
     private static final String POST_NOCREDIT = "Courier.Post.NoCredit";
     private static final String POST_NORECIPIENT = "Courier.Post.NoRecipient";
     private static final String POST_DIDYOUMEAN = "Courier.Post.DidYouMean";
@@ -339,6 +347,11 @@ public class CourierConfig {
         return colorize(config.getString(FEE_INFONOFEE)); // 1.1.0
     }
 
+    // LetterRender colorization
+    public String getPrivacyLocked(String player) {
+        return String.format(colorize2(config.getString(PRIVACY_LOCKED)), player); // 1.1.8
+    }
+
     public String getPostmanExtraDeliveries() {
         return colorize(config.getString(POSTMAN_EXTRADELIVERIES)); // 1.1.0
     }
@@ -419,6 +432,31 @@ public class CourierConfig {
         return colorize(config.getString(LETTER_NOCRAFTEDFOUND, "")); // 1.1.8
     }
 
+    // Lore should not be colorized
+    public String getLetterDisplayName() {
+        return strip(config.getString(LETTER_DISPLAYNAME, "")); // 1.1.8
+    }
+
+    // Lore should not be colorized
+    public String getLetterFrom(String player) {
+        return String.format(strip(config.getString(LETTER_FROM)), player); // 1.1.8
+    }
+
+    // LetterRenderer version
+    public String getLetterFrom2(String player) {
+        return String.format(colorize2(config.getString(LETTER_FROM)), player); // 1.1.8
+    }
+
+    // Lore should not be colorized
+    public String getLetterTo(String player) {
+        return String.format(strip(config.getString(LETTER_TO)), player); // 1.1.8
+    }
+
+    // Lore should not be colorized
+    public String getParchmentDisplayName() {
+        return strip(config.getString(PARCHMENT_DISPLAYNAME, "")); // 1.1.8
+    }
+
     public String getInfoLine1() {
         return colorize(config.getString(INFO_LINE1)); // 1.1.0
     }
@@ -447,9 +485,83 @@ public class CourierConfig {
         log.log(level, LOGPREFIX + message);
     }
 
+    // Converts from Chat to Map color space
+    String colorize2(String s) {
+        String result = s.replace("\\n","\n");
+        Pattern p = Pattern.compile("&(\\p{XDigit})");
+        Matcher m = p.matcher(s);
+        while (m.find()) {
+            result = result.replaceAll(m.group(), "§" + convertToMapColor(Byte.parseByte(m.group().substring(1), 16)) + ";");
+        }
+        return result;
+    }
+
     // credits: theguynextdoor - http://forums.bukkit.org/threads/adding-color-support.52980/#post-890244
     // see ChatColor.java for value validity
     String colorize(String s) {
         return s.replaceAll("(&(\\p{XDigit}))", "\u00A7$2");
+    }
+
+    String strip(String s) {
+//        return s.replaceAll("(§(\\p{Digit}+);)", "");
+        return s.replaceAll("(&(\\p{XDigit}))", "");
+    }
+
+    // code lifted from ScrollingMenuSign by desht (CC-BY-NC)
+    // https://github.com/desht/ScrollingMenuSign/
+    private byte[] colorCache = new byte[16];
+    private boolean[] colorInited = new boolean[16];
+
+    byte convertToMapColor(byte color) {
+        if(color < 0 || color > 15) {
+            clog(Level.FINE, "Out of bounds color value passed to convertToMapColor");
+            return MapPalette.DARK_BROWN;
+        }
+
+        if (colorInited[color]) {
+            return colorCache[color];
+        }
+
+        byte result = MapPalette.DARK_GRAY;
+
+        switch (color) {
+            case 0:
+                result = MapPalette.matchColor(0, 0, 0); break;
+            case 1:
+                result = MapPalette.matchColor(0, 0, 128); break;
+            case 2:
+                result = MapPalette.matchColor(0, 128, 0); break;
+            case 3:
+                result = MapPalette.matchColor(0, 128, 128); break;
+            case 4:
+                result = MapPalette.matchColor(128, 0, 0); break;
+            case 5:
+                result = MapPalette.matchColor(128, 0, 128); break;
+            case 6:
+                result = MapPalette.matchColor(128, 128, 0); break;
+            case 7:
+                result = MapPalette.matchColor(128, 128, 128); break;
+            case 8:
+                result = MapPalette.matchColor(64, 64, 64); break;
+            case 9:
+                result = MapPalette.matchColor(0, 0, 255); break;
+            case 10:
+                result = MapPalette.matchColor(0, 255, 0); break;
+            case 11:
+                result = MapPalette.matchColor(0, 255, 255); break;
+            case 12:
+                result = MapPalette.matchColor(255, 0, 0); break;
+            case 13:
+                result = MapPalette.matchColor(255, 0, 255); break;
+            case 14:
+                result = MapPalette.matchColor(255, 255, 0); break;
+            case 15:
+                result = MapPalette.matchColor(255, 255, 255); break;
+        }
+
+        colorInited[color] = true;
+        colorCache[color] = result;
+
+        return result;
     }
 }

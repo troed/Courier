@@ -39,15 +39,6 @@ class CourierEventListener implements Listener {
         }
     }
 
-/*    @EventHandler(priority = EventPriority.MONITOR)
-    public void onWorldInit(WorldInitEvent e) {
-        plugin.getCConfig().clog(Level.FINE, "World " + e.getWorld().getName() + " init");
-        if(plugin.getServer().getWorlds().size() == 1) {
-            // first world loaded - it's also the default in all cases I've seen [world(0)]
-            plugin.postWorldLoad();
-        }
-    }*/
-
     @EventHandler(priority = EventPriority.NORMAL)
     void onCourierDeliveryEvent(CourierDeliveryEvent e) {
         if(e.getPlayer()!=null && e.getId()!=-1) {
@@ -185,7 +176,7 @@ class CourierEventListener implements Listener {
 
     // helper method for converting legacy Courier Letters from MapID to Enchantment Level
     // also used when converting Maps that have been placed in ItemFrames back to regular Courier Maps
-    ItemStack convertMap(int id, MapView map) {
+    ItemStack convertMap(int id) {
         if(id == 0) {
             // special case. MapID 0 was a valid Courier Letter, Enchantment Level 0 is not!
             int newId = plugin.getCourierdb().generateUID();
@@ -207,7 +198,7 @@ class CourierEventListener implements Listener {
     }
 
     ItemStack convertLegacyMap(int id, MapView map) {
-        ItemStack converted = convertMap(id, map);
+        ItemStack converted = convertMap(id);
         // store the date in the db
         plugin.getCourierdb().storeDate(id, map.getCenterZ());
         return converted;
@@ -218,14 +209,13 @@ class CourierEventListener implements Listener {
     private ItemStack setLore(ItemStack item, Letter letter, Player player) {
         ItemMeta meta = item.getItemMeta();
         if(meta != null) {
-            // todo: translateable strings
-            meta.setDisplayName("Courier Letter");
+            meta.setDisplayName(plugin.getCConfig().getLetterDisplayName());
             List<String> strings = new ArrayList<String>();
             if(letter.isAllowedToSee(player)) {
-                strings.add("Letter from " + letter.getSender());
+                strings.add(plugin.getCConfig().getLetterFrom(letter.getSender()));
                 strings.add(letter.getTopRow());
             } else {
-                strings.add("Letter to " + letter.getReceiver());
+                strings.add(plugin.getCConfig().getLetterTo(letter.getReceiver()));
             }
             meta.setLore(strings);
             item.setItemMeta(meta);
@@ -248,7 +238,7 @@ class CourierEventListener implements Listener {
                     // unique map item having been freed from its ItemFrame
                     int id = item.getEnchantmentLevel(Enchantment.DURABILITY);
                     plugin.getCConfig().clog(Level.FINE, "Converting unique Courier Letter id " + id);
-                    letterItem = convertMap(id, map);
+                    letterItem = convertMap(id);
                 } else {
                     // legacy Courier map from pre v1.0.0 days
                     int id = item.getDurability();
@@ -287,7 +277,7 @@ class CourierEventListener implements Listener {
                 if(item.containsEnchantment(Enchantment.DURABILITY)) {
                     // unique map item having been freed from its ItemFrame
                     int id = item.getEnchantmentLevel(Enchantment.DURABILITY);
-                    letterItem = convertMap(id, map);
+                    letterItem = convertMap(id);
                 } else {
                     // legacy Courier map from pre v1.0.0 days
                     int id = item.getDurability();
