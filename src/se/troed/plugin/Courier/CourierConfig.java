@@ -18,7 +18,7 @@ import java.util.regex.Pattern;
 
 
 public class CourierConfig {
-    private static final boolean debug = true;
+    private static final boolean debug = false;
 
     private final Logger log;
     private final Configuration config;
