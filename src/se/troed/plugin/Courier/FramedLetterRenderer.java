@@ -5,6 +5,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.map.*;
 
+import java.util.logging.Level;
+
 public class FramedLetterRenderer extends MapRenderer {
 
     @SuppressWarnings("FieldCanBeLocal")

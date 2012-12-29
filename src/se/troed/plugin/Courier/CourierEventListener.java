@@ -89,7 +89,8 @@ class CourierEventListener implements Listener {
                 Letter letter = plugin.getLetter(item);
                 if(plugin.getCConfig().getLetterFrameable() &&
                             e.getPlayer().hasPermission(Courier.PM_USEITEMFRAMES) &&
-                            (letter == null || letter.isAllowedToSee(e.getPlayer()))) {
+                            (letter == null || letter.isAllowedToSee(e.getPlayer())) &&
+                            type != Courier.PARCHMENT) {
                     if(type == Courier.LETTER) {
                         // Regular Courier Letter using our shared Map - convert to unique Map for ItemFrame use
                         plugin.getCConfig().clog(Level.FINE, "Courier Letter placed into ItemFrame");
@@ -121,9 +122,11 @@ class CourierEventListener implements Listener {
                     } else if(type == Courier.FRAMEDLETTER) {
                         // Probably never happens since we convert them back on pickup and heldchange into regular Courier Letters
                         plugin.getCConfig().clog(Level.FINE, "Courier Framed Letter placed into ItemFrame");
-                    } // else it's parchment and we just don't do anything
+                    }
                 } else {
-                    // if we don't allow ItemFrames - block the interaction
+                    // If we don't allow ItemFrames - block the interaction
+                    // Also block placing parchments since we are not able to separate them from letters in LetterRenderer.render
+                    //  when players hold a Letter and look at the ItemFrame
                     plugin.getCConfig().clog(Level.FINE, "Blocked Courier Letter into ItemFrame");
                     // todo: feedback string to player
                     e.setCancelled(true);

@@ -5,6 +5,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.map.*;
 
+import java.util.logging.Level;
+
 public class LetterRenderer extends MapRenderer {
 
     @SuppressWarnings("FieldCanBeLocal")
@@ -34,10 +36,14 @@ public class LetterRenderer extends MapRenderer {
     public void render(MapView map, MapCanvas canvas, Player player) {
         Letter letter = null;
         ItemStack item = player.getItemInHand();
-        if(item != null && item.getType() == Material.MAP) {
-
-            letter = plugin.getLetter(item);
-
+        if(plugin.courierMapType(item) != Courier.NONE) {
+            if(plugin.courierMapType(item) == Courier.LETTER) {
+                letter = plugin.getLetter(item);
+//                plugin.getCConfig().clog(Level.FINE, "Rendering a Courier Letter map");
+            } else {
+//                plugin.getCConfig().clog(Level.FINE, "Rendering a Courier Parchment map");
+                // parchment - drawn blank below
+            }
             if(clear || letter == null || lastId != letter.getId()) {
                 for(int j = 0; j < CANVAS_HEIGHT; j++) {
                     for(int i = 0; i < CANVAS_WIDTH; i++) {
