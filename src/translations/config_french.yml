@@ -5,12 +5,13 @@
 # Route.WalkToPlayer is not used for Monster-Postmen (they would attack), only "friendly mobs".
 #   - Set to false if Villager-Postmen keep pushing you into lava ;)
 Courier:
-  UseFees: false
   Version: 1.2.0
   UpdateInterval: 18000         # Checks for new versions every 5h. A value of 0 disables.
+  UseFees: false
   NoPermissionPlugin: false
   Fee:
     Send: 10
+    BankAccount: <none>
     InfoFee: '&5Service postal: &fL''envoi vous coûtera %s'
     InfoNoFee: '&5Service postal: &fEnvoyer une lettre est gratuit !'
   Route:
@@ -19,13 +20,14 @@ Courier:
     WalkToPlayer: true
   Privacy:
     SealedEnvelope: true
+    Locked: "&0Sorry, only&2 %s\n&0can read this letter"
   Postman:
     Type: 'Enderman'
     QuickDespawn: 3
     Despawn: 20
     SpawnDistance: 10
     BreakSpawnProtection: true
-    CreativeDelivery: false
+    CreativeDelivery: true
     Greeting: '&5Service postal: &fUn facteur est arrivé avec votre courrier !'
     MailDrop: '&5Service postal: &fVotre lettre a été jetée au sol.'
     Inventory: '&5Service postal: &fVos mains étant occupées, le courrier a été placé
@@ -39,7 +41,10 @@ Courier:
     FreeLetter: true
     # Multiple amount resources example: [CobbleStone, Paper, CobbleStone]
     Resources: [Coal, Paper]
+    # Whether Courier should just deduct the resources or if players need to manually craft Letters
+    RequiresCrafting: false
     ShowDate: true
+    Frameable: true
     Drop: '&5Service postal: &fVotre lettre a été jetée au sol.'
     Inventory: '&5Service postal: &fVos mains étant occupées, le courrier a été placé
       dans votre inventaire.'
@@ -53,6 +58,12 @@ Courier:
     InfoCost: "&7Courier: &fResources needed to create letters: %s."
     InfoFree: "&7Courier: &fLetters don't require any resources to make."
     LackingResources: "&7Courier: &fYou don't have the required resources to create a letter. See /courier fees"
+    NoCraftedFound: "&7Courier: &fTo write a letter you first need to craft blank parchment. See /courier fees"
+    DisplayName: "Courier Letter"
+    From: "&0Letter from&2 %s"
+    To: "Letter to %s"
+  Parchment:
+    DisplayName: "Blank Courier Parchment"
   Post:
     NoCredit: '&5Service postal: &fVous n''avez pas assez d''argent pour envoyer une
       lettre (%s)'

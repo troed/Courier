@@ -27,6 +27,7 @@ public class Letter {
     private final String sender;
     private final int id;
     private List<String> message;
+    private String topRow;
     private String header;
     private final int date;
     private String displayDate;
@@ -76,13 +77,14 @@ public class Letter {
             displayDatePos = 0;
         }
         if(!receiver.equalsIgnoreCase(sender)) { // r == s is an unposted Letter (same sender as receiver)
-            header = HEADER_COLOR + "Letter from " + HEADER_FROM_COLOR + sender + HEADER_COLOR + ":";
+            header = plugin.getCConfig().getLetterFrom2(sender) + HEADER_COLOR + ":";
             try {
-                if(getWidth(header) > CANVAS_WIDTH) {
-                    header = HEADER_COLOR + "From " + HEADER_FROM_COLOR + sender + HEADER_COLOR + ":";
+// See comment to getWidth on NPE
+                if(getWidth(plugin.getCConfig().getLetterFrom(sender) + ":") > CANVAS_WIDTH) {
+                    header = HEADER_FROM_COLOR + sender + HEADER_COLOR + ":";
                 }
             } catch (Exception e) {
-                plugin.getCConfig().clog(Level.SEVERE, "Caught exception in MinecraftFont.Font.getWidth(displayDate)");
+                plugin.getCConfig().clog(Level.SEVERE, "Caught exception in MinecraftFont.Font.getWidth(header)");
             }
         } else {
             header = null; // tested by LetterRenderer
@@ -112,7 +114,7 @@ public class Letter {
         return receiver.equalsIgnoreCase(sender)        |    // Letters are public
                !plugin.getCConfig().getSealedEnvelope() |    // Config override
                p.hasPermission(Courier.PM_PRIVACYOVERRIDE) | // Permission to read all
-               p.getName().equalsIgnoreCase(receiver);                 // Player is receiver
+               p.getName().equalsIgnoreCase(receiver);       // Player is receiver
     }
 
     // if we have more pages after format() than before, switch to the new page
@@ -137,6 +139,11 @@ public class Letter {
         return message.get(currentPage);
     }
 
+    // helper method used when adding Lore to Letter ItemStacks
+    public String getTopRow() {
+        return topRow != null ? topRow : "";
+    }
+
     public void advancePage() {
         if(currentPage < message.size()-1) {
             currentPage++;
@@ -148,6 +155,25 @@ public class Letter {
         if(currentPage > 0) {
             currentPage--;
             plugin.getLetterRenderer().forceClear();
+        }
+    }
+
+    public int getPageCount() {
+        return message.size();
+    }
+
+    // 0 internally is page 1 externally
+    public int getCurPage() {
+        return currentPage + 1;
+    }
+
+    // page 1 externally is 0 internally
+    public void setCurPage(int p) {
+        if(p > 0 && p <= message.size()) {
+            currentPage = p - 1;
+            if(plugin.getLetterRenderer() != null) {
+                plugin.getLetterRenderer().forceClear();
+            }
         }
     }
     
@@ -206,7 +232,6 @@ public class Letter {
                     i++;
                     break; // inner loop break, will cause a newline
                 }
-
                 try {
                     width = getWidth(words.get(i)); // NPE warning!
                 } catch (Exception e) {
@@ -233,6 +258,10 @@ public class Letter {
                     x += (width + getWidth(" ")); // space cannot NPE
                     i++;
                 }
+            }
+            // store first line of text on the first page for convenience
+            if(height == 0 && page == 0) {
+                topRow = buffer.toString();
             }
             // if there's more to come, newline and check if we need a new page
             if(i < words.size()) {

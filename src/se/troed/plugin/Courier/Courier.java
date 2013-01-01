@@ -31,11 +31,14 @@ import org.bukkit.block.Biome;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.command.CommandSender;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.FurnaceRecipe;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.ShapelessRecipe;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.map.MapRenderer;
 import org.bukkit.map.MapView;
 import org.bukkit.plugin.Plugin;
@@ -85,6 +88,13 @@ public class Courier extends JavaPlugin {
     public static final String PM_ADMIN = "courier.admin";
     public static final String PM_THEONEPERCENT = "courier.theonepercent";
     public static final String PM_PRIVACYOVERRIDE = "courier.privacyoverride";
+    public static final String PM_USEITEMFRAMES = "courier.useitemframes";
+
+    // Courier Map types internal enum
+    public static final int NONE = 0;
+    public static final int LETTER = 1;
+    public static final int FRAMEDLETTER = 2;
+    public static final int PARCHMENT = 3;
 
     public static final int MAGIC_NUMBER = Integer.MAX_VALUE - 395743; // used to id our map
     public static final int MAX_ID = Short.MAX_VALUE; // really, we don't do negative numbers well atm
@@ -100,6 +110,9 @@ public class Courier extends JavaPlugin {
     private static CourierDatabase db = null;
 
     private final Tracker tracker = new Tracker(this); // must be done before CourierEventListener
+    private boolean abort = false; // used to abort plugin load on error
+    private boolean initDone = false; // failsafe for postWorldInit()
+
     private final CourierEventListener eventListener = new CourierEventListener(this);
     private final CourierDB courierdb = new CourierDB(this);
     private CourierCommands courierCommands = null;
@@ -128,6 +141,27 @@ public class Courier extends JavaPlugin {
 
     public CourierDatabase getDb() {
         return db;
+    }
+
+    // Helper method to quickly identify a Courier Map ItemStack
+    // Should be used in many more places than it is currently
+    // Valid for Enchanted Courier Letters, Blank Courier Parchments && Framed Letters
+    int courierMapType(ItemStack item) {
+        if(item != null && item.getType() == Material.MAP) {
+            MapView map = getServer().getMap(item.getDurability());
+            if(map.getCenterX() == Courier.MAGIC_NUMBER) {
+                if(map.getId() == getCourierdb().getCourierMapId()) {
+                    if(item.containsEnchantment(Enchantment.DURABILITY)) { // && level > 0
+                        return Courier.LETTER;
+                    } else {
+                        return Courier.PARCHMENT;
+                    }
+                } else {
+                    return Courier.FRAMEDLETTER;
+                }
+            }
+        }
+        return Courier.NONE;
     }
 
     /**
@@ -356,6 +390,9 @@ public class Courier extends JavaPlugin {
             courierCommands = new CourierCommands(this); // needs config to have been created
         }
 
+        abort = false;
+        initDone = false;
+
         try {
             this.saveResource("translations/readme.txt", true);
             this.saveResource("translations/config_french.yml", true);
@@ -366,8 +403,6 @@ public class Courier extends JavaPlugin {
         } catch (Exception e) {
             config.clog(Level.WARNING, "Unable to copy translations from .jar to plugin folder");
         }
-
-        boolean abort = false;
 
         boolean dbExist = false;
         try {
@@ -448,6 +483,26 @@ public class Courier extends JavaPlugin {
             getCommand(CMD_COURIER).setExecutor(courierCommands);
             getCommand(CMD_POST).setExecutor(courierCommands);
             getCommand(CMD_LETTER).setExecutor(courierCommands);
+        }
+
+        // wait until default world has been loaded for the rest of our startup code
+        if(!getServer().getWorlds().isEmpty()) {
+            // We've been reloaded, continue post-World loading now
+            postWorldLoad();
+        } else {
+            // hacky workaround since we're not getting WorldLoadEvent
+            getServer().getScheduler().scheduleSyncDelayedTask(this, new Runnable() {
+                public void run() {
+                    postWorldLoad();
+                }
+            }, 0);
+        }
+    }
+
+    // called from onWorldLoad event
+    public void postWorldLoad() {
+        if(initDone) {
+            getCConfig().clog(Level.WARNING, "postWorldLoad() called more than once! Contact plugin developer.");
         }
 
         short mapId = 0;
@@ -543,18 +598,6 @@ public class Courier extends JavaPlugin {
             }
         }
 
-        // todo: https://bukkit.atlassian.net/browse/BUKKIT-696
-        // CRAP. This only works if shift-clicking!!! Else players get new normal maps with mapid++ ...
-        // New idea, craft special paper? :/ No visible difference though ..
-        // Probably needs en enhancement report on Bukkit to disregard mapid++ if mapid is supplied
-/*        ItemStack item = new ItemStack(Material.MAP, 1, getCourierdb().getCourierMapId());
-        ShapelessRecipe recipe = new ShapelessRecipe(item);
-        recipe.addIngredient(Material.PAPER);
-        recipe.addIngredient(Material.COAL);
-        getServer().addRecipe(recipe);*/
-        //
-
-
         // Make burning of Letters possible
         // oops, not allowed to have Material.AIR as the result .. (NPE) .. working around this in the event listener
         // https://bukkit.atlassian.net/browse/BUKKIT-745
@@ -573,19 +616,40 @@ public class Courier extends JavaPlugin {
             config.clog(Level.WARNING, "With difficulty set to Peaceful Monsters cannot spawn. Verify that the Postman type you've configured Courier to use isn't a Monster.");
         }
 
+        if(config.getRequiresCrafting()) {
+            config.clog(Level.FINE, "Crafting recipe required");
+            ItemStack item = new ItemStack(Material.MAP, 1, getCourierdb().getCourierMapId());
+            ItemMeta meta = item.getItemMeta();
+            if(meta != null) {
+                meta.setDisplayName(config.getParchmentDisplayName());
+                item.setItemMeta(meta);
+            }
+            ShapelessRecipe recipe = new ShapelessRecipe(item);
+            for(ItemStack resource : config.getLetterResources()) {
+                config.clog(Level.FINE, "Crafting recipe adding: " + resource.getAmount() + " x " + resource.getType());
+                recipe.addIngredient(resource.getAmount(), resource.getType());
+            }
+            getServer().addRecipe(recipe);
+        }
+
         if(!abort) {
             // display how much of the available Letter storage Courier is currently using
             Integer usage = getDb().totalLetters() / (Courier.MAX_ID - Courier.MIN_ID);
             config.clog(Level.INFO, "Courier currently uses " + MessageFormat.format("{0,number,#.##%}", usage) + " of the total Letter storage");
+        }
 
-            PluginDescriptionFile pdfFile = this.getDescription();
+        PluginDescriptionFile pdfFile = this.getDescription();
+        if(!abort) {
             config.clog(Level.INFO, pdfFile.getName() + " version v" + pdfFile.getVersion() + " is enabled!");
 
             // launch our background thread checking for Courier updates
             startUpdateThread();
         } else {
+            config.clog(Level.INFO, pdfFile.getName() + " version v" + pdfFile.getVersion() + " has been disabled!");
             setEnabled(false);
         }
+
+        initDone = true;
     }
 
     // in preparation for plugin config dynamic reloading

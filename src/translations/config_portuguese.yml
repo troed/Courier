@@ -5,11 +5,12 @@
 # Route.WalkToPlayer is not used for Monster-Postmen (they would attack), only "friendly mobs".
 #   - Set to false if Villager-Postmen keep pushing you into lava ;)
 Courier:
-  UseFees: false
   Version: 1.2.0
   UpdateInterval: 18000         # Checks for new versions every 5h. A value of 0 disables.
+  UseFees: false
   Fee:
     Send: 10
+    BankAccount: <none>
     InfoFee: '&7Courier: &fO selo custa %s'
     InfoNoFee: '&7Courier: &fO envio de carta nao tem custos associados'
   Route:
@@ -18,13 +19,14 @@ Courier:
     WalkToPlayer: true
   Privacy:
     SealedEnvelope: true
+    Locked: "&0Sorry, only&2 %s\n&0can read this letter"
   Postman:
     Type: Enderman
     QuickDespawn: 3
     Despawn: 20
     SpawnDistance: 10
     BreakSpawnProtection: true
-    CreativeDelivery: false
+    CreativeDelivery: true
     Greeting: '&7Courier: &fO Carteiro chegou com o teu correio!'
     MailDrop: '&7Courier: &fO teu correio foi largado no chao.'
     Inventory: '&7Courier: &fTinhas as maos ocupadas, o Carteiro colocou o correio no teu inventario.'
@@ -36,7 +38,10 @@ Courier:
     FreeLetter: true
     # Multiple amount resources example: [CobbleStone, Paper, CobbleStone]
     Resources: [Coal, Paper]
+    # Whether Courier should just deduct the resources or if players need to manually craft Letters
+    RequiresCrafting: false
     ShowDate: true
+    Frameable: true
     Drop: '&7Courier: &fTens o inventario cheio, a carta foi deixada no chao.'
     Inventory: '&7Courier: &fTinhas as tuas maos ocupadas, a carta foi deixada no teu inventario.'
     NoText: '&7Courier: &fErro, nao foi adicionado texto a carta!'
@@ -46,6 +51,12 @@ Courier:
     InfoCost: '&7Courier: &fCusto associado a criacao de uma carta: %s.'
     InfoFree: '&7Courier: &fAs cartas nao tem custos associados.'
     LackingResources: '&7Courier: &fNao tens dinheiro suficiente para a criacao da carta. Faz /courier fees'
+    NoCraftedFound: "&7Courier: &fTo write a letter you first need to craft blank parchment. See /courier fees"
+    DisplayName: "Courier Letter"
+    From: "&0Letter from&2 %s"
+    To: "Letter to %s"
+  Parchment:
+    DisplayName: "Blank Courier Parchment"
   Post:
     NoCredit: '&7Courier: &fLamento, nao tens dinheiro para pagar o selo (%s)'
     NoRecipient: '&7Courier: &fErro, nao ha destinatarios para receber a carta!'

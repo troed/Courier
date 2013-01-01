@@ -11,10 +11,12 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.map.MapView;
 import org.bukkit.map.MinecraftFont;
+import org.bukkit.inventory.meta.ItemMeta;
 
 import java.text.DateFormat;
 import java.text.MessageFormat;
 import java.util.Date;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.logging.Level;
@@ -23,10 +25,12 @@ import java.util.regex.Pattern;
 class CourierCommands implements CommandExecutor {
     private final Courier plugin;
     private final CourierConfig config;
+    private final Tracker tracker;
 
     public CourierCommands(Courier instance) {
         plugin = instance;
         config = plugin.getCConfig();
+        tracker = plugin.getTracker();
     }
     
     // Player is null for console
@@ -239,15 +243,6 @@ class CourierCommands implements CommandExecutor {
                         break;
                     }
                 }
-                if(p == null) { // todo: remove this section for 1.0.1-R2
-                    // See https://bukkit.atlassian.net/browse/BUKKIT-404 by GICodeWarrior
-                    // https://github.com/troed/Courier/issues/2
-                    // We could end up here if this is to a player who's on the server for the first time
-                    p = plugin.getServer().getPlayerExact(receiver);
-                    if(p != null) {
-                        config.clog(Level.FINE, "Found " + p.getName() + " in getPlayerExact");
-                    }
-                }
                 if(p == null) {
                     // still not found, try lazy matching and display suggestions
                     // (searches online players only)
@@ -290,6 +285,26 @@ class CourierCommands implements CommandExecutor {
                         } else {
                             Courier.display(player, config.getPostFundProblem());
                             config.clog(Level.WARNING, "Could not withdraw postage fee from " + p.getName());
+                        }
+                        // add postage fee to bank account if one has been configured
+                        // allows both bank accounts and player accounts
+                        String account = plugin.getCConfig().getBankAccount();
+                        if(account != null && !account.isEmpty() && !account.equalsIgnoreCase("<none>")) {
+                            if(plugin.getEconomy().getBanks().contains(account)) {
+                                // named Bank Account exists
+                                er = plugin.getEconomy().bankDeposit(account, fee);
+                                plugin.getCConfig().clog(Level.FINE, "Depositing fee into bank account " + account);
+                            } else if (plugin.getEconomy().hasAccount(account)) {
+                                // it's a Player
+                                er = plugin.getEconomy().depositPlayer(account, fee);
+                                plugin.getCConfig().clog(Level.FINE, "Depositing fee into player account " + account);
+                            } else {
+                                // config is in error
+                                plugin.getCConfig().clog(Level.WARNING, "Configured Post office account " + account + " does not exist.");
+                            }
+                            if(!er.transactionSuccess()) {
+                                plugin.getCConfig().clog(Level.WARNING, "Could not add postage fee to configured account: " + account);
+                            }
                         }
                     } else {
                         Courier.display(player, config.getPostLetterSent(p.getName()));
@@ -338,24 +353,21 @@ class CourierCommands implements CommandExecutor {
             ItemStack item = player.getItemInHand();
             Letter letter = null;
             boolean crafted = false;
-            if(item != null && item.getType() == Material.MAP) {
-                MapView map = plugin.getServer().getMap(item.getDurability());
-                if(map.getId() == plugin.getCourierdb().getCourierMapId()) {
+            if(item != null) {
+                if(plugin.courierMapType(item) == Courier.PARCHMENT) {
+                    // crafted parchment can safely be replaced properly later
+                    crafted = true;
+                    plugin.getCConfig().clog(Level.FINE, "Found crafted letter");
+                } else if(plugin.courierMapType(item) == Courier.LETTER) {
                     // this is a current Courier Letter
-                    letter = plugin.getTracker().getLetter(item);
-                    if(letter == null) {
-                        // this is apparently a crafted and pristine Letter, can safely be replaced properly later
-                        // unfortunately we're currently unable to craft Maps where we've decided the mapid, we'll never end up here.
-                        crafted = true;
-                        config.clog(Level.FINE, "Found crafted letter");
-                    }
+                    letter = tracker.getLetter(item);
                 }
             }
             int id = -1;
             if(letter == null) {
-                // player had no Courier Letter in hand, create a new one
+                // player had no, or blank, Courier Letter in hand
                 // see: http://dev.bukkit.org/server-mods/courier/tickets/16-postage-charges/
-                id = createLetter(player);
+                id = createLetter(player, crafted);
             } else {
                 id = letter.getId();
             }
@@ -416,28 +428,51 @@ class CourierCommands implements CommandExecutor {
                             (int)(System.currentTimeMillis() / 1000L))) { // oh noes unix y2k issues!!!11
         
                         // no letter == we create and put in hands, or in inventory, or drop to ground
-                        // see CourierEventListener for similar code when Postman delivers letters
                         if(letter == null) {
                             ItemStack letterItem = new ItemStack(Material.MAP, 1, plugin.getCourierdb().getCourierMapId());
                             letterItem.addUnsafeEnchantment(Enchantment.DURABILITY, id);
-                            if(!crafted && (item != null && item.getAmount() > 0)) {
-                                config.clog(Level.FINE, "Player hands not empty");
-                                HashMap<Integer, ItemStack> items = player.getInventory().addItem(letterItem);
-                                if(items.isEmpty()) {
-                                    config.clog(Level.FINE, "Letter added to inventory");
-                                    Courier.display(player, config.getLetterInventory());
-                                } else {
-                                    config.clog(Level.FINE, "Inventory full, letter dropped");
-                                    Courier.display(player, config.getLetterDrop());
-                                    player.getWorld().dropItemNaturally(player.getLocation(), letterItem);
-                                }
+                            letter = tracker.getLetter(letterItem);
+                            // also see similar Lore code in CourierEventListener
+                            ItemMeta meta = letterItem.getItemMeta();
+                            if(meta != null) {
+                                meta.setDisplayName("Courier Letter");
+                                List<String> strings = new ArrayList<String>();
+                                strings.add(letter.getTopRow());
+                                meta.setLore(strings);
+                                letterItem.setItemMeta(meta);
                             } else {
-                                // we end up here on empty hands or if we know player is holding a crafted Letter
-                                config.clog(Level.FINE, "Letter delivered into player's hands");
+                                // ???
+                            }
+
+                            // if empty hands || crafted && itemInHand == single Courier parchment
+                            //   setItemInHand
+                            // else
+                            //   addToInventory
+                            //
+                            // This code is very similar to code in EventListener when right clicking Postmen
+                            if((item == null || item.getAmount() == 0) ||
+                                    (crafted && item.getAmount() == 1 && plugin.courierMapType(item) == Courier.PARCHMENT)) {
+                                plugin.getCConfig().clog(Level.FINE, "Letter delivered into player's hands");
                                 player.setItemInHand(letterItem); // REALLY replaces what's there
-        
+
                                 // quick render
                                 player.sendMap(plugin.getServer().getMap(plugin.getCourierdb().getCourierMapId()));
+                            } else {
+                                if(crafted && plugin.courierMapType(item) == Courier.PARCHMENT) {
+                                    // subtract one parchment
+                                    item.setAmount(item.getAmount()-1);
+                                    player.setItemInHand(item);
+                                }
+                                plugin.getCConfig().clog(Level.FINE, "Player hands not empty");
+                                HashMap<Integer, ItemStack> items = player.getInventory().addItem(letterItem);
+                                if(items.isEmpty()) {
+                                    plugin.getCConfig().clog(Level.FINE, "Letter added to inventory");
+                                    player.sendMessage(plugin.getCConfig().getLetterInventory());
+                                } else {
+                                    plugin.getCConfig().clog(Level.FINE, "Inventory full, letter dropped");
+                                    player.sendMessage(plugin.getCConfig().getLetterDrop());
+                                    player.getWorld().dropItemNaturally(player.getLocation(), letterItem);
+                                }
                             }
                         } else {
                             if(useCached) {
@@ -501,31 +536,40 @@ class CourierCommands implements CommandExecutor {
     // helper methods
 
     @SuppressWarnings("deprecation") // player.updateInventory()
-    int createLetter(Player player) {
+    int createLetter(Player player, boolean crafted) {
         int id = -1;
         if(!config.getFreeLetter()) {
             // letters aren't free on this server
-            List<ItemStack> resources = config.getLetterResources();
-            // verify player has the goods
-            Inventory inv = player.getInventory();
-            boolean lacking = false;
-            for(ItemStack resource : resources) {
-                config.clog(Level.FINE, "Requiring resource: " + resource.toString());
-                // (ItemStack, amount) doesn't match, (Material, amount) does
-                if(!inv.contains(resource.getType(), resource.getAmount())) {
-                    config.clog(Level.FINE, "Requiring resource: " + resource.toString() + " failed");
-                    lacking = true;
+            if(plugin.getCConfig().getRequiresCrafting()) {
+                if(crafted) {
+                    id = plugin.getDb().generateUID();
+                } else {
+                    // Well, if we end up here the player hadn't crafted a Letter and we're not making one for him/her
+                    player.sendMessage(plugin.getCConfig().getLetterNoCraftedFound());
                 }
-            }
-            if(lacking) {
-                Courier.display(player, config.getLetterLackingResources());
             } else {
-                // subtract from inventory
+                List<ItemStack> resources = plugin.getCConfig().getLetterResources();
+                // verify player has the goods
+                Inventory inv = player.getInventory();
+                boolean lacking = false;
                 for(ItemStack resource : resources) {
-                    inv.removeItem(resource);
+                    plugin.getCConfig().clog(Level.FINE, "Requiring resource: " + resource.toString());
+                    // (ItemStack, amount) doesn't match, (Material, amount) does
+                    if(!inv.contains(resource.getType(), resource.getAmount())) {
+                        plugin.getCConfig().clog(Level.FINE, "Requiring resource: " + resource.toString() + " failed");
+                        lacking = true;
+                    }
                 }
-                player.updateInventory(); // deprecated, but apparently the correct thing to do
-                id = plugin.getDb().generateUID();
+                if(lacking) {
+                    player.sendMessage(plugin.getCConfig().getLetterLackingResources());
+                } else {
+                    // subtract from inventory
+                    for(ItemStack resource : resources) {
+                        inv.removeItem(resource);
+                    }
+                    player.updateInventory(); // deprecated, but apparently the correct thing to do
+                    id = plugin.getDb().generateUID();
+                }
             }
         } else {
             // letters are free

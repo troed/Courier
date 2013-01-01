@@ -1,6 +1,7 @@
 package se.troed.plugin.Courier;
 
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.map.*;
 
 import javax.imageio.ImageIO;
@@ -25,6 +26,8 @@ public class LetterRenderer extends MapRenderer {
     BufferedImage laminated = null;
     private int lastId = -1;
     private boolean clear = false;
+    private String cachedPrivacy;
+    private String cachedReceiver = "";
 
     public LetterRenderer(Courier p) {
         super(true); // all our messages are contextual (i.e different for different players)
@@ -46,71 +49,79 @@ public class LetterRenderer extends MapRenderer {
         }
     }
 
-    // what? I'm getting _constant_ calls to this renderer method, 20tps, no matter if I'm holding a map or not!
-    // it starts as soon as I have a map (to check: any map or Courier) in the inventory, but whether it's
-    // in my hands or not isn't relevant
-    // this is also in old code with non-enchanted maps. bug reported.
+    // This method gets called at 20tps whenever a map is in a players inventory. Bail out as quickly as possible if we
+    // shouldn't do anything with it.
     // https://bukkit.atlassian.net/browse/BUKKIT-476
     @Override
     public void render(MapView map, MapCanvas canvas, Player player) {
-//        System.out.print("render(); ");
-        // thanks to the above bug we end up here even if we're not holding a Map specifically
-        Letter letter = plugin.getTracker().getLetter(player.getItemInHand());
-        if(clear || (letter != null && lastId != letter.getId())) {
-            if(letter != null && letter.isLaminated()) {
-//            canvas.drawImage(0, 0, laminated);
-                for(int j = 0; j < CANVAS_HEIGHT; j++) {
-                    for(int i = 0; i < CANVAS_WIDTH; i++) {
-                        canvas.setPixel(i, j, clearImage[j * CANVAS_WIDTH + i]);
-                    }
-                }
+        Letter letter = null;
+        ItemStack item = player.getItemInHand();
+        if(plugin.courierMapType(item) != Courier.NONE) {
+            if(plugin.courierMapType(item) == Courier.LETTER) {
+                letter = plugin.getTracker().getLetter(item);
+//                plugin.getCConfig().clog(Level.FINE, "Rendering a Courier Letter map");
             } else {
-                for(int j = 0; j < CANVAS_HEIGHT; j++) {
-                    for(int i = 0; i < CANVAS_WIDTH; i++) {
-                        canvas.setPixel(i, j, MapPalette.TRANSPARENT);
+//                plugin.getCConfig().clog(Level.FINE, "Rendering a Courier Parchment map");
+                // parchment - drawn blank below
+            }
+            if(clear || letter == null || lastId != letter.getId()) {
+                if(letter != null && letter.isLaminated()) {
+                    for(int j = 0; j < CANVAS_HEIGHT; j++) {
+                        for(int i = 0; i < CANVAS_WIDTH; i++) {
+                            canvas.setPixel(i, j, clearImage[j * CANVAS_WIDTH + i]);
+                        }
+                    }
+                } else {
+                    for(int j = 0; j < CANVAS_HEIGHT; j++) {
+                        for(int i = 0; i < CANVAS_WIDTH; i++) {
+                            canvas.setPixel(i, j, MapPalette.TRANSPARENT);
+                        }
                     }
                 }
-            }
-            if(letter != null) {
-                lastId = letter.getId();
-            }
-            clear = false;
-        }
 
-        if(letter != null && letter.isAllowedToSee(player)) {
-            int drawPos = HEADER_POS;
-            if(letter.getHeader() != null) {
-                canvas.drawText(0, MinecraftFont.Font.getHeight() * drawPos, MinecraftFont.Font, letter.getHeader());
-                drawPos = BODY_POS;
+                if(letter != null) {
+                    lastId = letter.getId();
+                }
+                clear = false;
             }
 
-            canvas.drawText(letter.getLeftMarkerPos(), MinecraftFont.Font.getHeight(), MinecraftFont.Font, letter.getLeftMarker());
-            canvas.drawText(letter.getRightMarkerPos(), MinecraftFont.Font.getHeight(), MinecraftFont.Font, letter.getRightMarker());
+            if(letter != null && letter.isAllowedToSee(player)) {
+                int drawPos = HEADER_POS;
+                if(letter.getHeader() != null) {
+                    canvas.drawText(0, MinecraftFont.Font.getHeight() * drawPos, MinecraftFont.Font, letter.getHeader());
+                    drawPos = BODY_POS;
+                }
 
-            canvas.drawText(0,
-                            MinecraftFont.Font.getHeight() * drawPos,
-                            MinecraftFont.Font, Letter.MESSAGE_COLOR + letter.getMessage());
+                canvas.drawText(letter.getLeftMarkerPos(), MinecraftFont.Font.getHeight(), MinecraftFont.Font, letter.getLeftMarker());
+                canvas.drawText(letter.getRightMarkerPos(), MinecraftFont.Font.getHeight(), MinecraftFont.Font, letter.getRightMarker());
 
-            if(letter.getDisplayDate() != null) {
-                canvas.drawText(letter.getDisplayDatePos(),
-                                0,
-                                MinecraftFont.Font, Letter.DATE_COLOR + letter.getDisplayDate());
+                canvas.drawText(0,
+                                MinecraftFont.Font.getHeight() * drawPos,
+                                MinecraftFont.Font, Letter.MESSAGE_COLOR + letter.getMessage());
+
+                if(letter.getDisplayDate() != null) {
+                    canvas.drawText(letter.getDisplayDatePos(),
+                                    0,
+                                    MinecraftFont.Font, Letter.DATE_COLOR + letter.getDisplayDate());
+                }
+
+                // this is the actual time we can be sure a letter has been read
+                // post an event to make sure we don't block the rendering pipeline
+                if(!letter.getRead()) {
+                    CourierReadEvent event = new CourierReadEvent(player, letter.getId());
+                    plugin.getServer().getPluginManager().callEvent(event);
+                    letter.setRead(true);
+                }
+             } else if(letter != null) {
+                if(!letter.getReceiver().equalsIgnoreCase(cachedReceiver)) {
+                    cachedReceiver = letter.getReceiver();
+                    cachedPrivacy = plugin.getCConfig().getPrivacyLocked(cachedReceiver);
+                }
+                canvas.drawText(0, MinecraftFont.Font.getHeight()*HEADER_POS, MinecraftFont.Font, cachedPrivacy);
             }
-
-            // this is the actual time we can be sure a letter has been read
-            // post an event to make sure we don't block the rendering pipeline
-            if(!letter.getRead()) {
-                CourierReadEvent event = new CourierReadEvent(player, letter.getId());
-                plugin.getServer().getPluginManager().callEvent(event);
-                letter.setRead(true);
-            }
-        } else if(letter != null) {
-            String temp = Letter.HEADER_COLOR + "Sorry, only " + Letter.HEADER_FROM_COLOR +
-                          letter.getReceiver() + "\n" + Letter.HEADER_COLOR + "can read this letter";
-            canvas.drawText(0, MinecraftFont.Font.getHeight()*HEADER_POS, MinecraftFont.Font, temp);
         }
     }
-    
+
     // called by CourierCommands commandLetter. Not terribly pretty architectured.
     public void forceClear() {
         clear = true;
@@ -118,6 +129,7 @@ public class LetterRenderer extends MapRenderer {
 
     // MapPalette.imageToBytes fails to create Colors with alpha - corrected below
     // https://bukkit.atlassian.net/browse/BUKKIT-852
+    // todo: this has apparently been fixed
     public static byte[] imageToBytes(Image image) {
         BufferedImage temp = new BufferedImage(image.getWidth(null), image.getHeight(null), BufferedImage.TYPE_INT_ARGB);
         Graphics2D graphics = temp.createGraphics();

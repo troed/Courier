@@ -5,11 +5,12 @@
 # Route.WalkToPlayer is not used for Monster-Postmen (they would attack), only "friendly mobs".
 #   - Set to false if Villager-Postmen keep pushing you into lava ;)
 Courier:
-  UseFees: false
   Version: 1.2.0
   UpdateInterval: 18000         # Checks for new versions every 5h. A value of 0 disables.
+  UseFees: false
   Fee:
     Send: 10
+    BankAccount: <none>
     InfoFee: "&7Kurier: &fDas Porto beträgt %s"
     InfoNoFee: "&7Kurier: &fAuf diesem Server enstehen keine Kosten für das Senden von Nachrichten"
   Route:
@@ -18,13 +19,14 @@ Courier:
     WalkToPlayer: true
   Privacy:
     SealedEnvelope: true
+    Locked: "&0Sorry, only&2 %s\n&0can read this letter"
   Postman:
     Type: Enderman
     QuickDespawn: 3
     Despawn: 20
     SpawnDistance: 10
     BreakSpawnProtection: true
-    CreativeDelivery: false
+    CreativeDelivery: true
     Greeting: "&7Kurier: &fEin Briefträger ist mit deiner Nachricht angekommen!"
     MailDrop: "&7Kurier: &fDeine Nachricht wurde auf den Boden gelegt."
     Inventory: "&7Kurier: &fDeine Hände waren voll, der Postbote hat die Nachricht für dich in dein Inventar gelegt."
@@ -36,7 +38,10 @@ Courier:
     FreeLetter: true
     # Multiple amount resources example: [CobbleStone, Paper, CobbleStone]
     Resources: [Coal, Paper]
+    # Whether Courier should just deduct the resources or if players need to manually craft Letters
+    RequiresCrafting: false
     ShowDate: true
+    Frameable: true
     Drop: "&7Kurier: &fDein Inventar ist voll, der Brief wurde auf den Boden gelegt."
     Inventory: "&7Kurier: &fDu hattest deine Hände voll, der Brief kann in deinem Inventar gefunden werden."
     NoText: "&7Kurier: &fError, kein Text um ihn dem Brief hinzuzufügen!"
@@ -46,6 +51,12 @@ Courier:
     InfoCost: "&7Kurier: &fBenötigte Mittel um Briefe zu erstellen: %s."
     InfoFree: "&7Kurier: &fBriefe brauchen keine Mittel um erstellt zu werden."
     LackingResources: "&7Kurier: &fDu hast nicht die benötigten Mittel um einen Brief zu erstellen. Siehe /courier fees"
+    NoCraftedFound: "&7Courier: &fTo write a letter you first need to craft blank parchment. See /courier fees"
+    DisplayName: "Courier Letter"
+    From: "&0Letter from&2 %s"
+    To: "Letter to %s"
+  Parchment:
+    DisplayName: "Blank Courier Parchment"
   Post:
     NoCredit: "&7Kurier: &fEntschuldigung du hast nicht genug Kredit, um das Porto zu decken (%s)"
     NoRecipient: "&7Kurier: &fError, kein Empfänger dem ein Brief geschickt werden kann!"

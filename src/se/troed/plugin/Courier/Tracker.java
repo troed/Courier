@@ -102,13 +102,13 @@ public class Tracker {
         letters.put(id, l);
     }
 
-    // finds the Letter associated with a specific item
+    // finds the Letter associated with a specific id
     // recreates structure from db after each restart as needed
-    public Letter getLetter(ItemStack letterItem) {
-        if(letterItem == null || letterItem.getType() != Material.MAP || !letterItem.containsEnchantment(Enchantment.DURABILITY)) {
+    public Letter getLetter(int id) {
+        if(id == 0) {
+            // currently happens when crafted Letters put into ItemFrames are rendered
             return null;
         }
-        int id = letterItem.getEnchantmentLevel(Enchantment.DURABILITY);
         Letter letter = letters.get(id);
         if(letter == null) {
             // server has lost the ItemStack<->Letter associations, re-populate
@@ -117,13 +117,19 @@ public class Tracker {
                 addLetter(id, letter);
                 plugin.getCConfig().clog(Level.FINE, "Letter " + id + " recreated from db for " + plugin.getDb().getPlayer(id));
             } else {
-                // we've found an item pointing to a Courier letter that does not exist in the db anylonger
+                // we've found an item pointing to a Courier letter that does not exist anylonger
                 // ripe for re-use!
-                // todo: visual effect and then removing the item?
                 plugin.getCConfig().clog(Level.FINE, "BAD: " + id + " not found in messages database");
             }
         }
         return letter;
+    }
+
+    public Letter getLetter(ItemStack letterItem) {
+        if(letterItem == null || !letterItem.containsEnchantment(Enchantment.DURABILITY)) {
+            return null;
+        }
+        return getLetter(letterItem.getEnchantmentLevel(Enchantment.DURABILITY));
     }
 
     private void despawnPostman(UUID uuid) {
