@@ -59,9 +59,6 @@ import java.util.logging.Level;
  * How to deal with players who NEVER accept delivery? We'll spawn an immense number of postmen
  * and Items over time! I do not track how many times a single mail has been delivered, maybe I should?
  *
- * ISSUE: Currently no quick rendering (sendMap) works. Not sure this is fixable - I guess it understands
- *        we're using the same MapID for everything.
- *
  */
 public class Courier extends JavaPlugin {
     // these must match plugin.yml
@@ -522,6 +519,8 @@ public class Courier extends JavaPlugin {
             // Prepare the magic Courier Map we use for all rendering
             // and more importantly, the one all ItemStacks will point to
             mapId = courierdb.getCourierMapId();
+            getCConfig().clog(Level.INFO, "Rendering map as found in config: " + mapId);
+
             // check if the server admin has used Courier and then deleted the world
             if(mapId != -1 && getServer().getMap(mapId) == null) {
                 getCConfig().clog(Level.SEVERE, "The Courier claimed map id " + mapId + " wasn't found in the world folder! Reclaiming.");

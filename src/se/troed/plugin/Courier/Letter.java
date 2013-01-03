@@ -35,6 +35,8 @@ public class Letter {
     // note, this is JUST to avoid event spamming. Actual read status is saved in the database
     private boolean read;
     private int currentPage = 0;
+    // to draw or not to draw
+    private boolean dirty;
 
     public Letter(Courier plug, String s, String r, String m, int id, boolean rd, int date) {
         plugin = plug;
@@ -90,6 +92,14 @@ public class Letter {
         setMessage(m);
     }
 
+    public void setDirty(boolean d) {
+        dirty = d;
+    }
+
+    public boolean getDirty() {
+        return dirty;
+    }
+
     public int getId() {
         return id;
     }
@@ -130,6 +140,7 @@ public class Letter {
                 advancePage();
             }
         }
+        setDirty(true);
     }
     
     public String getMessage() {
@@ -144,14 +155,16 @@ public class Letter {
     public void advancePage() {
         if(currentPage < message.size()-1) {
             currentPage++;
-            plugin.getLetterRenderer().forceClear();
+//            plugin.getLetterRenderer().forceClear();
+            setDirty(true);
         }
     }
 
     public void backPage() {
         if(currentPage > 0) {
             currentPage--;
-            plugin.getLetterRenderer().forceClear();
+//            plugin.getLetterRenderer().forceClear();
+            setDirty(true);
         }
     }
 
@@ -168,9 +181,10 @@ public class Letter {
     public void setCurPage(int p) {
         if(p > 0 && p <= message.size()) {
             currentPage = p - 1;
-            if(plugin.getLetterRenderer() != null) {
-                plugin.getLetterRenderer().forceClear();
-            }
+//            if(plugin.getLetterRenderer() != null) {
+//                plugin.getLetterRenderer().forceClear();
+                setDirty(true);
+//            }
         }
     }
     

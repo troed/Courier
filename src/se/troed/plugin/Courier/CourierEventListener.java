@@ -119,6 +119,7 @@ class CourierEventListener implements Listener {
                             mapItem.setItemMeta(meta);
                         }
                         e.getPlayer().setItemInHand(mapItem); // Replace the Courier Letter the player had with the new unique Map
+                        letter.setDirty(true);
                     } else if(type == Courier.FRAMEDLETTER) {
                         // Probably never happens since we convert them back on pickup and heldchange into regular Courier Letters
                         plugin.getCConfig().clog(Level.FINE, "Courier Framed Letter placed into ItemFrame");
@@ -168,7 +169,7 @@ class CourierEventListener implements Listener {
                 plugin.getCConfig().clog(Level.FINE, "Letter delivered into player's hands");
                 e.getPlayer().setItemInHand(letter); // REALLY replaces what's there
 
-                // quick render
+                // todo: quick render
                 e.getPlayer().sendMap(plugin.getServer().getMap(plugin.getCourierdb().getCourierMapId()));
 
                 if(e.getRightClicked() instanceof Enderman) {
@@ -277,7 +278,8 @@ class CourierEventListener implements Listener {
                 plugin.getCConfig().clog(Level.FINE, "Switched to Letter id " + letter.getId());
 
                 // quick render
-                e.getPlayer().sendMap(plugin.getServer().getMap(plugin.getCourierdb().getCourierMapId()));
+                letter.setDirty(true);
+//                e.getPlayer().sendMap(plugin.getServer().getMap(plugin.getCourierdb().getCourierMapId()));
             } else {
                 // or regular map
                 plugin.getCConfig().clog(Level.FINE, "Switched to blank parchment");
@@ -321,7 +323,8 @@ class CourierEventListener implements Listener {
                 // if itemheldhand was empty, we should render the letter immediately
                 ItemStack heldItem = e.getPlayer().getItemInHand();
                 if(heldItem != null && heldItem.getAmount() == 0) {
-                    e.getPlayer().sendMap(plugin.getServer().getMap(plugin.getCourierdb().getCourierMapId()));
+//                    e.getPlayer().sendMap(plugin.getServer().getMap(plugin.getCourierdb().getCourierMapId()));
+                    letter.setDirty(true);
                 }
             } else {
                 // or regular map

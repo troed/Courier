@@ -259,7 +259,7 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                         if(plugin.getCourierdb().sendMessage(letter.getId(), p.getName(), player.getName())) {
                             // existing Letter now has outdated info, will automatically be recreated from db
                             plugin.removeLetter(letter.getId());
-                            plugin.getLetterRenderer().forceClear();
+//                            plugin.getLetterRenderer().forceClear();
 
                             // remove item from hands, which kills the ItemStack association. It's now "gone"
                             // from the control of this player. (if I implement additional receivers you could of course
@@ -412,7 +412,8 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                                 player.setItemInHand(letterItem); // REALLY replaces what's there
 
                                 // quick render
-                                player.sendMap(plugin.getServer().getMap(plugin.getCourierdb().getCourierMapId()));
+                                letter.setDirty(true);
+//                                player.sendMap(plugin.getServer().getMap(plugin.getCourierdb().getCourierMapId()));
                             } else {
                                 if(crafted && plugin.courierMapType(item) == Courier.PARCHMENT) {
                                     // subtract one parchment
@@ -437,7 +438,7 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                             } else {
                                 // existing Letter now has outdated info, will automatically be recreated from db
                                 plugin.removeLetter(id);
-                                plugin.getLetterRenderer().forceClear();
+//                                plugin.getLetterRenderer().forceClear();
                             } 
                         }
                     } else {

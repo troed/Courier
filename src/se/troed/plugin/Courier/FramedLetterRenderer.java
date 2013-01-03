@@ -19,8 +19,6 @@ public class FramedLetterRenderer extends MapRenderer {
     @SuppressWarnings("FieldCanBeLocal")
     private final int CANVAS_HEIGHT = 128;
 //    private final byte[] clearImage = new byte[128*128];  // nice letter background image todo
-    private int lastId = -1;
-    private boolean clear = false;
 
     public FramedLetterRenderer(Courier p) {
         super(false); // Framed Letters are not contextual (i.e same for all players)
@@ -36,21 +34,14 @@ public class FramedLetterRenderer extends MapRenderer {
             // it's a Courier map in an ItemFrame. We get called when it's in a loaded chunk. Player doesn't
             // even need to be near it. Performance issues galore ...
             Letter letter = plugin.getLetter(map.getCenterZ());
-//            plugin.getCConfig().clog(Level.FINE, "Rendering a Courier ItemFrame map");
-            if(clear || letter == null || lastId != letter.getId()) {
+            if(letter != null && letter.getDirty()) {
+                plugin.getCConfig().clog(Level.FINE, "Rendering a Courier ItemFrame Letter (" + letter.getId() + ") on Map (" + map.getId() + ")");
                 for(int j = 0; j < CANVAS_HEIGHT; j++) {
                     for(int i = 0; i < CANVAS_WIDTH; i++) {
                         //                    canvas.setPixel(i, j, clearImage[j*128+i]);
                         canvas.setPixel(i, j, MapPalette.TRANSPARENT);
                     }
                 }
-                if(letter != null) {
-                    lastId = letter.getId();
-                }
-                clear = false;
-            }
-
-            if(letter != null) {
 
                 int drawPos = HEADER_POS;
 
@@ -71,12 +62,9 @@ public class FramedLetterRenderer extends MapRenderer {
                                     0,
                                     MinecraftFont.Font, Letter.DATE_COLOR + letter.getDisplayDate());
                 }
+                letter.setDirty(false);
+                player.sendMap(map);
             }
         }
-    }
-    
-    // called by CourierCommands commandLetter. Not terribly pretty architectured.
-    public void forceClear() {
-        clear = true;
     }
 }

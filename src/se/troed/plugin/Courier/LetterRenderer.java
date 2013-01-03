@@ -19,8 +19,8 @@ public class LetterRenderer extends MapRenderer {
     @SuppressWarnings("FieldCanBeLocal")
     private final int CANVAS_HEIGHT = 128;
 //    private final byte[] clearImage = new byte[128*128];  // nice letter background image todo
-    private int lastId = -1;
-    private boolean clear = false;
+//    private int lastId = -1;
+//    private boolean clear = false;
     private String cachedPrivacy;
     private String cachedReceiver = "";
 
@@ -37,65 +37,68 @@ public class LetterRenderer extends MapRenderer {
         Letter letter = null;
         ItemStack item = player.getItemInHand();
         if(plugin.courierMapType(item) != Courier.NONE) {
-            if(plugin.courierMapType(item) == Courier.LETTER) {
-                letter = plugin.getLetter(item);
-//                plugin.getCConfig().clog(Level.FINE, "Rendering a Courier Letter map");
-            } else {
-//                plugin.getCConfig().clog(Level.FINE, "Rendering a Courier Parchment map");
+            letter = plugin.getLetter(item);
+            if(letter == null) { // plugin.courierMapType(item) != Courier.LETTER
                 // parchment - drawn blank below
-            }
-            if(clear || letter == null || lastId != letter.getId()) {
+                // currently redraws at 20 tps
+//                plugin.getCConfig().clog(Level.FINE, "Rendering a Courier Parchment on Map (" + map.getId() + ")");
                 for(int j = 0; j < CANVAS_HEIGHT; j++) {
                     for(int i = 0; i < CANVAS_WIDTH; i++) {
                         //                    canvas.setPixel(i, j, clearImage[j*128+i]);
                         canvas.setPixel(i, j, MapPalette.TRANSPARENT);
                     }
                 }
-                if(letter != null) {
-                    lastId = letter.getId();
+            } else if(letter.getDirty()) {
+                plugin.getCConfig().clog(Level.FINE, "Rendering a Courier Letter (" + letter.getId() + ") on Map (" + map.getId() + ")");
+                for(int j = 0; j < CANVAS_HEIGHT; j++) {
+                    for(int i = 0; i < CANVAS_WIDTH; i++) {
+                        //                    canvas.setPixel(i, j, clearImage[j*128+i]);
+                        canvas.setPixel(i, j, MapPalette.TRANSPARENT);
+                    }
                 }
-                clear = false;
-            }
-            // todo: idea for pvp war servers: "your mail has fallen into enemy hands". "they've read it!")
-            if(letter != null && letter.isAllowedToSee(player)) {
-                int drawPos = HEADER_POS;
-                if(letter.getHeader() != null) {
-                    canvas.drawText(0, MinecraftFont.Font.getHeight() * drawPos, MinecraftFont.Font, letter.getHeader());
-                    drawPos = BODY_POS;
-                }
+                // todo: idea for pvp war servers: "your mail has fallen into enemy hands". "they've read it!")
+                if(letter.isAllowedToSee(player)) {
+                    int drawPos = HEADER_POS;
+                    if(letter.getHeader() != null) {
+                        canvas.drawText(0, MinecraftFont.Font.getHeight() * drawPos, MinecraftFont.Font, letter.getHeader());
+                        drawPos = BODY_POS;
+                    }
 
-                canvas.drawText(letter.getLeftMarkerPos(), MinecraftFont.Font.getHeight(), MinecraftFont.Font, letter.getLeftMarker());
-                canvas.drawText(letter.getRightMarkerPos(), MinecraftFont.Font.getHeight(), MinecraftFont.Font, letter.getRightMarker());
+                    canvas.drawText(letter.getLeftMarkerPos(), MinecraftFont.Font.getHeight(), MinecraftFont.Font, letter.getLeftMarker());
+                    canvas.drawText(letter.getRightMarkerPos(), MinecraftFont.Font.getHeight(), MinecraftFont.Font, letter.getRightMarker());
 
-                canvas.drawText(0,
-                                MinecraftFont.Font.getHeight() * drawPos,
-                                MinecraftFont.Font, Letter.MESSAGE_COLOR + letter.getMessage());
+                    canvas.drawText(0,
+                                    MinecraftFont.Font.getHeight() * drawPos,
+                                    MinecraftFont.Font, Letter.MESSAGE_COLOR + letter.getMessage());
 
-                if(letter.getDisplayDate() != null) {
-                    canvas.drawText(letter.getDisplayDatePos(),
-                                    0,
-                                    MinecraftFont.Font, Letter.DATE_COLOR + letter.getDisplayDate());
-                }
+                    if(letter.getDisplayDate() != null) {
+                        canvas.drawText(letter.getDisplayDatePos(),
+                                        0,
+                                        MinecraftFont.Font, Letter.DATE_COLOR + letter.getDisplayDate());
+                    }
 
-                // this is the actual time we can be sure a letter has been read
-                // post an event to make sure we don't block the rendering pipeline
-                if(!letter.getRead()) {
-                    CourierReadEvent event = new CourierReadEvent(player, letter.getId());
-                    plugin.getServer().getPluginManager().callEvent(event);
-                    letter.setRead(true);
+                    // this is the actual time we can be sure a letter has been read
+                    // post an event to make sure we don't block the rendering pipeline
+                    if(!letter.getRead()) {
+                        CourierReadEvent event = new CourierReadEvent(player, letter.getId());
+                        plugin.getServer().getPluginManager().callEvent(event);
+                        letter.setRead(true);
+                    }
+                } else {
+                    if(!letter.getReceiver().equalsIgnoreCase(cachedReceiver)) {
+                        cachedReceiver = letter.getReceiver();
+                        cachedPrivacy = plugin.getCConfig().getPrivacyLocked(cachedReceiver);
+                    }
+                    canvas.drawText(0, MinecraftFont.Font.getHeight()*HEADER_POS, MinecraftFont.Font, cachedPrivacy);
                 }
-            } else if(letter != null) {
-                if(!letter.getReceiver().equalsIgnoreCase(cachedReceiver)) {
-                    cachedReceiver = letter.getReceiver();
-                    cachedPrivacy = plugin.getCConfig().getPrivacyLocked(cachedReceiver);
-                }
-                canvas.drawText(0, MinecraftFont.Font.getHeight()*HEADER_POS, MinecraftFont.Font, cachedPrivacy);
+                letter.setDirty(false);
+                player.sendMap(map);
             }
         }
     }
 
     // called by CourierCommands commandLetter. Not terribly pretty architectured.
-    public void forceClear() {
+/*    public void forceClear() {
         clear = true;
-    }
+    }*/
 }
