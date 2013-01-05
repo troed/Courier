@@ -25,6 +25,7 @@ import org.bukkit.block.Biome;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -137,6 +138,10 @@ public class Courier extends JavaPlugin {
         return tracker;
     }
 
+    public CourierDB getCourierdb() {
+        return courierdb;
+    }
+
     /**
      * Picks a spot suitably in front of the player's eyes and checks to see if there's room 
      * for a postman to spawn in line-of-sight
@@ -191,17 +196,32 @@ public class Courier extends JavaPlugin {
                 }
             }
         }
-            
+
+        // make a feeble attempt at not betraying vanished players
+        // the box will likely need to be a lot bigger
+        // just loop through all online players instead? ~300 checks max
+        // but that would mean vanished players can never receive mail
+        if(sLoc != null) {
+            // todo: replace with a vanish-distance
+            int length = getCConfig().getSpawnDistance();
+            List<Entity> entities = p.getNearbyEntities(length, 64, length);
+            for(Entity e : entities) {
+                if(e instanceof Player) {
+                    Player player = (Player) e;
+                    if(!player.canSee(p)) {
+                        sLoc = null; // it's enough that one Player nearby isn't supposed to see us
+                        break;
+                    }
+                }
+            }
+        }
+
         if(sLoc == null) {
             getCConfig().clog(Level.FINE, "Didn't find room to spawn Postman");
             // fail
         }
 
         return sLoc;
-    }
-
-    public CourierDB getCourierdb() {
-        return courierdb;
     }
 
     private void startDeliveryThread() {
