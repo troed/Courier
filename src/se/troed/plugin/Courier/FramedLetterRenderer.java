@@ -33,7 +33,7 @@ public class FramedLetterRenderer extends MapRenderer {
         if(map.getCenterX() == Courier.MAGIC_NUMBER && map.getId() != plugin.getCourierdb().getCourierMapId()) {
             // it's a Courier map in an ItemFrame. We get called when it's in a loaded chunk. Player doesn't
             // even need to be near it. Performance issues galore ...
-            Letter letter = plugin.getLetter(map.getCenterZ());
+            Letter letter = plugin.getTracker().getLetter(map.getCenterZ());
             if(letter != null && letter.getDirty()) {
                 plugin.getCConfig().clog(Level.FINE, "Rendering a Courier ItemFrame Letter (" + letter.getId() + ") on Map (" + map.getId() + ")");
                 for(int j = 0; j < CANVAS_HEIGHT; j++) {

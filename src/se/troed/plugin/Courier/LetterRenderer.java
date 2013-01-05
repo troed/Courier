@@ -37,7 +37,7 @@ public class LetterRenderer extends MapRenderer {
         Letter letter = null;
         ItemStack item = player.getItemInHand();
         if(plugin.courierMapType(item) != Courier.NONE) {
-            letter = plugin.getLetter(item);
+            letter = plugin.getTracker().getLetter(item);
             if(letter == null) { // plugin.courierMapType(item) != Courier.LETTER
                 // parchment - drawn blank below
                 // currently redraws at 20 tps

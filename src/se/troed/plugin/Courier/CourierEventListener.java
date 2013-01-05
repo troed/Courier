@@ -25,9 +25,11 @@ import java.util.logging.Level;
 
 class CourierEventListener implements Listener {
     private final Courier plugin;
+    private final Tracker tracker;
 
     public CourierEventListener(Courier instance) {
         plugin = instance;
+        tracker = plugin.getTracker();
     }
 
     // todo: Bukkit 1.4.6 R0.1 - I don't seem to get WorldLoadEvents. Why?
@@ -62,7 +64,7 @@ class CourierEventListener implements Listener {
         if(plugin.courierMapType(item) == Courier.LETTER) {
  // todo: would it be awesome to allow page flipping in itemframes or do people want rotation instead?
  //       if(e.getMaterial() == Material.MAP && e.getItem().containsEnchantment(Enchantment.DURABILITY)) {
-            Letter letter = plugin.getLetter(item);
+            Letter letter = tracker.getLetter(item);
             if(letter != null) {
                 plugin.getCConfig().clog(Level.FINE, e.getPlayer().getDisplayName() + " navigating letter");
                 Action act = e.getAction();
@@ -86,7 +88,7 @@ class CourierEventListener implements Listener {
             // Is it a Letter?
             int type = plugin.courierMapType(item);
             if(type != Courier.NONE) {
-                Letter letter = plugin.getLetter(item);
+                Letter letter = tracker.getLetter(item);
                 if(plugin.getCConfig().getLetterFrameable() &&
                             e.getPlayer().hasPermission(Courier.PM_USEITEMFRAMES) &&
                             (letter == null || letter.isAllowedToSee(e.getPlayer())) &&
@@ -136,7 +138,7 @@ class CourierEventListener implements Listener {
         }
 
         // Did we right click a Postman?
-        Postman postman = plugin.getPostman(e.getRightClicked().getUniqueId());
+        Postman postman = tracker.getPostman(e.getRightClicked().getUniqueId());
         if(!e.isCancelled() && !e.getRightClicked().isDead() && postman != null && !postman.scheduledForQuickRemoval()) {
             plugin.getCConfig().clog(Level.FINE, e.getPlayer().getDisplayName() + " receiving mail");
             ItemStack letter = postman.getLetterItem();
@@ -271,7 +273,7 @@ class CourierEventListener implements Listener {
                 }
             }
             // conversion end
-            Letter letter = plugin.getLetter(item);
+            Letter letter = tracker.getLetter(item);
             if(letter != null) {
                 e.getPlayer().getInventory().setItem(e.getNewSlot(), updateLore(item, letter, e.getPlayer()));
 
@@ -310,7 +312,7 @@ class CourierEventListener implements Listener {
                 }
             }
             // conversion end
-            Letter letter = plugin.getLetter(item);
+            Letter letter = tracker.getLetter(item);
             if(letter != null) {
                 e.getItem().setItemStack(updateLore(item, letter, e.getPlayer()));
 
@@ -363,7 +365,7 @@ class CourierEventListener implements Listener {
                             }
                         }
                         if(page > 0) {
-                            Letter letter = plugin.getLetter(map.getCenterZ());
+                            Letter letter = tracker.getLetter(map.getCenterZ());
                             letter.setCurPage(page);
                         }
                     }
@@ -404,7 +406,7 @@ class CourierEventListener implements Listener {
     // (at least true for Enderman, but maybe not PigZombie?)
     @EventHandler(priority = EventPriority.HIGH)
     public void onEntityTarget(EntityTargetEvent e) {
-        if(!e.isCancelled() && plugin.getPostman(e.getEntity().getUniqueId()) != null) {
+        if(!e.isCancelled() && tracker.getPostman(e.getEntity().getUniqueId()) != null) {
             if(e.getEntity() instanceof Monster) {
                 plugin.getCConfig().clog(Level.FINE, "Cancel angry postman");
                 e.setCancelled(true);
@@ -416,9 +418,9 @@ class CourierEventListener implements Listener {
     @EventHandler(priority = EventPriority.HIGH)
     public void onEntityDamage(EntityDamageEvent e) {
         // don't care about cause, if it's a postman then drop mail and bail
-        if(!e.isCancelled() && plugin.getPostman(e.getEntity().getUniqueId()) != null) {
+        if(!e.isCancelled() && tracker.getPostman(e.getEntity().getUniqueId()) != null) {
             plugin.getCConfig().clog(Level.FINE, "Postman taking damage");
-            Postman postman = plugin.getPostman(e.getEntity().getUniqueId());
+            Postman postman = tracker.getPostman(e.getEntity().getUniqueId());
             if(!e.getEntity().isDead() && !postman.scheduledForQuickRemoval()) {
                 postman.drop();
                 postman.quickDespawn();
@@ -430,7 +432,7 @@ class CourierEventListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGH)
     public void onEntityChangeBlock(EntityChangeBlockEvent e) {
-        if(!e.isCancelled() && plugin.getPostman(e.getEntity().getUniqueId()) != null) {
+        if(!e.isCancelled() && tracker.getPostman(e.getEntity().getUniqueId()) != null) {
             plugin.getCConfig().clog(Level.FINE, "Prevented postman blockchange");
             e.setCancelled(true);
         }
@@ -438,7 +440,7 @@ class CourierEventListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGH)
     public void onEntityTeleport(EntityTeleportEvent e) {
-        if(!e.isCancelled() && plugin.getPostman(e.getEntity().getUniqueId()) != null) {
+        if(!e.isCancelled() && tracker.getPostman(e.getEntity().getUniqueId()) != null) {
             plugin.getCConfig().clog(Level.FINE, "Prevented postman teleport");
             e.setCancelled(true);
         }
@@ -452,7 +454,7 @@ class CourierEventListener implements Listener {
             // we end up here before we've had a chance to log and store our Postman uuids!
             // this means we cannot reliably override spawn deniers with perfect identification.
             // We match on Location instead but it's not pretty. Might be the only solution though.
-            Postman postman = plugin.getAndRemoveSpawner(e.getLocation());
+            Postman postman = tracker.getAndRemoveSpawner(e.getLocation());
             if(postman != null) {
                 plugin.getCConfig().clog(Level.FINE, "onCreatureSpawn is a Postman");
                 if(e.isCancelled()) {

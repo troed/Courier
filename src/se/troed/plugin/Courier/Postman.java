@@ -133,7 +133,7 @@ public abstract class Postman {
 
     // Called when either mail has been delivered or someone is attacking the postman
     public void quickDespawn() {
-        plugin.schedulePostmanDespawn(this.uuid, plugin.getCConfig().getQuickDespawnTime());
+        plugin.getTracker().schedulePostmanDespawn(this.uuid, plugin.getCConfig().getQuickDespawnTime());
         scheduledForQuickRemoval = true;
     }
 }

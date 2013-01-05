@@ -89,6 +89,8 @@ public class Courier extends JavaPlugin {
 
     private static Vault vault = null;
     private static Economy economy = null;
+
+    private final Tracker tracker = new Tracker(this); // must be done before CourierEventListener
     private boolean abort = false; // used to abort plugin load on error
     private boolean initDone = false; // failsafe for postWorldInit()
 
@@ -106,47 +108,13 @@ public class Courier extends JavaPlugin {
     // used temporarily in breaking spawn protections as well as making sure we only announce when spawned
     private final Map<Location, Postman> spawners = new HashMap<Location, Postman>();
     
-    // postmen should never live long, will always despawn
-    public void addPostman(Postman p) {
-        postmen.put(p.getUUID(), p);
-        schedulePostmanDespawn(p.getUUID(), getCConfig().getDespawnTime());
-    }
-
-    // returns null if it's not one of ours
-    public Postman getPostman(UUID uuid) {
-        return postmen.get(uuid);
-    }
-    
-    public void addSpawner(Location l, Postman p) {
-        // if this just keeps on growing we could detect and warn the admin that something is blocking
-        // even our detection of Postman spawn events. Regular cleanup thread?
-        spawners.put(l, p);
-        getCConfig().clog(Level.FINE, spawners.size() + " spawners in queue");
-    }
-    
-    public Postman getAndRemoveSpawner(Location l) {
-        Postman p = spawners.get(l);
-        if(p != null) {
-            spawners.remove(l);
-        }
-        return p;
-    }
-
-    public void removeLetter(int id) {
-        letters.remove(id);
-    }
-    
-    private void addLetter(int id, Letter l) {
-        letters.put(id, l);
-    }
-
     // Helper method to quickly identify a Courier Map ItemStack
     // Should be used in many more places than it is currently
     // Valid for Enchanted Courier Letters, Blank Courier Parchments && Framed Letters
     int courierMapType(ItemStack item) {
         if(item != null && item.getType() == Material.MAP) {
             MapView map = getServer().getMap(item.getDurability());
-            if(map.getCenterX() == Courier.MAGIC_NUMBER) {
+            if(map != null && map.getCenterX() == Courier.MAGIC_NUMBER) {
                 if(map.getId() == getCourierdb().getCourierMapId()) {
                     if(item.containsEnchantment(Enchantment.DURABILITY)) { // && level > 0
                         return Courier.LETTER;
@@ -161,45 +129,12 @@ public class Courier extends JavaPlugin {
         return Courier.NONE;
     }
 
-    // finds the Letter associated with a specific id
-    // recreates structure from db after each restart as needed
-    public Letter getLetter(int id) {
-        if(id == 0) {
-            // currently happens when crafted Letters put into ItemFrames are rendered
-            return null;
-        }
-        Letter letter = letters.get(id);
-        if(letter == null) {
-            // server has lost the ItemStack<->Letter associations, re-populate
-            String to = getCourierdb().getPlayer(id);
-            if(to != null) {
-                String from = getCourierdb().getSender(to, id);
-                String message = getCourierdb().getMessage(to, id);
-                letter = new Letter(this, from, to, message, id, getCourierdb().getRead(to, id), getCourierdb().getDate(to, id));
-                addLetter(id, letter);
-                getCConfig().clog(Level.FINE, "Letter " + id + " recreated from db for " + to);
-            } else {
-                // we've found an item pointing to a Courier letter that does not exist anylonger
-                // ripe for re-use!
-                getCConfig().clog(Level.FINE, "BAD: " + id + " not found in messages database");
-            }
-        }
-        return letter;
-    }
-
-    public Letter getLetter(ItemStack letterItem) {
-        if(letterItem == null || !letterItem.containsEnchantment(Enchantment.DURABILITY)) {
-            return null;
-        }
-        return getLetter(letterItem.getEnchantmentLevel(Enchantment.DURABILITY));
-    }
-
-    public LetterRenderer getLetterRenderer() {
-        return letterRenderer;
-    }
-    
     public Economy getEconomy() {
         return economy;
+    }
+
+    public Tracker getTracker() {
+        return tracker;
     }
 
     /**
@@ -269,39 +204,6 @@ public class Courier extends JavaPlugin {
         return courierdb;
     }
 
-    private void despawnPostman(UUID uuid) {
-        config.clog(Level.FINE, "Despawning postman " + uuid);
-        Postman postman = postmen.get(uuid);
-        if(postman != null) {
-            postman.remove();
-            postmen.remove(uuid);
-        } // else, shouldn't happen
-    }
-
-    public void schedulePostmanDespawn(final UUID uuid, int time) {
-        // if there's an existing (long) timeout on a postman and a quick comes in, cancel the first and start the new
-        // I don't know if it's long ... but I could add that info to Postman
-        Runnable runnable = postmen.get(uuid).getRunnable();
-        if(runnable != null) {
-            config.clog(Level.FINE, "Cancel existing despawn on Postman " + uuid);
-            getServer().getScheduler().cancelTask(postmen.get(uuid).getTaskId());    
-        }
-        runnable = new Runnable() {
-            public void run() {
-                despawnPostman(uuid);
-            }
-        };
-        postmen.get(uuid).setRunnable(runnable);
-        // in ticks. one tick = 50ms
-        config.clog(Level.FINE, "Scheduled " + time + " second despawn for Postman " + uuid);
-        int taskId = getServer().getScheduler().scheduleSyncDelayedTask(this, runnable, time*20);
-        if(taskId >= 0) {
-            postmen.get(uuid).setTaskId(taskId);
-        } else {
-            config.clog(Level.WARNING, "Despawning task scheduling failed");
-        }
-    }
-    
     private void startDeliveryThread() {
         if(deliveryId >= 0) {
             config.clog(Level.WARNING, "Multiple calls to startDeliveryThread()!");
@@ -401,12 +303,12 @@ public class Courier extends JavaPlugin {
                         // separate instantiation from spawning, save spawnLoc in instantiation
                         // and create a new method to lookup unspawned locations. Use loc matching
                         // in onCreatureSpawn as mob-denier override variable.
-                        this.addSpawner(spawnLoc, postman);
+                        tracker.addSpawner(spawnLoc, postman);
                         postman.spawn(spawnLoc);
                         // since we COULD be wrong when using location, re-check later if it indeed
                         // was a Postman we allowed through and despawn if not? Extra credit surely.
                         // Let's see if it's ever needed first
-                        this.addPostman(postman);
+                        tracker.addPostman(postman);
                     }
                 } else {
                     config.clog(Level.SEVERE, "undeliveredMail and undeliveredMessageId not in sync: " + undeliveredMessageId);
@@ -425,19 +327,14 @@ public class Courier extends JavaPlugin {
             getServer().getScheduler().cancelTask(deliveryId);
             deliveryId = -1;
         }
-        for (Map.Entry<UUID, Postman> uuidPostmanEntry : postmen.entrySet()) {
-            Postman postman = (Postman) ((Map.Entry) uuidPostmanEntry).getValue();
-            if (postman != null) {
-                postman.remove();
-            }
-        }
+        tracker.clearPostmen();
         courierdb.save(null);
         config.clog(Level.FINE, "Deliveries are now paused");
     }
     
     public void onDisable() {
         pauseDeliveries();
-        spawners.clear();
+        tracker.clearSpawners();
         stopUpdateThread();
         getServer().getScheduler().cancelTasks(this); // failsafe
         config.clog(Level.INFO, this.getDescription().getName() + " is now disabled.");
@@ -562,6 +459,7 @@ public class Courier extends JavaPlugin {
             MapView mv = getServer().getMap(mapId);
             if(letterRenderer == null) {
                 letterRenderer = new LetterRenderer(this);
+                getCConfig().clog(Level.FINE, "New LetterRenderer allocated");
             }
             letterRenderer.initialize(mv); // does this make a difference at all?
             List<MapRenderer> renderers = mv.getRenderers();
@@ -569,6 +467,7 @@ public class Courier extends JavaPlugin {
                 mv.removeRenderer(r);
             }
             mv.addRenderer(letterRenderer);
+            getCConfig().clog(Level.FINE, "LetterRenderer attached to Map " + mv.getId());
         }
         
         if(!abort && getServer().getOnlinePlayers().length > 0) {

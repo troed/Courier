@@ -494,6 +494,25 @@ public class CourierDB {
         return -1;
     }
 
+    // does this id exist in the database
+    // todo: horribly inefficient compared to just calling getPlayer() - due to using YAML instead of SQLite
+    //       in this mergeback from the v1.2.0 branch
+    public boolean isValid(int id) {
+        if(id == -1 || mdb == null) {
+            return false;
+        }
+
+        Set<String> strings = mdb.getKeys(false);
+        for (String key : strings) {
+            List<Integer> messageids = mdb.getIntegerList(key + ".messageids");
+            if (messageids != null && messageids.contains(id)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     // finds a specific messageid and returns associated player
     public String getPlayer(int id) {
         if(id == -1 || mdb == null) {

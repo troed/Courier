@@ -21,9 +21,11 @@ import java.util.regex.Pattern;
 
 class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
     private final Courier plugin;
+    private final Tracker tracker;
 
     public CourierCommands(Courier instance) {
         plugin = instance;
+        tracker = plugin.getTracker();
     }
     
     // Player is null for console
@@ -122,9 +124,9 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                     if(spawnLoc != null) {
 //                        Postman postman = new CreaturePostman(plugin, player, undeliveredMessageId);
                         Postman postman = Postman.create(plugin, player, undeliveredMessageId);
-                        plugin.addSpawner(spawnLoc, postman);
+                        tracker.addSpawner(spawnLoc, postman);
                         postman.spawn(spawnLoc);
-                        plugin.addPostman(postman);
+                        tracker.addPostman(postman);
                     }
 
                 } else {
@@ -149,7 +151,7 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
         ItemStack item = player.getItemInHand();
         Letter letter = null;
         if(item != null && item.getType() == Material.MAP) {
-            letter = plugin.getLetter(item);
+            letter = tracker.getLetter(item);
         }
         if(letter != null) {
             if(plugin.getEconomy() != null &&
@@ -258,7 +260,7 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                         // sign over this letter to recipient
                         if(plugin.getCourierdb().sendMessage(letter.getId(), p.getName(), player.getName())) {
                             // existing Letter now has outdated info, will automatically be recreated from db
-                            plugin.removeLetter(letter.getId());
+                            tracker.removeLetter(letter.getId());
 //                            plugin.getLetterRenderer().forceClear();
 
                             // remove item from hands, which kills the ItemStack association. It's now "gone"
@@ -316,7 +318,7 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                     plugin.getCConfig().clog(Level.FINE, "Found crafted letter");
                 } else if(plugin.courierMapType(item) == Courier.LETTER) {
                     // this is a current Courier Letter
-                    letter = plugin.getLetter(item);
+                    letter = tracker.getLetter(item);
                 }
             }
             int id = -1;
@@ -387,7 +389,7 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                         if(letter == null) {
                             ItemStack letterItem = new ItemStack(Material.MAP, 1, plugin.getCourierdb().getCourierMapId());
                             letterItem.addUnsafeEnchantment(Enchantment.DURABILITY, id);
-                            letter = plugin.getLetter(letterItem);
+                            letter = tracker.getLetter(letterItem);
                             // also see similar Lore code in CourierEventListener
                             ItemMeta meta = letterItem.getItemMeta();
                             if(meta != null) {
@@ -437,7 +439,7 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                                 letter.setMessage(message.toString());
                             } else {
                                 // existing Letter now has outdated info, will automatically be recreated from db
-                                plugin.removeLetter(id);
+                                tracker.removeLetter(id);
 //                                plugin.getLetterRenderer().forceClear();
                             } 
                         }

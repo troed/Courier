@@ -38,13 +38,15 @@ public class Letter {
     // to draw or not to draw
     private boolean dirty;
 
-    public Letter(Courier plug, String s, String r, String m, int id, boolean rd, int date) {
+    public Letter(Courier plug, int id) {
         plugin = plug;
-        sender = s;
-        receiver = r;
+        // not happy. would much rather prefer if all database handling was in CourierDatabase
+        CourierDB db = plug.getCourierdb();
         this.id = id;
-        read = rd;
-        this.date = date;
+        receiver = db.getPlayer(id);
+        sender = db.getSender(receiver, id);
+        read = db.getRead(receiver, id);
+        date = db.getDate(receiver, id);
         // http://dev.bukkit.org/server-mods/courier/tickets/35-make-show-date-configurable/
         if(date > 0 && plugin.getCConfig().getShowDate()) {
             Calendar calendar = Calendar.getInstance();
@@ -75,7 +77,7 @@ public class Letter {
             displayDate = null;
             displayDatePos = 0;
         }
-        if(!r.equalsIgnoreCase(s)) { // r == s is an unposted Letter (same sender as receiver)
+        if(!receiver.equalsIgnoreCase(sender)) { // r == s is an unposted Letter (same sender as receiver)
             header = plugin.getCConfig().getLetterFrom2(sender) + HEADER_COLOR + ":";
             try {
 // See comment to getWidth on NPE
@@ -89,7 +91,7 @@ public class Letter {
             header = null; // tested by LetterRenderer
         }
         // must be done after header, we use that knowledge for height calculation
-        setMessage(m);
+        setMessage(db.getMessage(receiver, id));
     }
 
     public void setDirty(boolean d) {
