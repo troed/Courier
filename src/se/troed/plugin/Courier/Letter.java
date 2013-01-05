@@ -157,7 +157,6 @@ public class Letter {
     public void advancePage() {
         if(currentPage < message.size()-1) {
             currentPage++;
-//            plugin.getLetterRenderer().forceClear();
             setDirty(true);
         }
     }
@@ -165,7 +164,6 @@ public class Letter {
     public void backPage() {
         if(currentPage > 0) {
             currentPage--;
-//            plugin.getLetterRenderer().forceClear();
             setDirty(true);
         }
     }
@@ -183,10 +181,7 @@ public class Letter {
     public void setCurPage(int p) {
         if(p > 0 && p <= message.size()) {
             currentPage = p - 1;
-//            if(plugin.getLetterRenderer() != null) {
-//                plugin.getLetterRenderer().forceClear();
-                setDirty(true);
-//            }
+            setDirty(true);
         }
     }
     
@@ -278,14 +273,14 @@ public class Letter {
                 height++;
                 if(height == MAP_HEIGHT_LINES || (header != null && page == 0 && height == MAP_HEIGHT_LINES-2)) {
                     height = 0;
-                    pages.add(buffer.toString());
+                    pages.add(plugin.getCConfig().colorize2(buffer.toString()));
                     buffer.setLength(0); // clear();
                     page++;
                 }
             }
         }
         if(pages.size() == page) {
-            pages.add(buffer.toString());
+            pages.add(plugin.getCConfig().colorize2(buffer.toString()));
         }
         return pages;
     }
@@ -293,11 +288,12 @@ public class Letter {
     // getWidth() seems to NPE in MapFont.java:55 on '§'
     // Unicode Character 'SECTION SIGN' (U+00A7)
     // isValid() passes over '\u00a7' and '\n' - but getWidth() doesn't
-    // https://bukkit.atlassian.net/browse/BUKKIT-685
+    // todo: https://bukkit.atlassian.net/browse/BUKKIT-685
     int getWidth(String s) throws NullPointerException {
         if((s == null) || s.isEmpty()) {
             return 0;
         }
+        s = s.replaceAll("\u00A7.", "");
         int width = MinecraftFont.Font.getWidth(s);
         width += s.length(); // getWidth currently does not include the space between characters (1px) in its calculation
         return width;

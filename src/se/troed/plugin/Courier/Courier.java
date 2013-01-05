@@ -525,7 +525,7 @@ public class Courier extends JavaPlugin {
         // oops, not allowed to have Material.AIR as the result .. (NPE) .. working around this in the event listener
         // https://bukkit.atlassian.net/browse/BUKKIT-745
         if(!abort) {
-            FurnaceRecipe rec = new FurnaceRecipe(new ItemStack(Material.AIR), Material.MAP);
+            FurnaceRecipe rec = new FurnaceRecipe(new ItemStack(Material.MAP), Material.MAP);
             getServer().addRecipe(rec);
         }
 
