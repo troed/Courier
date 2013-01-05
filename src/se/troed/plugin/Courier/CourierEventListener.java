@@ -180,6 +180,7 @@ class CourierEventListener implements Listener {
                             mapItem.setItemMeta(meta);
                         }
                         e.getPlayer().setItemInHand(mapItem); // Replace the Courier Letter the player had with the new unique Map
+                        //noinspection ConstantConditions
                         letter.setDirty(true);
                     } else if(type == Courier.FRAMEDLETTER) {
                         // Probably never happens since we convert them back on pickup and heldchange into regular Courier Letters
@@ -208,10 +209,7 @@ class CourierEventListener implements Listener {
                 if(items.isEmpty()) {
                     plugin.getCConfig().clog(Level.FINE, "Letter added to inventory");
                     // send an explaining string to the player
-                    String inventory = plugin.getCConfig().getInventory();
-                    if(inventory != null && !inventory.isEmpty()) {
-                        e.getPlayer().sendMessage(inventory);
-                    }
+                    Courier.display(e.getPlayer(), plugin.getCConfig().getInventory());
                     if(e.getRightClicked() instanceof Enderman) {
                         ((Enderman)e.getRightClicked()).setCarriedMaterial(new MaterialData(Material.AIR));
                     } else {

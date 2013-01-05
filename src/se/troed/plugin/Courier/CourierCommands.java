@@ -67,32 +67,32 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
             if (args[0].equalsIgnoreCase("fees")) {
                 if(plugin.getEconomy() != null) {
                     double fee = plugin.getCConfig().getFeeSend();
-                    player.sendMessage(plugin.getCConfig().getInfoFee(plugin.getEconomy().format(fee)));
+                    Courier.display(player, plugin.getCConfig().getInfoFee(plugin.getEconomy().format(fee)));
                 } else {
-                    player.sendMessage(plugin.getCConfig().getInfoNoFee());
+                    Courier.display(player, plugin.getCConfig().getInfoNoFee());
                 }
                 if(!plugin.getCConfig().getFreeLetter()) {
                     // letters aren't free on this server
                     List<ItemStack> resources = plugin.getCConfig().getLetterResources();
-                    player.sendMessage(plugin.getCConfig().getLetterInfoCost(resources.toString().replaceAll("[\\[\\]\\{\\}]|ItemStack", "")));
+                    Courier.display(player, plugin.getCConfig().getLetterInfoCost(resources.toString().replaceAll("[\\[\\]\\{\\}]|ItemStack", "")));
                 } else {
-                    player.sendMessage(plugin.getCConfig().getLetterInfoFree());
+                    Courier.display(player, plugin.getCConfig().getLetterInfoFree());
                 }
                 retVal = true;
             } else if(args[0].equalsIgnoreCase("unread")) {
                 if(plugin.getCourierdb().deliverUnreadMessages(player.getName())) {
-                    player.sendMessage(plugin.getCConfig().getPostmanExtraDeliveries());
+                    Courier.display(player, plugin.getCConfig().getPostmanExtraDeliveries());
                 } else {
-                    player.sendMessage(plugin.getCConfig().getPostmanNoUnreadMail());
+                    Courier.display(player, plugin.getCConfig().getPostmanNoUnreadMail());
                 }
                 retVal = true;
             }
             // todo: implement /courier list
         } else {
-            player.sendMessage(plugin.getCConfig().getInfoLine1());
-            player.sendMessage(plugin.getCConfig().getInfoLine2());
-            player.sendMessage(plugin.getCConfig().getInfoLine3());
-            player.sendMessage(plugin.getCConfig().getInfoLine4());
+            Courier.display(player, plugin.getCConfig().getInfoLine1());
+            Courier.display(player, plugin.getCConfig().getInfoLine2());
+            Courier.display(player, plugin.getCConfig().getInfoLine3());
+            Courier.display(player, plugin.getCConfig().getInfoLine4());
             retVal = true;
         }
         return retVal;
@@ -110,7 +110,7 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
             int undeliveredMessageId = plugin.getCourierdb().undeliveredMessageId(player.getName());
             if(undeliveredMessageId != -1) {
                 // this is really a command meant for testing, no need for translation
-                player.sendMessage("You've got mail waiting for delivery!");
+                Courier.display(player, "You've got mail waiting for delivery!");
 
                 // Is it the FIRST map viewed on server start that gets the wrong id when rendering?
                 // how can that be? if it's my code I don't see where ...
@@ -157,10 +157,10 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
             if(plugin.getEconomy() != null &&
                     plugin.getEconomy().getBalance(player.getName()) < plugin.getCConfig().getFeeSend() &&
                     !player.hasPermission(Courier.PM_THEONEPERCENT)) {
-                player.sendMessage(plugin.getCConfig().getPostNoCredit(plugin.getEconomy().format(plugin.getCConfig().getFeeSend())));
+                Courier.display(player, plugin.getCConfig().getPostNoCredit(plugin.getEconomy().format(plugin.getCConfig().getFeeSend())));
                 ret = true;
             } else if(args == null || args.length < 1) {
-                player.sendMessage(plugin.getCConfig().getPostNoRecipient());
+                Courier.display(player, plugin.getCConfig().getPostNoRecipient());
             // /post player1 player2 player3 etc in the future?
             } else {
                 String receiver = args[0];
@@ -196,7 +196,7 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                     if(players != null && players.size() == 1) {
                         // we got one exact match
                         // p = players.get(0); // don't, could be embarrassing if wrong
-                        player.sendMessage(plugin.getCConfig().getPostDidYouMean(receiver, players.get(0).getName()));
+                        Courier.display(player, plugin.getCConfig().getPostDidYouMean(receiver, players.get(0).getName()));
                     } else if (players != null && players.size() > 1 && player.hasPermission(Courier.PM_LIST)) {
                         // more than one possible match found
                         StringBuilder suggestList = new StringBuilder();
@@ -211,11 +211,11 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                             }
                         }
                         // players listing who's online. If so, that could be a permission also valid for /courier list
-                        player.sendMessage(plugin.getCConfig().getPostDidYouMeanList(receiver));
-                        player.sendMessage(plugin.getCConfig().getPostDidYouMeanList2(suggestList.toString()));
+                        Courier.display(player, plugin.getCConfig().getPostDidYouMeanList(receiver));
+                        Courier.display(player, plugin.getCConfig().getPostDidYouMeanList2(suggestList.toString()));
                     } else {
                         // time to give up
-                        player.sendMessage(plugin.getCConfig().getPostNoSuchPlayer(receiver));
+                        Courier.display(player, plugin.getCConfig().getPostNoSuchPlayer(receiver));
                     }
                 }
                 if(p != null) {
@@ -226,10 +226,10 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                         double fee = plugin.getCConfig().getFeeSend();
                         EconomyResponse er = plugin.getEconomy().withdrawPlayer(player.getName(), fee);
                         if(er.transactionSuccess()) {
-                            player.sendMessage(plugin.getCConfig().getPostLetterSentFee(p.getName(), plugin.getEconomy().format(fee)));
+                            Courier.display(player, plugin.getCConfig().getPostLetterSentFee(p.getName(), plugin.getEconomy().format(fee)));
                             send = true;
                         } else {
-                            player.sendMessage(plugin.getCConfig().getPostFundProblem());
+                            Courier.display(player, plugin.getCConfig().getPostFundProblem());
                             plugin.getCConfig().clog(Level.WARNING, "Could not withdraw postage fee from " + p.getName());
                         }
                         // add postage fee to bank account if one has been configured
@@ -253,7 +253,7 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                             }
                         }
                     } else {
-                        player.sendMessage(plugin.getCConfig().getPostLetterSent(p.getName()));
+                        Courier.display(player, plugin.getCConfig().getPostLetterSent(p.getName()));
                         send = true;
                     }
                     if(send) {
@@ -275,7 +275,7 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                 ret = true;
             }
         } else {
-            player.sendMessage(plugin.getCConfig().getPostNoLetter());
+            Courier.display(player, plugin.getCConfig().getPostNoLetter());
         }
         return ret;
     }
@@ -290,7 +290,7 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
     boolean commandLetter(Player player, String[] args) {
         // letter - no argument - chatmode?
         if(args == null || args.length < 1) {
-            player.sendMessage(plugin.getCConfig().getLetterNoText());
+            Courier.display(player, plugin.getCConfig().getLetterNoText());
             return false;
         }
         // letter message - builds upon message in hand
@@ -377,7 +377,7 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                     }
     
                     if(invalid) {
-                        player.sendMessage(plugin.getCConfig().getLetterSkippedText());
+                        Courier.display(player, plugin.getCConfig().getLetterSkippedText());
                     }
     
                     if (plugin.getCourierdb().storeMessage(id,
@@ -426,10 +426,10 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                                 HashMap<Integer, ItemStack> items = player.getInventory().addItem(letterItem);
                                 if(items.isEmpty()) {
                                     plugin.getCConfig().clog(Level.FINE, "Letter added to inventory");
-                                    player.sendMessage(plugin.getCConfig().getLetterInventory());
+                                    Courier.display(player, plugin.getCConfig().getLetterInventory());
                                 } else {
                                     plugin.getCConfig().clog(Level.FINE, "Inventory full, letter dropped");
-                                    player.sendMessage(plugin.getCConfig().getLetterDrop());
+                                    Courier.display(player, plugin.getCConfig().getLetterDrop());
                                     player.getWorld().dropItemNaturally(player.getLocation(), letterItem);
                                 }
                             }
@@ -444,7 +444,7 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                             } 
                         }
                     } else {
-                        player.sendMessage(plugin.getCConfig().getLetterCreateFailed());
+                        Courier.display(player, plugin.getCConfig().getLetterCreateFailed());
                         plugin.getCConfig().clog(Level.SEVERE, "Could not store letter in database!");
                     }
                     ret = true;
@@ -457,7 +457,7 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                 ret = true;
             }
         } catch (InternalError e) {
-            player.sendMessage(plugin.getCConfig().getLetterNoMoreUIDs());
+            Courier.display(player, plugin.getCConfig().getLetterNoMoreUIDs());
             plugin.getCConfig().clog(Level.SEVERE, "Out of unique message IDs!");
             ret = true;
         }
@@ -504,7 +504,7 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                     id = plugin.getCourierdb().generateUID();
                 } else {
                     // Well, if we end up here the player hadn't crafted a Letter and we're not making one for him/her
-                    player.sendMessage(plugin.getCConfig().getLetterNoCraftedFound());
+                    Courier.display(player, plugin.getCConfig().getLetterNoCraftedFound());
                 }
             } else {
                 List<ItemStack> resources = plugin.getCConfig().getLetterResources();
@@ -520,7 +520,7 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                     }
                 }
                 if(lacking) {
-                    player.sendMessage(plugin.getCConfig().getLetterLackingResources());
+                    Courier.display(player, plugin.getCConfig().getLetterLackingResources());
                 } else {
                     // subtract from inventory
                     for(ItemStack resource : resources) {

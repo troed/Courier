@@ -1,8 +1,6 @@
 package se.troed.plugin.Courier;
 
-import org.bukkit.Material;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
 import org.bukkit.map.*;
 
 import java.util.logging.Level;

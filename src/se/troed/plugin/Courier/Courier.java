@@ -24,6 +24,7 @@ import org.bukkit.*;
 import org.bukkit.block.Biome;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
+import org.bukkit.command.CommandSender;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
@@ -105,11 +106,7 @@ public class Courier extends JavaPlugin {
     private BukkitTask updateTask;
     private Runnable deliveryThread;
     private int deliveryId = -1;
-    private final Map<UUID, Postman> postmen = new HashMap<UUID, Postman>();
-    private final Map<Integer, Letter> letters = new HashMap<Integer, Letter>();
-    // used temporarily in breaking spawn protections as well as making sure we only announce when spawned
-    private final Map<Location, Postman> spawners = new HashMap<Location, Postman>();
-    
+
     // Helper method to quickly identify a Courier Map ItemStack
     // Should be used in many more places than it is currently
     // Valid for Enchanted Courier Letters, Blank Courier Parchments && Framed Letters
@@ -286,10 +283,7 @@ public class Courier extends JavaPlugin {
                     // todo: this might well turn out to be too spammy ... and the message is about "place" not "mode"
                     // Also, could warn when detecting PlayerGameModeChangeEvent
                     config.clog(Level.FINE, "Didn't deliver mail to " + player.getDisplayName() + " - player is in Creative mode");
-                    String cannotDeliver = getCConfig().getCannotDeliver();
-                    if(cannotDeliver != null && !cannotDeliver.isEmpty()) {
-                        player.sendMessage(cannotDeliver);
-                    }
+                    display(player, getCConfig().getCannotDeliver());
                     continue;
                 }
                 // if already delivery out for this player do something?
@@ -570,6 +564,14 @@ public class Courier extends JavaPlugin {
         getConfig().options().copyDefaults(true);
         saveConfig();
         config = new CourierConfig(this);
+    }
+
+    // avoid empty lines being output if we silence messages in the config
+    static void display(CommandSender s, String m) {
+        if((m == null) || m.isEmpty()) {
+            return;
+        }
+        s.sendMessage(m);
     }
 
     public CourierConfig getCConfig() {
