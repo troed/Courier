@@ -408,10 +408,6 @@ public class CourierDB {
         mdb.set(r + "." + String.valueOf(oldid), null);
     }
 
-// figure out letter decay, re-use of ids etc
-//    public boolean removeMessage(short id, String r) {
-//    }
-
     public boolean undeliveredMail(String r) {
         //noinspection SimplifiableIfStatement
         if(mdb == null || r == null) {
@@ -492,6 +488,30 @@ public class CourierDB {
         // if we end up here, for any reason, it means there are no undelivered messages
         mdb.set(r + ".newmail", false);
         return -1;
+    }
+
+    // removes a single Letter from the database
+    public boolean deleteMessage(short id) {
+        if(id == -1 || mdb == null) {
+            return false;
+        }
+
+        String r = getPlayer(id);
+        if(r == null) {
+            return false;
+        }
+
+        List<Integer> messageids = mdb.getIntegerList(r + ".messageids");
+        if(messageids == null) { // safety, should not happen in this case
+            messageids = new ArrayList<Integer>();
+        }
+
+        // "atomic" remove
+        messageids.remove(Integer.valueOf(id)); // caught out by ArrayList.remove(Object o) vs remove(int i) ...
+        mdb.set(r + ".messageids", messageids);
+        mdb.set(r + "." + String.valueOf(id), null);
+
+        return true;
     }
 
     // does this id exist in the database

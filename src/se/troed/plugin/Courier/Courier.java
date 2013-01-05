@@ -28,6 +28,7 @@ import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.FurnaceRecipe;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.ShapelessRecipe;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -150,6 +151,7 @@ public class Courier extends JavaPlugin {
      *
      * Also: Should be extended to check at least a few blocks to the sides and not JUST direct line of sight
      *
+     * todo: Move this method to Postman
      */
     @SuppressWarnings("JavaDoc")
     Location findSpawnLocation(Player p) {
@@ -524,7 +526,16 @@ public class Courier extends JavaPlugin {
             config.clog(Level.WARNING, "With difficulty set to Peaceful Monsters cannot spawn. Verify that the Postman type you've configured Courier to use isn't a Monster.");
         }
 
-        if(config.getRequiresCrafting()) {
+        // todo: configurable
+        // Make burning of Letters possible
+        // oops, not allowed to have Material.AIR as the result .. (NPE) .. working around this in the event listener
+        // https://bukkit.atlassian.net/browse/BUKKIT-745
+        if(!abort) {
+            FurnaceRecipe rec = new FurnaceRecipe(new ItemStack(Material.AIR), Material.MAP);
+            getServer().addRecipe(rec);
+        }
+
+        if(!abort && config.getRequiresCrafting()) {
             config.clog(Level.FINE, "Crafting recipe required");
             ItemStack item = new ItemStack(Material.MAP, 1, getCourierdb().getCourierMapId());
             ItemMeta meta = item.getItemMeta();

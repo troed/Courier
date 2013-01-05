@@ -1,6 +1,7 @@
 package se.troed.plugin.Courier;
 
 import org.bukkit.Material;
+import org.bukkit.block.Furnace;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
@@ -8,6 +9,7 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.*;
+import org.bukkit.event.inventory.FurnaceSmeltEvent;
 import org.bukkit.event.player.*;
 import org.bukkit.event.world.ChunkLoadEvent;
 import org.bukkit.event.world.WorldLoadEvent;
@@ -76,7 +78,64 @@ class CourierEventListener implements Listener {
                     e.setCancelled(true);
                 }
             }
+        } else if(!e.isCancelled()) {
+            // we need to track players who right click furnaces
+            if(e.getClickedBlock().getState().getType() == Material.FURNACE) {
+                if(e.getAction() == Action.RIGHT_CLICK_BLOCK) {
+                    plugin.getCConfig().clog(Level.FINE, e.getPlayer().getName() + " is using a furnace");
+                    tracker.setSmelter(e.getClickedBlock().getState().getBlock().getLocation(), e.getPlayer());
+                }
+            }
         }
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onPlayerDropItemEvent(PlayerDropItemEvent e) {
+        Letter letter = tracker.getLetter(e.getItemDrop().getItemStack());
+        if(!e.isCancelled() && letter != null && letter.isAllowedToSee(e.getPlayer())) {
+            tracker.addDrop(e.getItemDrop().getUniqueId(), letter);
+            plugin.getCConfig().clog(Level.FINE, e.getPlayer().getDisplayName() + " dropped Letter " + letter.getId());
+        }
+    }
+
+    // Letters can be deleted by letting them despawn
+    // However, if the chunk is unloaded, will we ever get this event?
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onItemDespawnEvent(ItemDespawnEvent e) {
+        if(e.isCancelled()) {
+            return;
+        }
+        Letter letter = tracker.getAndRemoveDrop(e.getEntity().getUniqueId());
+        if(letter != null) {
+            tracker.removeLetter(letter.getId());
+            plugin.getCourierdb().deleteMessage((short)letter.getId());
+            plugin.getCConfig().clog(Level.FINE, "Dropped Letter " + letter.getId() + " despawned, was removed from database");
+        }
+    }
+
+    // Letters (and yes, normal Maps as well) can be deleted by burning them in furnaces
+    // Priority Highest until the NPE is fixed. We added the recipe - we must cancel the event
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onFurnaceSmeltEvent(FurnaceSmeltEvent e) {
+        if(e.isCancelled() || e.getSource().getType() != Material.MAP) {
+            return;
+        }
+        Letter letter = tracker.getLetter(e.getSource());
+        if(letter != null) {
+            // verify that the player who last right-clicked this furnace "owns" the letter and can delete it
+            Player p = tracker.getSmelter(e.getBlock().getLocation());
+            if(p != null && letter.isAllowedToSee(p)) {
+                tracker.removeLetter(letter.getId());
+                plugin.getCourierdb().deleteMessage((short)letter.getId());
+                plugin.getCConfig().clog(Level.FINE, "Letter " + letter.getId() + " was burnt in a furnace by " + p.getName() + ", removed from database");
+            }
+        }
+        // avoid NPE by manually faking the intended result and cancelling event
+        // todo: https://bukkit.atlassian.net/browse/BUKKIT-745
+        Furnace furnace = (Furnace) e.getBlock().getState();
+        furnace.getInventory().clear(0); // 0 = ingredient slot
+        // here would be some magic as to understanding whether to decrease the amount of fuel .. not trivial
+        e.setCancelled(true);
     }
 
     @EventHandler(priority = EventPriority.NORMAL)
@@ -312,7 +371,12 @@ class CourierEventListener implements Listener {
                 }
             }
             // conversion end
-            Letter letter = tracker.getLetter(item);
+            Letter letter = tracker.getAndRemoveDrop(e.getItem().getUniqueId());
+            if(letter != null) {
+                // if someone picked up a drop we were tracking, remove it from here
+                plugin.getCConfig().clog(Level.FINE, "Letter id " + letter.getId() + " was dropped and picked up again");
+            }
+            letter = tracker.getLetter(item);
             if(letter != null) {
                 e.getItem().setItemStack(updateLore(item, letter, e.getPlayer()));
 
@@ -334,8 +398,6 @@ class CourierEventListener implements Listener {
             }
         }        
     }
-
-    // onPlayerDropItem for recycling? or something more active? (furnace? :D)
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onChunkLoad(ChunkLoadEvent e) {
