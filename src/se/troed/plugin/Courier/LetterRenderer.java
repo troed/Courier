@@ -61,6 +61,8 @@ public class LetterRenderer extends MapRenderer {
                     int drawPos = HEADER_POS;
                     if(letter.getHeader() != null) {
                         canvas.drawText(0, MinecraftFont.Font.getHeight() * drawPos, MinecraftFont.Font, letter.getHeader());
+                        drawLine(canvas, 10, MinecraftFont.Font.getHeight() * (drawPos+1) +
+                                            (int)(MinecraftFont.Font.getHeight() * 0.4), CANVAS_WIDTH-11, MapPalette.DARK_BROWN);
                         drawPos = BODY_POS;
                     }
 
@@ -94,6 +96,13 @@ public class LetterRenderer extends MapRenderer {
                 letter.setDirty(false);
                 player.sendMap(map);
             }
+        }
+    }
+
+    // horisontal lines
+    static void drawLine(MapCanvas canvas, int x, int y, int x2, byte c) {
+        for(int t = x; t <= x2; t++) {
+            canvas.setPixel(t, y, c);
         }
     }
 
