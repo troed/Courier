@@ -273,16 +273,26 @@ public class Letter {
                 height++;
                 if(height == MAP_HEIGHT_LINES || (header != null && page == 0 && height == MAP_HEIGHT_LINES-2)) {
                     height = 0;
-                    pages.add(plugin.getCConfig().colorize2(buffer.toString()));
+                    pages.add(dateSensitiveColorization(buffer.toString()));
                     buffer.setLength(0); // clear();
                     page++;
                 }
             }
         }
         if(pages.size() == page) {
-            pages.add(plugin.getCConfig().colorize2(buffer.toString()));
+            pages.add(dateSensitiveColorization(buffer.toString()));
         }
         return pages;
+    }
+
+    // Since letter colorization wasn't available until v1.1.9 and it might cause unwanted rendering of letters
+    // written before it was released, only colorize 'new' letters
+    private String dateSensitiveColorization (String s) {
+        if(this.date > 1357417818) { // hard coded to 20:30 UTC 5th of Jan 2013
+            return plugin.getCConfig().colorize2(s);
+        } else {
+            return s;
+        }
     }
 
     // getWidth() seems to NPE in MapFont.java:55 on '§'

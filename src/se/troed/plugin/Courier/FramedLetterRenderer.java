@@ -45,6 +45,8 @@ public class FramedLetterRenderer extends MapRenderer {
 
                 if(letter.getHeader() != null) {
                     canvas.drawText(0, MinecraftFont.Font.getHeight() * drawPos, MinecraftFont.Font, letter.getHeader());
+                    LetterRenderer.drawLine(canvas, 10, MinecraftFont.Font.getHeight() * (drawPos+1) +
+                            (int)(MinecraftFont.Font.getHeight() * 0.4), CANVAS_WIDTH-11, MapPalette.DARK_BROWN);
                     drawPos = BODY_POS;
                 }
 

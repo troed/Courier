@@ -377,6 +377,7 @@ class CourierEventListener implements Listener {
             letter = tracker.getLetter(item);
             if(letter != null) {
                 e.getItem().setItemStack(updateLore(item, letter, e.getPlayer()));
+                // todo: need to updateInventory for lore to be reflected correctly on picked up Framed Letters?
 
                 plugin.getCConfig().clog(Level.FINE, "Letter " + letter.getId() + " picked up.");
 
