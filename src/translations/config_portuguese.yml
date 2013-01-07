@@ -25,6 +25,7 @@ Courier:
     Despawn: 20
     SpawnDistance: 10
     BreakSpawnProtection: true
+    VanishDistance: 20
     CreativeDelivery: true
     Greeting: '&7Courier: &fO Carteiro chegou com o teu correio!'
     MailDrop: '&7Courier: &fO teu correio foi largado no chao.'

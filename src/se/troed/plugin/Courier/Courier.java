@@ -201,15 +201,17 @@ public class Courier extends JavaPlugin {
         // just loop through all online players instead? ~300 checks max
         // but that would mean vanished players can never receive mail
         if(sLoc != null) {
-            // todo: replace with a vanish-distance
-            int length = getCConfig().getSpawnDistance();
-            List<Entity> entities = p.getNearbyEntities(length, 64, length);
-            for(Entity e : entities) {
-                if(e instanceof Player) {
-                    Player player = (Player) e;
-                    if(!player.canSee(p)) {
-                        sLoc = null; // it's enough that one Player nearby isn't supposed to see us
-                        break;
+            int length = getCConfig().getVanishDistance();
+            if(length > 0) {
+                List<Entity> entities = p.getNearbyEntities(length, 64, length);
+                for(Entity e : entities) {
+                    if(e instanceof Player) {
+                        Player player = (Player) e;
+                        if(!player.canSee(p)) {
+                            sLoc = null; // it's enough that one Player nearby isn't supposed to see us
+                            getCConfig().clog(Level.FINE, "Vanished player " + p.getName() + "'s postman could be seen by " + player.getName());
+                            break;
+                        }
                     }
                 }
             }
@@ -250,11 +252,20 @@ public class Courier extends JavaPlugin {
             updateTask = new BukkitRunnable() {
                 public void run() {
                     String version = config.getVersion();
-                    String checkVersion = updateCheck(version);
-                    config.clog(Level.FINE, "version: " + version + " vs updateCheck: " + checkVersion);
-                    if(!checkVersion.endsWith(version)) {
-                        config.clog(Level.WARNING, "There's a new version of Courier available: " + checkVersion + " (you have v" + version + ")");
-                        config.clog(Level.WARNING, "Please visit the Courier home: http://dev.bukkit.org/server-mods/courier/");
+                    String checkVersion = null;
+                    // updateCheck returns "Courier v1.2.3" - extract "1.2.3"
+                    String[] parsed = updateCheck(version).split(" v");
+                    if(parsed != null && parsed.length > 0) {
+                        checkVersion = parsed[1];
+                    }
+                    if(checkVersion == null) {
+                        config.clog(Level.WARNING, "Error in Courier automatic update check. Notify plugin author.");
+                    } else {
+                        config.clog(Level.FINE, "version: " + version + " vs updateCheck: " + checkVersion);
+                        if(config.versionCompare(version, checkVersion) < 0) {
+                            config.clog(Level.WARNING, "There's a new version of Courier available: v" + checkVersion + " (you have v" + version + ")");
+                            config.clog(Level.WARNING, "Please visit the Courier home: http://dev.bukkit.org/server-mods/courier/");
+                        }
                     }
                 }
             }.runTaskTimer(this, 400, getCConfig().getUpdateInterval() * 20);

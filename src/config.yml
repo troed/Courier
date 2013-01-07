@@ -25,6 +25,7 @@ Courier:
     Despawn: 20
     SpawnDistance: 10
     BreakSpawnProtection: true
+    VanishDistance: 20
     CreativeDelivery: true
     Greeting: "&7Courier: &fA Postman has arrived with your mail!"
     MailDrop: "&7Courier: &fYour mail was dropped onto the ground."

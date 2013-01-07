@@ -112,9 +112,6 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                 // this is really a command meant for testing, no need for translation
                 Courier.display(player, "You've got mail waiting for delivery!");
 
-                // Is it the FIRST map viewed on server start that gets the wrong id when rendering?
-                // how can that be? if it's my code I don't see where ...
-
                 plugin.getCConfig().clog(Level.FINE, "MessageId: " + undeliveredMessageId);
                 String from = plugin.getCourierdb().getSender(player.getName(), undeliveredMessageId);
                 String message = plugin.getCourierdb().getMessage(player.getName(), undeliveredMessageId);
@@ -180,15 +177,6 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                         break;
                     }
                 }
-/*                if(p == null) { // todo: remove this section for 1.0.1-R2
-                    // See https://bukkit.atlassian.net/browse/BUKKIT-404 by GICodeWarrior
-                    // https://github.com/troed/Courier/issues/2
-                    // We could end up here if this is to a player who's on the server for the first time
-                    p = plugin.getServer().getPlayerExact(receiver);
-                    if(p != null) {
-                        plugin.getCConfig().clog(Level.FINE, "Found " + p.getName() + " in getPlayerExact");
-                    }
-                }*/
                 if(p == null) {
                     // still not found, try lazy matching and display suggestions
                     // (searches online players only)
@@ -299,18 +287,6 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
             ItemStack item = player.getItemInHand();
             Letter letter = null;
             boolean crafted = false;
-/*            if(item != null && item.getType() == Material.MAP) {
-                MapView map = plugin.getServer().getMap(item.getDurability());
-                if(map.getId() == plugin.getCourierdb().getCourierMapId()) {
-                    // this is a current Courier Letter
-                    letter = plugin.getLetter(item);
-                    if(letter == null) {
-                        // this is apparently a crafted and pristine Letter, can safely be replaced properly later
-                        crafted = true;
-                        plugin.getCConfig().clog(Level.FINE, "Found crafted letter");
-                    }
-                }
-            }*/
             if(item != null) {
                 if(plugin.courierMapType(item) == Courier.PARCHMENT) {
                     // crafted parchment can safely be replaced properly later
@@ -365,7 +341,13 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                             // if this grows, break it out and make it configurable
                             if (arg.equalsIgnoreCase("%loc") || arg.equalsIgnoreCase("%pos")) {
                                 Location loc = player.getLocation();
-                                message.append("[" + loc.getBlockX() + "," + loc.getBlockY() + "," + loc.getBlockZ() + "]");
+                                message.append("[");
+                                message.append(loc.getBlockX());
+                                message.append(",");
+                                message.append(loc.getBlockY());
+                                message.append(",");
+                                message.append(loc.getBlockZ());
+                                message.append("]");
                             } else {
                                 message.append(newlines.matcher(arg).replaceAll(" $1 ").trim()); // tokenize
                             }

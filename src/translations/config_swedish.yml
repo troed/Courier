@@ -25,6 +25,7 @@ Courier:
     Despawn: 20
     SpawnDistance: 10
     BreakSpawnProtection: true
+    VanishDistance: 20
     CreativeDelivery: true
     Greeting: "&7Courier: &fEn brevbärare har dykt upp med brev till dig!"
     MailDrop: "&7Courier: &fDitt brev hamnade på marken."

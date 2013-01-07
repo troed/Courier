@@ -25,6 +25,7 @@ Courier:
     Despawn: 20
     SpawnDistance: 10
     BreakSpawnProtection: true
+    VanishDistance: 20
     CreativeDelivery: true
     Greeting: "&7Kurier: &fEin Briefträger ist mit deiner Nachricht angekommen!"
     MailDrop: "&7Kurier: &fDeine Nachricht wurde auf den Boden gelegt."

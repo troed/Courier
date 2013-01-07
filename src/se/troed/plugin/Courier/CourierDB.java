@@ -511,6 +511,9 @@ public class CourierDB {
         mdb.set(r + ".messageids", messageids);
         mdb.set(r + "." + String.valueOf(id), null);
 
+        // todo: If our Letter had been delivered to another Player then remove that delivered info for them too.
+        // seems not critical. new letters will set delivered to false even if ID is reused
+
         return true;
     }
 
@@ -643,6 +646,7 @@ public class CourierDB {
             }
         }
         // make sure we don't enter negative number territory
+        // todo: introduce "fuzziness" making nextId less predictable
         for(int i=Courier.MIN_ID; i<Courier.MAX_ID; i++) {
             if(sortedSet.add(i)) {
                 // i wasn't in the set

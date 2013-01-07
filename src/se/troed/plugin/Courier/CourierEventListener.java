@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.logging.Level;
 
+@SuppressWarnings("UnusedDeclaration")
 class CourierEventListener implements Listener {
     private final Courier plugin;
     private final Tracker tracker;
@@ -338,9 +339,11 @@ class CourierEventListener implements Listener {
 
                 // quick render
                 letter.setDirty(true);
-//                e.getPlayer().sendMap(plugin.getServer().getMap(plugin.getCourierdb().getCourierMapId()));
             } else {
                 // or regular map
+                // or parchment?
+                // or MapItem we have pointing to a Letter that has been deleted. If enchanted (== proof) we could
+                //    just decided to delete it here
                 plugin.getCConfig().clog(Level.FINE, "Switched to blank parchment");
             }
         }
@@ -388,11 +391,13 @@ class CourierEventListener implements Listener {
                 // if itemheldhand was empty, we should render the letter immediately
                 ItemStack heldItem = e.getPlayer().getItemInHand();
                 if(heldItem != null && heldItem.getAmount() == 0) {
-//                    e.getPlayer().sendMap(plugin.getServer().getMap(plugin.getCourierdb().getCourierMapId()));
                     letter.setDirty(true);
                 }
             } else {
                 // or regular map
+                // or parchment?
+                // or MapItem we have pointing to a Letter that has been deleted. If enchanted (== proof) we could
+                //    just decided to delete it here
                 plugin.getCConfig().clog(Level.FINE, "Picked up blank parchment");
             }
         }        

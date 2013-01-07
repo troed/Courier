@@ -42,6 +42,7 @@ public class CourierConfig {
     private static final String POSTMAN_TYPE = "Courier.Postman.Type";
     private static final String POSTMAN_SPAWNDISTANCE = "Courier.Postman.SpawnDistance";
     private static final String POSTMAN_BREAKSPAWNPROTECTION = "Courier.Postman.BreakSpawnProtection";
+    private static final String POSTMAN_VANISHDISTANCE = "Courier.Postman.VanishDistance";
     private static final String POSTMAN_CREATIVEDELIVERY = "Courier.Postman.CreativeDelivery";
     private static final String POSTMAN_GREETING = "Courier.Postman.Greeting";
     private static final String POSTMAN_MAILDROP = "Courier.Postman.MailDrop";
@@ -110,46 +111,12 @@ public class CourierConfig {
         this.version = pdfFile.getVersion(); // actual plugin version
         
         // verify config compatibility with config file version (could be different from plugin)
-        String version = config.getString(pdfFile.getName() + ".Version");
-        if(version!=null) {
-            int major = 0;
-            int minor = 0;
-            int revision = 0;
-
-            String[] parts = version.split("\\.");
-            if(parts.length > 0 && parts[0] != null) {
-                major = Integer.decode(parts[0]);
-            }
-            if(parts.length > 1 && parts[1] != null) {
-                minor = Integer.decode(parts[1]);
-            }
-            if(parts.length > 2 && parts[2] != null) {
-                revision = Integer.decode(parts[2]);
-            }
-            clog(Level.FINE, "Config version: Major: " + major + " Minor: " + minor + " Revision: " + revision);
-
-            int existingVersion = major*1000000+minor*1000+revision;
-
-            parts = VERSIONBREAK.split("\\.");
-            if(parts.length > 0 && parts[0] != null) {
-                major = Integer.decode(parts[0]);
-            }
-            if(parts.length > 1 && parts[1] != null) {
-                minor = Integer.decode(parts[1]);
-            }
-            if(parts.length > 2 && parts[2] != null) {
-                revision = Integer.decode(parts[2]);
-            }
-            clog(Level.FINE, "Comp break: Major: " + major + " Minor: " + minor + " Revision: " + revision);
-
-            int breakVersion = major*1000000+minor*1000+revision;
-
-            if(existingVersion < breakVersion) {
-                // config file not valid - abort plugin load
-                clog(Level.SEVERE, "Config file version too old - unexpected behaviour might occur!");
-            }
+        String configVersion = config.getString(pdfFile.getName() + ".Version");
+        if(versionCompare(configVersion, VERSIONBREAK) < 0) {
+            // config file not valid - abort plugin load
+            clog(Level.SEVERE, "Config file version too old - unexpected behaviour might occur!");
         }
-        
+
         useFees = config.getBoolean(USEFEES, false); // added in 0.9.5
         clog(Level.FINE, USEFEES + ": " + useFees);
         updateInterval = config.getInt(UPDATEINTERVAL, 18000); // added in v1.1.0
@@ -294,6 +261,10 @@ public class CourierConfig {
 
     public Double getFeeSend() {
         return feeSend;
+    }
+
+    public int getVanishDistance() {
+        return config.getInt(POSTMAN_VANISHDISTANCE, 0);
     }
 
     // translatable strings
@@ -466,6 +437,51 @@ public class CourierConfig {
             level = Level.INFO;
         }
         log.log(level, LOGPREFIX + message);
+    }
+
+    // -1 version < compareVersion
+    // 0 version equals compareVersion
+    // 1 version > compareVersion
+    public int versionCompare(String version, String compareVersion) {
+        int major = 0;
+        int minor = 0;
+        int revision = 0;
+
+        String[] parts = version.split("\\.");
+        if(parts.length > 0 && parts[0] != null) {
+            major = Integer.decode(parts[0]);
+        }
+        if(parts.length > 1 && parts[1] != null) {
+            minor = Integer.decode(parts[1]);
+        }
+        if(parts.length > 2 && parts[2] != null) {
+            revision = Integer.decode(parts[2]);
+        }
+        clog(Level.FINE, "Version: Major: " + major + " Minor: " + minor + " Revision: " + revision);
+
+        int existingVersion = major*1000000+minor*1000+revision;
+
+        parts = compareVersion.split("\\.");
+        if(parts.length > 0 && parts[0] != null) {
+            major = Integer.decode(parts[0]);
+        }
+        if(parts.length > 1 && parts[1] != null) {
+            minor = Integer.decode(parts[1]);
+        }
+        if(parts.length > 2 && parts[2] != null) {
+            revision = Integer.decode(parts[2]);
+        }
+        clog(Level.FINE, "CompareVersion: Major: " + major + " Minor: " + minor + " Revision: " + revision);
+
+        int breakVersion = major*1000000+minor*1000+revision;
+
+        if(existingVersion < breakVersion) {
+            return -1;
+        } else if (existingVersion == breakVersion) {
+            return 0;
+        } else {
+            return 1;
+        }
     }
 
     // Converts from Chat to Map color space

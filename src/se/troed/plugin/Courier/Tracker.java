@@ -105,7 +105,6 @@ public class Tracker {
     // recreates structure from db after each restart as needed
     public Letter getLetter(int id) {
         if(id == 0) {
-            // currently happens when crafted Letters put into ItemFrames are rendered
             return null;
         }
         Letter letter = letters.get(id);
@@ -118,7 +117,8 @@ public class Tracker {
             } else {
                 // we've found an item pointing to a Courier letter that does not exist anylonger
                 // ripe for re-use!
-                plugin.getCConfig().clog(Level.FINE, "BAD: " + id + " not found in messages database");
+                plugin.getCConfig().clog(Level.FINE, "Letter " + id + " not found in messages database but was still requested (old/duplicate item?)");
+                // todo: should we just delete these items? :)
             }
         }
         return letter;

@@ -25,6 +25,7 @@ Courier:
     Despawn: 20
     SpawnDistance: 10
     BreakSpawnProtection: true
+    VanishDistance: 20
     CreativeDelivery: true
     Greeting: "&7Koerier: &fDe postbode is gearriveerd met post voor jou!"
     MailDrop: "&7Koerier: &fJe post ligt op de grond."

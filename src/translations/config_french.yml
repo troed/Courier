@@ -25,6 +25,7 @@ Courier:
     Despawn: 20
     SpawnDistance: 10
     BreakSpawnProtection: true
+    VanishDistance: 20
     CreativeDelivery: true
     Greeting: '&5Service postal: &fUn facteur est arrivé avec votre courrier !'
     MailDrop: '&5Service postal: &fVotre lettre a été jetée au sol.'

@@ -303,7 +303,7 @@ public class Letter {
         if((s == null) || s.isEmpty()) {
             return 0;
         }
-        s = s.replaceAll("\u00A7.", "");
+        s = s.replaceAll("(\u00A7.|&(\\p{XDigit}))", "");   // don't count either §. or &a-f
         int width = MinecraftFont.Font.getWidth(s);
         width += s.length(); // getWidth currently does not include the space between characters (1px) in its calculation
         return width;

@@ -40,7 +40,7 @@ public class LetterRenderer extends MapRenderer {
             letter = plugin.getTracker().getLetter(item);
             if(letter == null) { // plugin.courierMapType(item) != Courier.LETTER
                 // parchment - drawn blank below
-                // currently redraws at 20 tps
+                // currently redraws at 20 tps - no letter to clear dirty flag
 //                plugin.getCConfig().clog(Level.FINE, "Rendering a Courier Parchment on Map (" + map.getId() + ")");
                 for(int j = 0; j < CANVAS_HEIGHT; j++) {
                     for(int i = 0; i < CANVAS_WIDTH; i++) {
@@ -105,9 +105,4 @@ public class LetterRenderer extends MapRenderer {
             canvas.setPixel(t, y, c);
         }
     }
-
-    // called by CourierCommands commandLetter. Not terribly pretty architectured.
-/*    public void forceClear() {
-        clear = true;
-    }*/
 }
