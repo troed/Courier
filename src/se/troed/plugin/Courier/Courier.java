@@ -451,10 +451,19 @@ public class Courier extends JavaPlugin {
                 getCConfig().clog(Level.SEVERE, "If deleting the world (or maps) wasn't intended you should look into why this happened.");
                 mapId = -1;
             }
+            // verify that everything is as it should
+            if(mapId != -1) {
+                MapView mv = getServer().getMap(mapId);
+                if(mv.getCenterX() != Courier.MAGIC_NUMBER) {
+                    getCConfig().clog(Level.SEVERE, "The map claimed to be the Courier Map in config isn't! Trying to fix.");
+                    mapId = -1; // deal with this as if we had none allocated, see below
+                }
+            }
             if(mapId == -1) {
                 // we don't have an allocated map stored, see if there is one we've forgotten about
+                MapView mv = null;
                 for(short i=0; i<Short.MAX_VALUE; i++) {
-                    MapView mv = getServer().getMap(i);
+                    mv = getServer().getMap(i);
                     if(mv != null && mv.getCenterX() == Courier.MAGIC_NUMBER && mv.getCenterZ() == 0 ) {
                         // there we go, a nice Courier Letter map to render with
                         mapId = i;
@@ -462,18 +471,26 @@ public class Courier extends JavaPlugin {
                         getCConfig().clog(Level.INFO, "Found existing Courier map with id " + mv.getId());
                         break;
                     // else if getCenterX == MAGIC_NUMBER it's a legacy Letter and will be handled by PlayerListener
-                    } else if(mv == null) {
-                        // no Courier Map found and we've gone through them all, we need to create one for our use
-                        // (in reality this might be triggered if the admin has deleted some maps, nothing I can do)
-                        // Maps are saved in the world-folders, use default world(0) trick
-                        mv = getServer().createMap(getServer().getWorlds().get(0));
-                        mv.setCenterX(Courier.MAGIC_NUMBER);
-                        mv.setCenterZ(0); // legacy Courier Letters have a unix timestamp here instead
-                        mapId = mv.getId();
-                        getCConfig().clog(Level.INFO, "Rendering map claimed with the id " + mv.getId());
-                        courierdb.setCourierMapId(mapId);
-                        break;
                     }
+                }
+                if(mapId == -1) {
+                    // no Courier Map found and we've gone through them all
+                    // (in reality this might be triggered if the admin has deleted some maps, nothing I can do)
+                    // Maps are saved in the world-folders, use default world(0) trick
+                    short existingMapId = courierdb.getCourierMapId();
+                    if(existingMapId != -1) {
+                        // if we really believe this is our map then go for it - fix it up.
+                        mv = getServer().getMap(existingMapId);
+                    }
+                    if(existingMapId == -1 || mv == null) {
+                        // allocate a new map
+                        mv = getServer().createMap(getServer().getWorlds().get(0));
+                    }
+                    mv.setCenterX(Courier.MAGIC_NUMBER);
+                    mv.setCenterZ(0); // legacy Courier Letters have a unix timestamp here instead
+                    mapId = mv.getId();
+                    getCConfig().clog(Level.INFO, "Rendering map claimed with the id " + mv.getId());
+                    courierdb.setCourierMapId(mapId);
                 }
             }
             if(mapId == -1) {
