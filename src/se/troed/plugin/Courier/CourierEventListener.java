@@ -1,6 +1,7 @@
 package se.troed.plugin.Courier;
 
 import org.bukkit.Material;
+import org.bukkit.block.Furnace;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
@@ -8,6 +9,7 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.*;
+import org.bukkit.event.inventory.FurnaceSmeltEvent;
 import org.bukkit.event.player.*;
 import org.bukkit.event.world.ChunkLoadEvent;
 import org.bukkit.event.world.WorldLoadEvent;
@@ -23,11 +25,14 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.logging.Level;
 
+@SuppressWarnings("UnusedDeclaration")
 class CourierEventListener implements Listener {
     private final Courier plugin;
+    private final Tracker tracker;
 
     public CourierEventListener(Courier instance) {
         plugin = instance;
+        tracker = plugin.getTracker();
     }
 
     // todo: Bukkit 1.4.6 R0.1 - I don't seem to get WorldLoadEvents. Why?
@@ -62,7 +67,7 @@ class CourierEventListener implements Listener {
         if(plugin.courierMapType(item) == Courier.LETTER) {
  // todo: would it be awesome to allow page flipping in itemframes or do people want rotation instead?
  //       if(e.getMaterial() == Material.MAP && e.getItem().containsEnchantment(Enchantment.DURABILITY)) {
-            Letter letter = plugin.getLetter(item);
+            Letter letter = tracker.getLetter(item);
             if(letter != null) {
                 plugin.getCConfig().clog(Level.FINE, e.getPlayer().getDisplayName() + " navigating letter");
                 Action act = e.getAction();
@@ -74,7 +79,64 @@ class CourierEventListener implements Listener {
                     e.setCancelled(true);
                 }
             }
+        } else if(!e.isCancelled()) {
+            // we need to track players who right click furnaces
+            if(e.getClickedBlock().getState().getType() == Material.FURNACE) {
+                if(e.getAction() == Action.RIGHT_CLICK_BLOCK) {
+                    plugin.getCConfig().clog(Level.FINE, e.getPlayer().getName() + " is using a furnace");
+                    tracker.setSmelter(e.getClickedBlock().getState().getBlock().getLocation(), e.getPlayer());
+                }
+            }
         }
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onPlayerDropItemEvent(PlayerDropItemEvent e) {
+        Letter letter = tracker.getLetter(e.getItemDrop().getItemStack());
+        if(!e.isCancelled() && letter != null && letter.isAllowedToSee(e.getPlayer())) {
+            tracker.addDrop(e.getItemDrop().getUniqueId(), letter);
+            plugin.getCConfig().clog(Level.FINE, e.getPlayer().getDisplayName() + " dropped Letter " + letter.getId());
+        }
+    }
+
+    // Letters can be deleted by letting them despawn
+    // However, if the chunk is unloaded, will we ever get this event?
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onItemDespawnEvent(ItemDespawnEvent e) {
+        if(e.isCancelled()) {
+            return;
+        }
+        Letter letter = tracker.getAndRemoveDrop(e.getEntity().getUniqueId());
+        if(letter != null) {
+            tracker.removeLetter(letter.getId());
+            plugin.getCourierdb().deleteMessage((short)letter.getId());
+            plugin.getCConfig().clog(Level.FINE, "Dropped Letter " + letter.getId() + " despawned, was removed from database");
+        }
+    }
+
+    // Letters (and yes, normal Maps as well) can be deleted by burning them in furnaces
+    // Priority Highest until the NPE is fixed. We added the recipe - we must cancel the event
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onFurnaceSmeltEvent(FurnaceSmeltEvent e) {
+        if(e.isCancelled() || e.getSource().getType() != Material.MAP) {
+            return;
+        }
+        Letter letter = tracker.getLetter(e.getSource());
+        if(letter != null) {
+            // verify that the player who last right-clicked this furnace "owns" the letter and can delete it
+            Player p = tracker.getSmelter(e.getBlock().getLocation());
+            if(p != null && letter.isAllowedToSee(p)) {
+                tracker.removeLetter(letter.getId());
+                plugin.getCourierdb().deleteMessage((short)letter.getId());
+                plugin.getCConfig().clog(Level.FINE, "Letter " + letter.getId() + " was burnt in a furnace by " + p.getName() + ", removed from database");
+            }
+        }
+        // avoid NPE by manually faking the intended result and cancelling event
+        // todo: https://bukkit.atlassian.net/browse/BUKKIT-745
+        Furnace furnace = (Furnace) e.getBlock().getState();
+        furnace.getInventory().clear(0); // 0 = ingredient slot
+        // here would be some magic as to understanding whether to decrease the amount of fuel .. not trivial
+        e.setCancelled(true);
     }
 
     @EventHandler(priority = EventPriority.NORMAL)
@@ -86,7 +148,7 @@ class CourierEventListener implements Listener {
             // Is it a Letter?
             int type = plugin.courierMapType(item);
             if(type != Courier.NONE) {
-                Letter letter = plugin.getLetter(item);
+                Letter letter = tracker.getLetter(item);
                 if(plugin.getCConfig().getLetterFrameable() &&
                             e.getPlayer().hasPermission(Courier.PM_USEITEMFRAMES) &&
                             (letter == null || letter.isAllowedToSee(e.getPlayer())) &&
@@ -119,6 +181,8 @@ class CourierEventListener implements Listener {
                             mapItem.setItemMeta(meta);
                         }
                         e.getPlayer().setItemInHand(mapItem); // Replace the Courier Letter the player had with the new unique Map
+                        //noinspection ConstantConditions
+                        letter.setDirty(true);
                     } else if(type == Courier.FRAMEDLETTER) {
                         // Probably never happens since we convert them back on pickup and heldchange into regular Courier Letters
                         plugin.getCConfig().clog(Level.FINE, "Courier Framed Letter placed into ItemFrame");
@@ -135,7 +199,7 @@ class CourierEventListener implements Listener {
         }
 
         // Did we right click a Postman?
-        Postman postman = plugin.getPostman(e.getRightClicked().getUniqueId());
+        Postman postman = tracker.getPostman(e.getRightClicked().getUniqueId());
         if(!e.isCancelled() && !e.getRightClicked().isDead() && postman != null && !postman.scheduledForQuickRemoval()) {
             plugin.getCConfig().clog(Level.FINE, e.getPlayer().getDisplayName() + " receiving mail");
             ItemStack letter = postman.getLetterItem();
@@ -146,10 +210,7 @@ class CourierEventListener implements Listener {
                 if(items.isEmpty()) {
                     plugin.getCConfig().clog(Level.FINE, "Letter added to inventory");
                     // send an explaining string to the player
-                    String inventory = plugin.getCConfig().getInventory();
-                    if(inventory != null && !inventory.isEmpty()) {
-                        e.getPlayer().sendMessage(inventory);
-                    }
+                    Courier.display(e.getPlayer(), plugin.getCConfig().getInventory());
                     if(e.getRightClicked() instanceof Enderman) {
                         ((Enderman)e.getRightClicked()).setCarriedMaterial(new MaterialData(Material.AIR));
                     } else {
@@ -168,7 +229,7 @@ class CourierEventListener implements Listener {
                 plugin.getCConfig().clog(Level.FINE, "Letter delivered into player's hands");
                 e.getPlayer().setItemInHand(letter); // REALLY replaces what's there
 
-                // quick render
+                // todo: quick render
                 e.getPlayer().sendMap(plugin.getServer().getMap(plugin.getCourierdb().getCourierMapId()));
 
                 if(e.getRightClicked() instanceof Enderman) {
@@ -270,16 +331,19 @@ class CourierEventListener implements Listener {
                 }
             }
             // conversion end
-            Letter letter = plugin.getLetter(item);
+            Letter letter = tracker.getLetter(item);
             if(letter != null) {
                 e.getPlayer().getInventory().setItem(e.getNewSlot(), updateLore(item, letter, e.getPlayer()));
 
                 plugin.getCConfig().clog(Level.FINE, "Switched to Letter id " + letter.getId());
 
                 // quick render
-                e.getPlayer().sendMap(plugin.getServer().getMap(plugin.getCourierdb().getCourierMapId()));
+                letter.setDirty(true);
             } else {
                 // or regular map
+                // or parchment?
+                // or MapItem we have pointing to a Letter that has been deleted. If enchanted (== proof) we could
+                //    just decided to delete it here
                 plugin.getCConfig().clog(Level.FINE, "Switched to blank parchment");
             }
         }
@@ -308,9 +372,15 @@ class CourierEventListener implements Listener {
                 }
             }
             // conversion end
-            Letter letter = plugin.getLetter(item);
+            Letter letter = tracker.getAndRemoveDrop(e.getItem().getUniqueId());
+            if(letter != null) {
+                // if someone picked up a drop we were tracking, remove it from here
+                plugin.getCConfig().clog(Level.FINE, "Letter id " + letter.getId() + " was dropped and picked up again");
+            }
+            letter = tracker.getLetter(item);
             if(letter != null) {
                 e.getItem().setItemStack(updateLore(item, letter, e.getPlayer()));
+                // todo: need to updateInventory for lore to be reflected correctly on picked up Framed Letters?
 
                 plugin.getCConfig().clog(Level.FINE, "Letter " + letter.getId() + " picked up.");
 
@@ -321,16 +391,17 @@ class CourierEventListener implements Listener {
                 // if itemheldhand was empty, we should render the letter immediately
                 ItemStack heldItem = e.getPlayer().getItemInHand();
                 if(heldItem != null && heldItem.getAmount() == 0) {
-                    e.getPlayer().sendMap(plugin.getServer().getMap(plugin.getCourierdb().getCourierMapId()));
+                    letter.setDirty(true);
                 }
             } else {
                 // or regular map
+                // or parchment?
+                // or MapItem we have pointing to a Letter that has been deleted. If enchanted (== proof) we could
+                //    just decided to delete it here
                 plugin.getCConfig().clog(Level.FINE, "Picked up blank parchment");
             }
         }        
     }
-
-    // onPlayerDropItem for recycling? or something more active? (furnace? :D)
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onChunkLoad(ChunkLoadEvent e) {
@@ -360,7 +431,7 @@ class CourierEventListener implements Listener {
                             }
                         }
                         if(page > 0) {
-                            Letter letter = plugin.getLetter(map.getCenterZ());
+                            Letter letter = tracker.getLetter(map.getCenterZ());
                             letter.setCurPage(page);
                         }
                     }
@@ -401,7 +472,7 @@ class CourierEventListener implements Listener {
     // (at least true for Enderman, but maybe not PigZombie?)
     @EventHandler(priority = EventPriority.HIGH)
     public void onEntityTarget(EntityTargetEvent e) {
-        if(!e.isCancelled() && plugin.getPostman(e.getEntity().getUniqueId()) != null) {
+        if(!e.isCancelled() && tracker.getPostman(e.getEntity().getUniqueId()) != null) {
             if(e.getEntity() instanceof Monster) {
                 plugin.getCConfig().clog(Level.FINE, "Cancel angry postman");
                 e.setCancelled(true);
@@ -413,9 +484,9 @@ class CourierEventListener implements Listener {
     @EventHandler(priority = EventPriority.HIGH)
     public void onEntityDamage(EntityDamageEvent e) {
         // don't care about cause, if it's a postman then drop mail and bail
-        if(!e.isCancelled() && plugin.getPostman(e.getEntity().getUniqueId()) != null) {
+        if(!e.isCancelled() && tracker.getPostman(e.getEntity().getUniqueId()) != null) {
             plugin.getCConfig().clog(Level.FINE, "Postman taking damage");
-            Postman postman = plugin.getPostman(e.getEntity().getUniqueId());
+            Postman postman = tracker.getPostman(e.getEntity().getUniqueId());
             if(!e.getEntity().isDead() && !postman.scheduledForQuickRemoval()) {
                 postman.drop();
                 postman.quickDespawn();
@@ -427,7 +498,7 @@ class CourierEventListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGH)
     public void onEntityChangeBlock(EntityChangeBlockEvent e) {
-        if(!e.isCancelled() && plugin.getPostman(e.getEntity().getUniqueId()) != null) {
+        if(!e.isCancelled() && tracker.getPostman(e.getEntity().getUniqueId()) != null) {
             plugin.getCConfig().clog(Level.FINE, "Prevented postman blockchange");
             e.setCancelled(true);
         }
@@ -435,7 +506,7 @@ class CourierEventListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGH)
     public void onEntityTeleport(EntityTeleportEvent e) {
-        if(!e.isCancelled() && plugin.getPostman(e.getEntity().getUniqueId()) != null) {
+        if(!e.isCancelled() && tracker.getPostman(e.getEntity().getUniqueId()) != null) {
             plugin.getCConfig().clog(Level.FINE, "Prevented postman teleport");
             e.setCancelled(true);
         }
@@ -449,7 +520,7 @@ class CourierEventListener implements Listener {
             // we end up here before we've had a chance to log and store our Postman uuids!
             // this means we cannot reliably override spawn deniers with perfect identification.
             // We match on Location instead but it's not pretty. Might be the only solution though.
-            Postman postman = plugin.getAndRemoveSpawner(e.getLocation());
+            Postman postman = tracker.getAndRemoveSpawner(e.getLocation());
             if(postman != null) {
                 plugin.getCConfig().clog(Level.FINE, "onCreatureSpawn is a Postman");
                 if(e.isCancelled()) {

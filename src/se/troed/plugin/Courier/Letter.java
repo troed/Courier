@@ -35,14 +35,18 @@ public class Letter {
     // note, this is JUST to avoid event spamming. Actual read status is saved in the database
     private boolean read;
     private int currentPage = 0;
+    // to draw or not to draw
+    private boolean dirty;
 
-    public Letter(Courier plug, String s, String r, String m, int id, boolean rd, int date) {
+    public Letter(Courier plug, int id) {
         plugin = plug;
-        sender = s;
-        receiver = r;
+        // not happy. would much rather prefer if all database handling was in CourierDatabase
+        CourierDB db = plug.getCourierdb();
         this.id = id;
-        read = rd;
-        this.date = date;
+        receiver = db.getPlayer(id);
+        sender = db.getSender(receiver, id);
+        read = db.getRead(receiver, id);
+        date = db.getDate(receiver, id);
         // http://dev.bukkit.org/server-mods/courier/tickets/35-make-show-date-configurable/
         if(date > 0 && plugin.getCConfig().getShowDate()) {
             Calendar calendar = Calendar.getInstance();
@@ -73,7 +77,7 @@ public class Letter {
             displayDate = null;
             displayDatePos = 0;
         }
-        if(!r.equalsIgnoreCase(s)) { // r == s is an unposted Letter (same sender as receiver)
+        if(!receiver.equalsIgnoreCase(sender)) { // r == s is an unposted Letter (same sender as receiver)
             header = plugin.getCConfig().getLetterFrom2(sender) + HEADER_COLOR + ":";
             try {
 // See comment to getWidth on NPE
@@ -87,7 +91,15 @@ public class Letter {
             header = null; // tested by LetterRenderer
         }
         // must be done after header, we use that knowledge for height calculation
-        setMessage(m);
+        setMessage(db.getMessage(receiver, id));
+    }
+
+    public void setDirty(boolean d) {
+        dirty = d;
+    }
+
+    public boolean getDirty() {
+        return dirty;
     }
 
     public int getId() {
@@ -130,6 +142,7 @@ public class Letter {
                 advancePage();
             }
         }
+        setDirty(true);
     }
     
     public String getMessage() {
@@ -144,14 +157,14 @@ public class Letter {
     public void advancePage() {
         if(currentPage < message.size()-1) {
             currentPage++;
-            plugin.getLetterRenderer().forceClear();
+            setDirty(true);
         }
     }
 
     public void backPage() {
         if(currentPage > 0) {
             currentPage--;
-            plugin.getLetterRenderer().forceClear();
+            setDirty(true);
         }
     }
 
@@ -168,9 +181,7 @@ public class Letter {
     public void setCurPage(int p) {
         if(p > 0 && p <= message.size()) {
             currentPage = p - 1;
-            if(plugin.getLetterRenderer() != null) {
-                plugin.getLetterRenderer().forceClear();
-            }
+            setDirty(true);
         }
     }
     
@@ -262,26 +273,37 @@ public class Letter {
                 height++;
                 if(height == MAP_HEIGHT_LINES || (header != null && page == 0 && height == MAP_HEIGHT_LINES-2)) {
                     height = 0;
-                    pages.add(buffer.toString());
+                    pages.add(dateSensitiveColorization(buffer.toString()));
                     buffer.setLength(0); // clear();
                     page++;
                 }
             }
         }
         if(pages.size() == page) {
-            pages.add(buffer.toString());
+            pages.add(dateSensitiveColorization(buffer.toString()));
         }
         return pages;
+    }
+
+    // Since letter colorization wasn't available until v1.1.9 and it might cause unwanted rendering of letters
+    // written before it was released, only colorize 'new' letters
+    private String dateSensitiveColorization (String s) {
+        if(this.date > 1357417818) { // hard coded to 20:30 UTC 5th of Jan 2013
+            return plugin.getCConfig().colorize2(s);
+        } else {
+            return s;
+        }
     }
 
     // getWidth() seems to NPE in MapFont.java:55 on '§'
     // Unicode Character 'SECTION SIGN' (U+00A7)
     // isValid() passes over '\u00a7' and '\n' - but getWidth() doesn't
-    // https://bukkit.atlassian.net/browse/BUKKIT-685
+    // todo: https://bukkit.atlassian.net/browse/BUKKIT-685
     int getWidth(String s) throws NullPointerException {
         if((s == null) || s.isEmpty()) {
             return 0;
         }
+        s = s.replaceAll("(\u00A7.|&(\\p{XDigit}))", "");   // don't count either §. or &a-f
         int width = MinecraftFont.Font.getWidth(s);
         width += s.length(); // getWidth currently does not include the space between characters (1px) in its calculation
         return width;

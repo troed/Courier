@@ -24,9 +24,12 @@ import org.bukkit.*;
 import org.bukkit.block.Biome;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
+import org.bukkit.command.CommandSender;
 import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.FurnaceRecipe;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.ShapelessRecipe;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -59,9 +62,6 @@ import java.util.logging.Level;
  * How to deal with players who NEVER accept delivery? We'll spawn an immense number of postmen
  * and Items over time! I do not track how many times a single mail has been delivered, maybe I should?
  *
- * ISSUE: Currently no quick rendering (sendMap) works. Not sure this is fixable - I guess it understands
- *        we're using the same MapID for everything.
- *
  */
 public class Courier extends JavaPlugin {
     // these must match plugin.yml
@@ -92,6 +92,8 @@ public class Courier extends JavaPlugin {
 
     private static Vault vault = null;
     private static Economy economy = null;
+
+    private final Tracker tracker = new Tracker(this); // must be done before CourierEventListener
     private boolean abort = false; // used to abort plugin load on error
     private boolean initDone = false; // failsafe for postWorldInit()
 
@@ -104,44 +106,6 @@ public class Courier extends JavaPlugin {
     private BukkitTask updateTask;
     private Runnable deliveryThread;
     private int deliveryId = -1;
-    private final Map<UUID, Postman> postmen = new HashMap<UUID, Postman>();
-    private final Map<Integer, Letter> letters = new HashMap<Integer, Letter>();
-    // used temporarily in breaking spawn protections as well as making sure we only announce when spawned
-    private final Map<Location, Postman> spawners = new HashMap<Location, Postman>();
-    
-    // postmen should never live long, will always despawn
-    public void addPostman(Postman p) {
-        postmen.put(p.getUUID(), p);
-        schedulePostmanDespawn(p.getUUID(), getCConfig().getDespawnTime());
-    }
-
-    // returns null if it's not one of ours
-    public Postman getPostman(UUID uuid) {
-        return postmen.get(uuid);
-    }
-    
-    public void addSpawner(Location l, Postman p) {
-        // if this just keeps on growing we could detect and warn the admin that something is blocking
-        // even our detection of Postman spawn events. Regular cleanup thread?
-        spawners.put(l, p);
-        getCConfig().clog(Level.FINE, spawners.size() + " spawners in queue");
-    }
-    
-    public Postman getAndRemoveSpawner(Location l) {
-        Postman p = spawners.get(l);
-        if(p != null) {
-            spawners.remove(l);
-        }
-        return p;
-    }
-
-    public void removeLetter(int id) {
-        letters.remove(id);
-    }
-    
-    private void addLetter(int id, Letter l) {
-        letters.put(id, l);
-    }
 
     // Helper method to quickly identify a Courier Map ItemStack
     // Should be used in many more places than it is currently
@@ -149,7 +113,7 @@ public class Courier extends JavaPlugin {
     int courierMapType(ItemStack item) {
         if(item != null && item.getType() == Material.MAP) {
             MapView map = getServer().getMap(item.getDurability());
-            if(map.getCenterX() == Courier.MAGIC_NUMBER) {
+            if(map != null && map.getCenterX() == Courier.MAGIC_NUMBER) {
                 if(map.getId() == getCourierdb().getCourierMapId()) {
                     if(item.containsEnchantment(Enchantment.DURABILITY)) { // && level > 0
                         return Courier.LETTER;
@@ -164,45 +128,16 @@ public class Courier extends JavaPlugin {
         return Courier.NONE;
     }
 
-    // finds the Letter associated with a specific id
-    // recreates structure from db after each restart as needed
-    public Letter getLetter(int id) {
-        if(id == 0) {
-            // currently happens when crafted Letters put into ItemFrames are rendered
-            return null;
-        }
-        Letter letter = letters.get(id);
-        if(letter == null) {
-            // server has lost the ItemStack<->Letter associations, re-populate
-            String to = getCourierdb().getPlayer(id);
-            if(to != null) {
-                String from = getCourierdb().getSender(to, id);
-                String message = getCourierdb().getMessage(to, id);
-                letter = new Letter(this, from, to, message, id, getCourierdb().getRead(to, id), getCourierdb().getDate(to, id));
-                addLetter(id, letter);
-                getCConfig().clog(Level.FINE, "Letter " + id + " recreated from db for " + to);
-            } else {
-                // we've found an item pointing to a Courier letter that does not exist anylonger
-                // ripe for re-use!
-                getCConfig().clog(Level.FINE, "BAD: " + id + " not found in messages database");
-            }
-        }
-        return letter;
-    }
-
-    public Letter getLetter(ItemStack letterItem) {
-        if(letterItem == null || !letterItem.containsEnchantment(Enchantment.DURABILITY)) {
-            return null;
-        }
-        return getLetter(letterItem.getEnchantmentLevel(Enchantment.DURABILITY));
-    }
-
-    public LetterRenderer getLetterRenderer() {
-        return letterRenderer;
-    }
-    
     public Economy getEconomy() {
         return economy;
+    }
+
+    public Tracker getTracker() {
+        return tracker;
+    }
+
+    public CourierDB getCourierdb() {
+        return courierdb;
     }
 
     /**
@@ -213,6 +148,7 @@ public class Courier extends JavaPlugin {
      *
      * Also: Should be extended to check at least a few blocks to the sides and not JUST direct line of sight
      *
+     * todo: Move this method to Postman
      */
     @SuppressWarnings("JavaDoc")
     Location findSpawnLocation(Player p) {
@@ -259,7 +195,28 @@ public class Courier extends JavaPlugin {
                 }
             }
         }
-            
+
+        // make a feeble attempt at not betraying vanished players
+        // the box will likely need to be a lot bigger
+        // just loop through all online players instead? ~300 checks max
+        // but that would mean vanished players can never receive mail
+        if(sLoc != null) {
+            int length = getCConfig().getVanishDistance();
+            if(length > 0) {
+                List<Entity> entities = p.getNearbyEntities(length, 64, length);
+                for(Entity e : entities) {
+                    if(e instanceof Player) {
+                        Player player = (Player) e;
+                        if(!player.canSee(p)) {
+                            sLoc = null; // it's enough that one Player nearby isn't supposed to see us
+                            getCConfig().clog(Level.FINE, "Vanished player " + p.getName() + "'s postman could be seen by " + player.getName());
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
         if(sLoc == null) {
             getCConfig().clog(Level.FINE, "Didn't find room to spawn Postman");
             // fail
@@ -268,43 +225,6 @@ public class Courier extends JavaPlugin {
         return sLoc;
     }
 
-    public CourierDB getCourierdb() {
-        return courierdb;
-    }
-
-    private void despawnPostman(UUID uuid) {
-        config.clog(Level.FINE, "Despawning postman " + uuid);
-        Postman postman = postmen.get(uuid);
-        if(postman != null) {
-            postman.remove();
-            postmen.remove(uuid);
-        } // else, shouldn't happen
-    }
-
-    public void schedulePostmanDespawn(final UUID uuid, int time) {
-        // if there's an existing (long) timeout on a postman and a quick comes in, cancel the first and start the new
-        // I don't know if it's long ... but I could add that info to Postman
-        Runnable runnable = postmen.get(uuid).getRunnable();
-        if(runnable != null) {
-            config.clog(Level.FINE, "Cancel existing despawn on Postman " + uuid);
-            getServer().getScheduler().cancelTask(postmen.get(uuid).getTaskId());    
-        }
-        runnable = new Runnable() {
-            public void run() {
-                despawnPostman(uuid);
-            }
-        };
-        postmen.get(uuid).setRunnable(runnable);
-        // in ticks. one tick = 50ms
-        config.clog(Level.FINE, "Scheduled " + time + " second despawn for Postman " + uuid);
-        int taskId = getServer().getScheduler().scheduleSyncDelayedTask(this, runnable, time*20);
-        if(taskId >= 0) {
-            postmen.get(uuid).setTaskId(taskId);
-        } else {
-            config.clog(Level.WARNING, "Despawning task scheduling failed");
-        }
-    }
-    
     private void startDeliveryThread() {
         if(deliveryId >= 0) {
             config.clog(Level.WARNING, "Multiple calls to startDeliveryThread()!");
@@ -332,11 +252,20 @@ public class Courier extends JavaPlugin {
             updateTask = new BukkitRunnable() {
                 public void run() {
                     String version = config.getVersion();
-                    String checkVersion = updateCheck(version);
-                    config.clog(Level.FINE, "version: " + version + " vs updateCheck: " + checkVersion);
-                    if(!checkVersion.endsWith(version)) {
-                        config.clog(Level.WARNING, "There's a new version of Courier available: " + checkVersion + " (you have v" + version + ")");
-                        config.clog(Level.WARNING, "Please visit the Courier home: http://dev.bukkit.org/server-mods/courier/");
+                    String checkVersion = null;
+                    // updateCheck returns "Courier v1.2.3" - extract "1.2.3"
+                    String[] parsed = updateCheck(version).split(" v");
+                    if(parsed != null && parsed.length > 0) {
+                        checkVersion = parsed[1];
+                    }
+                    if(checkVersion == null) {
+                        config.clog(Level.WARNING, "Error in Courier automatic update check. Notify plugin author.");
+                    } else {
+                        config.clog(Level.FINE, "version: " + version + " vs updateCheck: " + checkVersion);
+                        if(config.versionCompare(version, checkVersion) < 0) {
+                            config.clog(Level.WARNING, "There's a new version of Courier available: v" + checkVersion + " (you have v" + version + ")");
+                            config.clog(Level.WARNING, "Please visit the Courier home: http://dev.bukkit.org/server-mods/courier/");
+                        }
                     }
                 }
             }.runTaskTimer(this, 400, getCConfig().getUpdateInterval() * 20);
@@ -365,10 +294,7 @@ public class Courier extends JavaPlugin {
                     // todo: this might well turn out to be too spammy ... and the message is about "place" not "mode"
                     // Also, could warn when detecting PlayerGameModeChangeEvent
                     config.clog(Level.FINE, "Didn't deliver mail to " + player.getDisplayName() + " - player is in Creative mode");
-                    String cannotDeliver = getCConfig().getCannotDeliver();
-                    if(cannotDeliver != null && !cannotDeliver.isEmpty()) {
-                        player.sendMessage(cannotDeliver);
-                    }
+                    display(player, getCConfig().getCannotDeliver());
                     continue;
                 }
                 // if already delivery out for this player do something?
@@ -404,12 +330,12 @@ public class Courier extends JavaPlugin {
                         // separate instantiation from spawning, save spawnLoc in instantiation
                         // and create a new method to lookup unspawned locations. Use loc matching
                         // in onCreatureSpawn as mob-denier override variable.
-                        this.addSpawner(spawnLoc, postman);
+                        tracker.addSpawner(spawnLoc, postman);
                         postman.spawn(spawnLoc);
                         // since we COULD be wrong when using location, re-check later if it indeed
                         // was a Postman we allowed through and despawn if not? Extra credit surely.
                         // Let's see if it's ever needed first
-                        this.addPostman(postman);
+                        tracker.addPostman(postman);
                     }
                 } else {
                     config.clog(Level.SEVERE, "undeliveredMail and undeliveredMessageId not in sync: " + undeliveredMessageId);
@@ -428,19 +354,14 @@ public class Courier extends JavaPlugin {
             getServer().getScheduler().cancelTask(deliveryId);
             deliveryId = -1;
         }
-        for (Map.Entry<UUID, Postman> uuidPostmanEntry : postmen.entrySet()) {
-            Postman postman = (Postman) ((Map.Entry) uuidPostmanEntry).getValue();
-            if (postman != null) {
-                postman.remove();
-            }
-        }
+        tracker.clearPostmen();
         courierdb.save(null);
         config.clog(Level.FINE, "Deliveries are now paused");
     }
     
     public void onDisable() {
         pauseDeliveries();
-        spawners.clear();
+        tracker.clearSpawners();
         stopUpdateThread();
         getServer().getScheduler().cancelTasks(this); // failsafe
         config.clog(Level.INFO, this.getDescription().getName() + " is now disabled.");
@@ -522,16 +443,27 @@ public class Courier extends JavaPlugin {
             // Prepare the magic Courier Map we use for all rendering
             // and more importantly, the one all ItemStacks will point to
             mapId = courierdb.getCourierMapId();
+            getCConfig().clog(Level.INFO, "Rendering map as found in config: " + mapId);
+
             // check if the server admin has used Courier and then deleted the world
             if(mapId != -1 && getServer().getMap(mapId) == null) {
                 getCConfig().clog(Level.SEVERE, "The Courier claimed map id " + mapId + " wasn't found in the world folder! Reclaiming.");
                 getCConfig().clog(Level.SEVERE, "If deleting the world (or maps) wasn't intended you should look into why this happened.");
                 mapId = -1;
             }
+            // verify that everything is as it should
+            if(mapId != -1) {
+                MapView mv = getServer().getMap(mapId);
+                if(mv.getCenterX() != Courier.MAGIC_NUMBER) {
+                    getCConfig().clog(Level.SEVERE, "The map claimed to be the Courier Map in config isn't! Trying to fix.");
+                    mapId = -1; // deal with this as if we had none allocated, see below
+                }
+            }
             if(mapId == -1) {
                 // we don't have an allocated map stored, see if there is one we've forgotten about
+                MapView mv = null;
                 for(short i=0; i<Short.MAX_VALUE; i++) {
-                    MapView mv = getServer().getMap(i);
+                    mv = getServer().getMap(i);
                     if(mv != null && mv.getCenterX() == Courier.MAGIC_NUMBER && mv.getCenterZ() == 0 ) {
                         // there we go, a nice Courier Letter map to render with
                         mapId = i;
@@ -539,18 +471,26 @@ public class Courier extends JavaPlugin {
                         getCConfig().clog(Level.INFO, "Found existing Courier map with id " + mv.getId());
                         break;
                     // else if getCenterX == MAGIC_NUMBER it's a legacy Letter and will be handled by PlayerListener
-                    } else if(mv == null) {
-                        // no Courier Map found and we've gone through them all, we need to create one for our use
-                        // (in reality this might be triggered if the admin has deleted some maps, nothing I can do)
-                        // Maps are saved in the world-folders, use default world(0) trick
-                        mv = getServer().createMap(getServer().getWorlds().get(0));
-                        mv.setCenterX(Courier.MAGIC_NUMBER);
-                        mv.setCenterZ(0); // legacy Courier Letters have a unix timestamp here instead
-                        mapId = mv.getId();
-                        getCConfig().clog(Level.INFO, "Rendering map claimed with the id " + mv.getId());
-                        courierdb.setCourierMapId(mapId);
-                        break;
                     }
+                }
+                if(mapId == -1) {
+                    // no Courier Map found and we've gone through them all
+                    // (in reality this might be triggered if the admin has deleted some maps, nothing I can do)
+                    // Maps are saved in the world-folders, use default world(0) trick
+                    short existingMapId = courierdb.getCourierMapId();
+                    if(existingMapId != -1) {
+                        // if we really believe this is our map then go for it - fix it up.
+                        mv = getServer().getMap(existingMapId);
+                    }
+                    if(existingMapId == -1 || mv == null) {
+                        // allocate a new map
+                        mv = getServer().createMap(getServer().getWorlds().get(0));
+                    }
+                    mv.setCenterX(Courier.MAGIC_NUMBER);
+                    mv.setCenterZ(0); // legacy Courier Letters have a unix timestamp here instead
+                    mapId = mv.getId();
+                    getCConfig().clog(Level.INFO, "Rendering map claimed with the id " + mv.getId());
+                    courierdb.setCourierMapId(mapId);
                 }
             }
             if(mapId == -1) {
@@ -563,6 +503,7 @@ public class Courier extends JavaPlugin {
             MapView mv = getServer().getMap(mapId);
             if(letterRenderer == null) {
                 letterRenderer = new LetterRenderer(this);
+                getCConfig().clog(Level.FINE, "New LetterRenderer allocated");
             }
             letterRenderer.initialize(mv); // does this make a difference at all?
             List<MapRenderer> renderers = mv.getRenderers();
@@ -570,6 +511,7 @@ public class Courier extends JavaPlugin {
                 mv.removeRenderer(r);
             }
             mv.addRenderer(letterRenderer);
+            getCConfig().clog(Level.FINE, "LetterRenderer attached to Map " + mv.getId());
         }
         
         if(!abort && getServer().getOnlinePlayers().length > 0) {
@@ -606,7 +548,16 @@ public class Courier extends JavaPlugin {
             config.clog(Level.WARNING, "With difficulty set to Peaceful Monsters cannot spawn. Verify that the Postman type you've configured Courier to use isn't a Monster.");
         }
 
-        if(config.getRequiresCrafting()) {
+        // todo: configurable
+        // Make burning of Letters possible
+        // oops, not allowed to have Material.AIR as the result .. (NPE) .. working around this in the event listener
+        // https://bukkit.atlassian.net/browse/BUKKIT-745
+        if(!abort) {
+            FurnaceRecipe rec = new FurnaceRecipe(new ItemStack(Material.MAP), Material.MAP);
+            getServer().addRecipe(rec);
+        }
+
+        if(!abort && config.getRequiresCrafting()) {
             config.clog(Level.FINE, "Crafting recipe required");
             ItemStack item = new ItemStack(Material.MAP, 1, getCourierdb().getCourierMapId());
             ItemMeta meta = item.getItemMeta();
@@ -641,6 +592,14 @@ public class Courier extends JavaPlugin {
         getConfig().options().copyDefaults(true);
         saveConfig();
         config = new CourierConfig(this);
+    }
+
+    // avoid empty lines being output if we silence messages in the config
+    static void display(CommandSender s, String m) {
+        if((m == null) || m.isEmpty()) {
+            return;
+        }
+        s.sendMessage(m);
     }
 
     public CourierConfig getCConfig() {

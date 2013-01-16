@@ -2,10 +2,9 @@
 # All times are in seconds, distances in blocks
 # Strings can use &0..&f color coding
 # Courier has been tested with Postman.Type 'Enderman' and 'Villager', but will accept all Creature-types
-# Route.WalkToPlayer is not used for Monster-Postmen (they would attack), only "friendly mobs".
-#   - Set to false if Villager-Postmen keep pushing you into lava ;)
+# Route.WalkToPlayer is currently non-functioning due to changed Minecraft behaviour
 Courier:
-  Version: 1.1.8
+  Version: 1.1.9
   UpdateInterval: 18000         # Checks for new versions every 5h. A value of 0 disables.
   UseFees: false
   Fee:
@@ -26,6 +25,7 @@ Courier:
     Despawn: 20
     SpawnDistance: 10
     BreakSpawnProtection: true
+    VanishDistance: 20
     CreativeDelivery: true
     Greeting: "&7Kurier: &fEin Briefträger ist mit deiner Nachricht angekommen!"
     MailDrop: "&7Kurier: &fDeine Nachricht wurde auf den Boden gelegt."
