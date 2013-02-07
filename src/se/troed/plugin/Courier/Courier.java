@@ -24,11 +24,13 @@ import org.bukkit.*;
 import org.bukkit.block.Biome;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
+import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
+import org.bukkit.event.HandlerList;
 import org.bukkit.inventory.FurnaceRecipe;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.ShapelessRecipe;
@@ -345,8 +347,23 @@ public class Courier extends JavaPlugin {
     }
 
     public void startDeliveries() {
-        startDeliveryThread();
-        config.clog(Level.FINE, "Deliveries have started");
+        if(initDone) {
+            startDeliveryThread();
+            config.clog(Level.FINE, "Deliveries have started");
+        } else {
+            // if we arrive here and initDone == false then our second stage load has not happened. Bail out!
+            // setEnabled(false)? Has never been enabled
+
+            config.clog(Level.SEVERE, "Courier second stage has failed to load! Contact plugin author.");
+
+            HandlerList.unregisterAll(this);
+
+            // and void our commands
+            getCommand(CMD_POSTMAN).setExecutor(this);
+            getCommand(CMD_COURIER).setExecutor(this);
+            getCommand(CMD_POST).setExecutor(this);
+            getCommand(CMD_LETTER).setExecutor(this);
+        }
     }
     
     public void pauseDeliveries() {
@@ -421,9 +438,11 @@ public class Courier extends JavaPlugin {
         // wait until default world has been loaded for the rest of our startup code
         if(!getServer().getWorlds().isEmpty()) {
             // We've been reloaded, continue post-World loading now
+            getCConfig().clog(Level.FINE, "Courier has been reloaded - executing postWorldLoad");
             postWorldLoad();
         } else {
-            // hacky workaround since we're not getting WorldLoadEvent
+            // hacky workaround if we're not getting WorldLoadEvent
+            getCConfig().clog(Level.FINE, "Scheduling postWorldLoad");
             getServer().getScheduler().scheduleSyncDelayedTask(this, new Runnable() {
                 public void run() {
                     postWorldLoad();
@@ -435,7 +454,9 @@ public class Courier extends JavaPlugin {
     // called from onWorldLoad event
     public void postWorldLoad() {
         if(initDone) {
-            getCConfig().clog(Level.WARNING, "postWorldLoad() called more than once! Contact plugin developer.");
+//            getCConfig().clog(Level.WARNING, "postWorldLoad() called more than once! Contact plugin developer.");
+            // it's ok to end up here twice, the dual method is used to work around incompatibilities
+            return;
         }
 
         short mapId = 0;
@@ -481,10 +502,14 @@ public class Courier extends JavaPlugin {
                     if(existingMapId != -1) {
                         // if we really believe this is our map then go for it - fix it up.
                         mv = getServer().getMap(existingMapId);
+                        if(mv != null) {
+                            getCConfig().clog(Level.FINE, "Existing map " + mv.getId() + " re-claimed");
+                        }
                     }
                     if(existingMapId == -1 || mv == null) {
                         // allocate a new map
                         mv = getServer().createMap(getServer().getWorlds().get(0));
+                        getCConfig().clog(Level.FINE, "New map " + mv.getId() + " allocated");
                     }
                     mv.setCenterX(Courier.MAGIC_NUMBER);
                     mv.setCenterZ(0); // legacy Courier Letters have a unix timestamp here instead
@@ -516,7 +541,8 @@ public class Courier extends JavaPlugin {
         
         if(!abort && getServer().getOnlinePlayers().length > 0) {
             // players already on, we've been reloaded
-            startDeliveries();
+            startDeliveryThread();
+            config.clog(Level.FINE, "Deliveries have started");
         }
 
         // if config says we should use economy, require vault + economy support
@@ -637,5 +663,10 @@ public class Courier extends JavaPlugin {
             return currentVersion;
         }
         return currentVersion;
+    }
+
+    // if plugin second stage doesn't load, we'll register all commands to this null method instead of CourierCommands
+    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        return true;
     }
 }

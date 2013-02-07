@@ -41,7 +41,7 @@ class CourierEventListener implements Listener {
         plugin.getCConfig().clog(Level.FINE, "World " + e.getWorld().getName() + " load");
         if(plugin.getServer().getWorlds().size() == 1) {
             // first world loaded - it's also the default in all cases I've seen [world(0)]
-//            plugin.postWorldInit();
+            plugin.postWorldLoad();
         }
     }
 
