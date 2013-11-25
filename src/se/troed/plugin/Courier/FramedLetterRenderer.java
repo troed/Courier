@@ -53,9 +53,11 @@ public class FramedLetterRenderer extends MapRenderer {
                 canvas.drawText(letter.getLeftMarkerPos(), MinecraftFont.Font.getHeight(), MinecraftFont.Font, letter.getLeftMarker());
                 canvas.drawText(letter.getRightMarkerPos(), MinecraftFont.Font.getHeight(), MinecraftFont.Font, letter.getRightMarker());
 
-                canvas.drawText(0,
-                                MinecraftFont.Font.getHeight() * drawPos,
-                                MinecraftFont.Font, Letter.MESSAGE_COLOR + letter.getMessage());
+                if(letter.getMessage() != null) {
+                    canvas.drawText(0,
+                                    MinecraftFont.Font.getHeight() * drawPos,
+                                    MinecraftFont.Font, Letter.MESSAGE_COLOR + letter.getMessage());
+                }
 
                 if(letter.getDisplayDate() != null) {
                     canvas.drawText(letter.getDisplayDatePos(),

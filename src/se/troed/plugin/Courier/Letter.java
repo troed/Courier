@@ -91,7 +91,8 @@ public class Letter {
             header = null; // tested by LetterRenderer
         }
         // must be done after header, we use that knowledge for height calculation
-        setMessage(db.getMessage(receiver, id));
+        // kill paragraph chars here if other plugins have written them into the db (not possible through MC chat box)
+        setMessage(db.getMessage(receiver, id).replaceAll("(\u00A7.)", ""));
     }
 
     public void setDirty(boolean d) {
