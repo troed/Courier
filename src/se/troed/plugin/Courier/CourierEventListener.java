@@ -451,7 +451,7 @@ class CourierEventListener implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerQuit(PlayerQuitEvent event) {
-        if(plugin.getServer().getOnlinePlayers().length <= 1) { // ==
+        if(plugin.getServer().getOnlinePlayers().toArray().length <= 1) { // ==
             // last player left
             plugin.pauseDeliveries();
         }
@@ -460,7 +460,7 @@ class CourierEventListener implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerJoin(PlayerJoinEvent event) {
-        if(plugin.getServer().getOnlinePlayers().length == 1) {
+        if(plugin.getServer().getOnlinePlayers().toArray().length == 1) {
             // first player joined
             // note: if this ever jumps from 0 to 2 in one go we'll never start deliveries. Implement failsafe?
             plugin.startDeliveries();
