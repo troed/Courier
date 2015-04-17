@@ -161,7 +161,7 @@ public class Courier extends JavaPlugin {
         // "@param maxDistance This is the maximum distance in blocks for the trace. Setting this value above 140 may lead to problems with unloaded chunks. A value of 0 indicates no limit"
         try {
             // o,o,o,o,o,o,x
-            blocks = p.getLineOfSight(null, getCConfig().getSpawnDistance());
+            blocks = p.getLineOfSight((Set)null, getCConfig().getSpawnDistance());
         } catch (IllegalStateException e) {
             blocks = null;
             getCConfig().clog(Level.WARNING, "caught IllegalStateException in getLineOfSight");
@@ -287,8 +287,11 @@ public class Courier extends JavaPlugin {
     private void deliverMail() {
         // find first online player with undelivered mail
         // spawn new thread to deliver the mail
-        Player[] players = getServer().getOnlinePlayers();
-        for (Player player : players) {
+        Iterator players = getServer().getOnlinePlayers().iterator();
+        
+        while(players.hasNext()) {
+        	
+        	Player player = (Player) players.next();
             if (courierdb.undeliveredMail(player.getName())) {
                 // Do not deliver mail to players in Creative mode
                 // http://dev.bukkit.org/server-mods/courier/tickets/49-pagination-stops-working-after-changing-slot-creative/
@@ -539,7 +542,7 @@ public class Courier extends JavaPlugin {
             getCConfig().clog(Level.FINE, "LetterRenderer attached to Map " + mv.getId());
         }
         
-        if(!abort && getServer().getOnlinePlayers().length > 0) {
+        if(!abort && !getServer().getOnlinePlayers().isEmpty()) {
             // players already on, we've been reloaded
             startDeliveryThread();
             config.clog(Level.FINE, "Deliveries have started");
