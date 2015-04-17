@@ -3,6 +3,10 @@ package se.troed.plugin.Courier;
 import org.bukkit.entity.Player;
 import org.bukkit.map.*;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.logging.Level;
 
 public class FramedLetterRenderer extends MapRenderer {
@@ -17,10 +21,29 @@ public class FramedLetterRenderer extends MapRenderer {
     @SuppressWarnings("FieldCanBeLocal")
     private final int CANVAS_HEIGHT = 128;
 //    private final byte[] clearImage = new byte[128*128];  // nice letter background image todo
+    static byte[] clearImage = null;    // singleton
+    BufferedImage framed = null;
 
     public FramedLetterRenderer(Courier p) {
         super(false); // Framed Letters are not contextual (i.e same for all players)
         plugin = p;
+
+        if(clearImage == null) {
+            try {
+                InputStream is = plugin.getClass().getResourceAsStream("/framed.png");
+                framed = ImageIO.read(is);
+                is.close();
+            } catch (IOException e) {
+                plugin.getCConfig().clog(Level.WARNING, "Unable to find framed.png in .jar");
+                e.printStackTrace();
+            }
+            if(framed != null) {
+                plugin.getCConfig().clog(Level.FINE, "framed.png found");
+                clearImage = MapPalette.imageToBytes(framed);
+            } else {
+                clearImage = new byte[128*128];
+            }
+        }
     }
 
     // This method gets called at 20tps whenever a map is in a players inventory. Bail out as quickly as possible if we
@@ -36,8 +59,9 @@ public class FramedLetterRenderer extends MapRenderer {
                 plugin.getCConfig().clog(Level.FINE, "Rendering a Courier ItemFrame Letter (" + letter.getId() + ") on Map (" + map.getId() + ")");
                 for(int j = 0; j < CANVAS_HEIGHT; j++) {
                     for(int i = 0; i < CANVAS_WIDTH; i++) {
-                        //                    canvas.setPixel(i, j, clearImage[j*128+i]);
-                        canvas.setPixel(i, j, MapPalette.TRANSPARENT);
+                        canvas.setPixel(i, j, clearImage[j*128+i]);
+//                        canvas.setPixel(i, j, MapPalette.TRANSPARENT);
+//                        canvas.setPixel(i, j, MapPalette.LIGHT_BROWN);
                     }
                 }
 
