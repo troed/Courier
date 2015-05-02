@@ -1,6 +1,8 @@
 package se.troed.plugin.Courier;
 
 import org.bukkit.Material;
+import org.bukkit.block.Block;
+import org.bukkit.block.BlockState;
 import org.bukkit.block.Furnace;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.*;
@@ -41,7 +43,7 @@ class CourierEventListener implements Listener {
         plugin.getCConfig().clog(Level.FINE, "World " + e.getWorld().getName() + " load");
         if(plugin.getServer().getWorlds().size() == 1) {
             // first world loaded - it's also the default in all cases I've seen [world(0)]
-//            plugin.postWorldInit();
+            plugin.postWorldLoad();
         }
     }
 
@@ -81,12 +83,23 @@ class CourierEventListener implements Listener {
             }
         } else if(!e.isCancelled()) {
             // we need to track players who right click furnaces
-            if(e.getClickedBlock().getState().getType() == Material.FURNACE) {
-                if(e.getAction() == Action.RIGHT_CLICK_BLOCK) {
-                    plugin.getCConfig().clog(Level.FINE, e.getPlayer().getName() + " is using a furnace");
-                    tracker.setSmelter(e.getClickedBlock().getState().getBlock().getLocation(), e.getPlayer());
+            Block block = e.getClickedBlock();
+            if(block != null) {
+                BlockState blockState = block.getState();
+                if(blockState != null) {
+                    if(blockState.getType() == Material.FURNACE) {
+                        if(e.getAction() == Action.RIGHT_CLICK_BLOCK) {
+                            plugin.getCConfig().clog(Level.FINE, e.getPlayer().getName() + " is using a furnace");
+                            tracker.setSmelter(e.getClickedBlock().getState().getBlock().getLocation(), e.getPlayer());
+                        }
+                    }
+                } else {
+                    plugin.getCConfig().clog(Level.FINE, "null BlockState in getPlayerInteract");
                 }
+            } else {
+                plugin.getCConfig().clog(Level.FINE, "null Block in getPlayerInteract");
             }
+
         }
     }
 

@@ -4,7 +4,7 @@
 # Courier has been tested with Postman.Type 'Enderman' and 'Villager', but will accept all Creature-types
 # Route.WalkToPlayer is currently non-functioning due to changed Minecraft behaviour
 Courier:
-  Version: 1.1.9
+  Version: 1.2.0
   UpdateInterval: 18000         # Checks for new versions every 5h. A value of 0 disables.
   UseFees: false
   Fee:
@@ -18,7 +18,7 @@ Courier:
     WalkToPlayer: true
   Privacy:
     SealedEnvelope: true
-    Locked: "&0Sorry, only&2 %s\n&0can read this letter"
+    Locked: "&0Sorry, nur&2 %s\n&0kann diesen Brief lesen"
   Postman:
     Type: Enderman
     QuickDespawn: 3
@@ -51,12 +51,12 @@ Courier:
     InfoCost: "&7Kurier: &fBenötigte Mittel um Briefe zu erstellen: %s."
     InfoFree: "&7Kurier: &fBriefe brauchen keine Mittel um erstellt zu werden."
     LackingResources: "&7Kurier: &fDu hast nicht die benötigten Mittel um einen Brief zu erstellen. Siehe /courier fees"
-    NoCraftedFound: "&7Courier: &fTo write a letter you first need to craft blank parchment. See /courier fees"
+    NoCraftedFound: "&7Kurier: &fUm einen Brief zu schreiben, musst du erst ein leeres Pergament herstellen. Siehe /courier fees"
     DisplayName: "Courier Letter"
-    From: "&0Letter from&2 %s"
-    To: "Letter to %s"
+    From: "&0Brief von&2 %s"
+    To: "Brief an %s"
   Parchment:
-    DisplayName: "Blank Courier Parchment"
+    DisplayName: "Kurier Brief"
   Post:
     NoCredit: "&7Kurier: &fEntschuldigung du hast nicht genug Kredit, um das Porto zu decken (%s)"
     NoRecipient: "&7Kurier: &fError, kein Empfänger dem ein Brief geschickt werden kann!"
