@@ -171,6 +171,8 @@ class CourierCommands /*extends ServerListener*/ implements CommandExecutor {
                 OfflinePlayer[] offPlayers = plugin.getServer().getOfflinePlayers();
                 OfflinePlayer p = null;
                 for(OfflinePlayer o : offPlayers) {
+                    if(o.getName() == null) continue; // Player name isn't available for comparison
+
                     if(o.getName().equalsIgnoreCase(receiver)) {
                         p = o;
                         plugin.getCConfig().clog(Level.FINE, "Found " + p.getName() + " in OfflinePlayers");
