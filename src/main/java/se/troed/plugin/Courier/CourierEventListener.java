@@ -445,7 +445,9 @@ class CourierEventListener implements Listener {
                         }
                         if(page > 0) {
                             Letter letter = tracker.getLetter(map.getCenterZ());
-                            letter.setCurPage(page);
+                            if(letter!=null) {
+                                letter.setCurPage(page);
+                            }
                         }
                     }
                     List<MapRenderer> renderers = map.getRenderers();
