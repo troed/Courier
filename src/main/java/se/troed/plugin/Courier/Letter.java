@@ -41,7 +41,7 @@ public class Letter {
     public Letter(Courier plug, int id) {
         plugin = plug;
         // not happy. would much rather prefer if all database handling was in CourierDatabase
-        CourierDB db = plug.getCourierdb();
+        ICourierDB db = plug.getCourierdb();
         this.id = id;
         receiver = db.getPlayer(id);
         sender = db.getSender(receiver, id);
