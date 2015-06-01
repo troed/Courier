@@ -285,7 +285,7 @@ class CourierEventListener implements Listener {
         }
         // convert old Courier Letter into new
         ItemStack letterItem = new ItemStack(Material.MAP, 1, plugin.getCourierdb().getCourierMapId());
-        // I can trust this id to stay the same thanks to how we handle it in CourierDB
+        // I can trust this id to stay the same thanks to how we handle it in ICourierDB
         letterItem.addUnsafeEnchantment(Enchantment.DURABILITY, id);
         return letterItem;
     }

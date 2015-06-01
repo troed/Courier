@@ -101,7 +101,7 @@ public class Courier extends JavaPlugin {
 
     private final CourierEventListener eventListener = new CourierEventListener(this);
     private final CourierCommands courierCommands = new CourierCommands(this);
-    private final CourierDB courierdb = new CourierDB(this);
+    private final ICourierDB courierdb = new YamlDB(this);
     private CourierConfig config;
     private LetterRenderer letterRenderer = null;
 
@@ -138,7 +138,7 @@ public class Courier extends JavaPlugin {
         return tracker;
     }
 
-    public CourierDB getCourierdb() {
+    public ICourierDB getCourierdb() {
         return courierdb;
     }
 
