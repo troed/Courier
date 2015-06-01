@@ -1,6 +1,6 @@
 name: Courier
 main: se.troed.plugin.Courier.Courier
-version: 1.2.1
+version: ${version}
 author: defxor
 description: Item based Player to Player realistically rendered mail
 website: http://dev.bukkit.org/server-mods/courier/

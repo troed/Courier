@@ -1,5 +1,7 @@
 apply plugin:'java'
 
+version = '1.2.1'
+
 repositories {
     mavenCentral()
 
@@ -14,4 +16,10 @@ repositories {
 
 dependencies {
     compile 'net.milkbowl.vault:Vault:1.5.4'
+}
+
+processResources {
+    filter {
+        it.replace('${version}', project.version)
+    }
 }
