@@ -1,11 +1,3 @@
-Courier
+THIS IS AN ARCHIVED REPO
 
-A player to player item based mail system for Bukkit Minecraft servers
-
-Supports online as well as offline players and uses as few commands as possible to achieve an immersive in-game experience
-
-see http://dev.bukkit.org/server-mods/courier/
-
-by defxor
-
-Note: This software is licensed under the GPLv2.
+Now hosted at https://codeberg.org/troed/Courier
